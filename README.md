@@ -1,6 +1,7 @@
 # StoryTeller
 
-Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and a FastAPI backend.
+Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and a FastAPI backend. 
+
 
 ## Repository layout
 
