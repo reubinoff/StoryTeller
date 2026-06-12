@@ -1,0 +1,87 @@
+import type { ReactNode } from "react";
+import { BrandMark, Mascot, type MascotPose } from "./Mascot";
+
+interface AuthFrameProps {
+  side: ReactNode;
+  children: ReactNode;
+}
+
+export const AuthFrame = ({ side, children }: AuthFrameProps) => (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      background: "var(--paper)",
+    }}
+    className="auth-frame"
+  >
+    {side}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "48px 32px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 420 }}>{children}</div>
+    </div>
+  </div>
+);
+
+interface AuthSideProps {
+  title: string;
+  subtitle: string;
+  pose: MascotPose;
+}
+
+export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
+  <div
+    style={{
+      background: "var(--ink)",
+      color: "var(--paper)",
+      padding: 48,
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      overflow: "hidden",
+    }}
+    className="auth-side"
+  >
+    <div className="row gap-12">
+      <BrandMark size={32} color="var(--paper)" />
+      <div className="brand-name" style={{ color: "var(--paper)" }}>
+        LinguaQuest
+      </div>
+    </div>
+    <div style={{ marginTop: "auto", position: "relative", zIndex: 2 }}>
+      <h1
+        style={{
+          fontSize: 48,
+          color: "var(--paper)",
+          marginBottom: 14,
+          lineHeight: 1.05,
+        }}
+      >
+        {title}
+      </h1>
+      <p
+        style={{
+          fontSize: 17,
+          color: "rgba(251,246,236,0.7)",
+          maxWidth: 380,
+          lineHeight: 1.5,
+        }}
+      >
+        {subtitle}
+      </p>
+    </div>
+    <div style={{ position: "absolute", right: -40, bottom: -20, opacity: 0.94 }}>
+      <Mascot size={200} pose={pose} kind="ferret" />
+    </div>
+    <div style={{ position: "absolute", right: 48, top: 48, opacity: 0.18 }}>
+      <BrandMark size={280} color="var(--rust)" />
+    </div>
+  </div>
+);

@@ -1,0 +1,1 @@
+"""LinguaQuest backend application package."""
