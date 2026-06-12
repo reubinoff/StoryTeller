@@ -16,3 +16,14 @@ backend/.pytest_cache/
 backend/.mypy_cache/
 backend/.ruff_cache/
 backend/*.egg-info/
+
+# Azure Functions backend
+backend-serverless/.venv/
+backend-serverless/__pycache__/
+backend-serverless/.coverage
+backend-serverless/.pytest_cache/
+backend-serverless/.mypy_cache/
+backend-serverless/.ruff_cache/
+backend-serverless/*.egg-info/
+backend-serverless/local.settings.json
+backend-serverless/infra/main.parameters.json

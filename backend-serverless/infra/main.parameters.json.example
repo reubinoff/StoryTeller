@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "prod"
+    },
+    "postgresAdminPassword": {
+      "value": "replace-with-a-long-random-password"
+    },
+    "jwtSecret": {
+      "value": "replace-with-a-long-random-jwt-secret"
+    },
+    "anthropicApiKey": {
+      "value": "replace-with-your-anthropic-key"
+    },
+    "corsOrigins": {
+      "value": "[\"https://your-frontend.example.com\"]"
+    }
+  }
+}

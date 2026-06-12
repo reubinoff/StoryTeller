@@ -1,0 +1,52 @@
+[project]
+name = "linguaquest-backend-serverless"
+version = "0.1.0"
+description = "LinguaQuest Azure Functions backend - FastAPI ASGI, queue worker, SQLAlchemy async, PostgreSQL, Claude"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "azure-functions>=1.24.0",
+    "azure-storage-queue>=12.12.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.9.2",
+    "pydantic-settings>=2.6.0",
+    "email-validator>=2.2.0",
+    "anthropic>=0.39.0",
+    "jinja2>=3.1.4",
+    "pyjwt[crypto]>=2.10.0",
+    "argon2-cffi>=23.1.0",
+    "python-multipart>=0.0.18",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "aiosqlite>=0.20.0",
+    "mypy>=1.13.0",
+    "ruff>=0.7.4",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W", "N"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+disallow_untyped_decorators = false
+plugins = ["pydantic.mypy"]

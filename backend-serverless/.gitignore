@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Azure Functions local settings can contain secrets.
+local.settings.json
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Test and tool caches
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

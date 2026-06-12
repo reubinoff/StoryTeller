@@ -8,6 +8,7 @@ Gamified English-learning web app with reading and writing tasks, progress track
 StoryTeller/
 ├── client/          # React Router 7 SPA (SSR)
 ├── backend/         # FastAPI + PostgreSQL + Anthropic Claude
+├── backend-serverless/ # Azure Functions + FastAPI ASGI + queue worker
 └── client/API_CONTRACT.md   # Shared API contract
 ```
 
@@ -15,6 +16,7 @@ StoryTeller/
 |---------|-------|------|
 | [`client/`](client/) | React 19, React Router 7, Tailwind CSS 4, TanStack Query | [client/README.md](client/README.md) |
 | [`backend/`](backend/) | Python 3.13, FastAPI, SQLAlchemy 2 async, PostgreSQL 17, Claude | [backend/README.md](backend/README.md) |
+| [`backend-serverless/`](backend-serverless/) | Azure Functions, FastAPI ASGI, Storage Queue worker, PostgreSQL, Claude | [backend-serverless/README.md](backend-serverless/README.md) |
 
 ## Quick start (frontend only)
 
@@ -88,3 +90,8 @@ npm run test:run
 ## Deployment
 
 The client includes a `Dockerfile` for production SSR (`npm run build` → `npm run start`). The backend runs as a standard Uvicorn ASGI app.
+
+The serverless backend lives in `backend-serverless/` and deploys to Azure Functions
+with a Storage Queue worker for writing evaluations. See
+[`backend-serverless/README.md`](backend-serverless/README.md) for local
+debugging, Azure provisioning, migrations, and CI/CD.

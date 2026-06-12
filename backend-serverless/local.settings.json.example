@@ -1,0 +1,25 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5432/linguaquest",
+    "JWT_SECRET": "change-me-in-prod-please-use-a-long-random-string",
+    "JWT_ALGORITHM": "HS256",
+    "JWT_ACCESS_TTL_SECONDS": "900",
+    "ANTHROPIC_API_KEY": "",
+    "CLAUDE_MODEL": "claude-sonnet-4-5-20250929",
+    "CLAUDE_MAX_TOKENS": "4096",
+    "CORS_ORIGINS": "[\"http://localhost:5173\",\"http://127.0.0.1:5173\",\"http://localhost:5174\",\"http://127.0.0.1:5174\"]",
+    "EVALUATION_QUEUE_NAME": "writing-evaluations",
+    "CREATE_EVALUATION_QUEUE_ON_ENQUEUE": "true",
+    "SEED_ON_STARTUP": "true",
+    "AUTO_CREATE_SCHEMA": "false",
+    "ENVIRONMENT": "dev"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}
