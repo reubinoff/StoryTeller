@@ -6,7 +6,6 @@ from the design hand-off (Landing, Auth, Onboarding, Dashboard, Courses,
 Course detail, Reading task, Writing task, Writing processing, Reading result,
 Writing result, Settings, Achievements, Help & FAQ) is implemented with a
 typed `fetch` API client backed by a localStorage-driven mock layer, so the
-whole flow works end-to-end without a real backend.
 
 ## Stack
 
