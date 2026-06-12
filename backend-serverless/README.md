@@ -330,7 +330,8 @@ Optional GitHub gate:
 
 1. Run `Backend Serverless Manual Migrations`.
 2. Enter `RUN`.
-3. The workflow reads `database-url` from Key Vault and runs
+3. The workflow runs on a self-hosted runner labeled `azure-vnet`.
+4. The workflow reads `database-url` from Key Vault and runs
    `alembic upgrade head`.
 
 Because the production database is private-networked, run migrations from a
