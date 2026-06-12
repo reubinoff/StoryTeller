@@ -32,20 +32,6 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      - name: Open temporary PostgreSQL firewall rule
-        id: firewall
-        shell: bash
-        run: |
-          set -euo pipefail
-          runner_ip="$(curl --fail --silent https://api.ipify.org)"
-          rule_name="github-actions-${GITHUB_RUN_ID}"
-          az postgres flexible-server firewall-rule create \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_POSTGRES_SERVER_NAME }}" \
-            --rule-name "$rule_name" \
-            --start-ip-address "$runner_ip" \
-            --end-ip-address "$runner_ip"
-          echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
       - name: Run Alembic migrations
         working-directory: backend-serverless
         shell: bash
@@ -59,11 +45,3 @@ jobs:
           DATABASE_URL="$database_url" \
             UV_PROJECT_ENVIRONMENT="${{ runner.temp }}/migration-venv" \
             uv run --frozen alembic upgrade head
-      - name: Remove temporary PostgreSQL firewall rule
-        if: always() && steps.firewall.outputs.rule_name != ''
-        run: |
-          az postgres flexible-server firewall-rule delete \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_POSTGRES_SERVER_NAME }}" \
-            --rule-name "${{ steps.firewall.outputs.rule_name }}" \
-            --yes

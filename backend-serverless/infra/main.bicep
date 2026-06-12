@@ -14,18 +14,9 @@ param functionAppName string = ''
 @description('Storage account name. Leave empty to generate one.')
 param storageAccountName string = ''
 
-@description('PostgreSQL Flexible Server name. Leave empty to generate one.')
-param postgresServerName string = ''
-
-@description('PostgreSQL database name.')
-param databaseName string = 'storyteller'
-
-@description('PostgreSQL administrator login.')
-param postgresAdminLogin string = 'storytelleradmin'
-
 @secure()
-@description('PostgreSQL administrator password.')
-param postgresAdminPassword string
+@description('Existing PostgreSQL SQLAlchemy async connection string. Example: postgresql+asyncpg://user:password@server.postgres.database.azure.com:5432/db?ssl=require')
+param databaseUrl string
 
 @secure()
 @description('JWT signing secret for production.')
@@ -37,6 +28,9 @@ param anthropicApiKey string = ''
 
 @description('Allowed frontend origins as a JSON array string.')
 param corsOrigins string = '["http://localhost:5173","http://127.0.0.1:5173"]'
+
+@description('Existing subnet resource ID for Function App VNet integration. For Flex Consumption, use a subnet delegated to Microsoft.App/environments.')
+param functionSubnetResourceId string
 
 @description('Queue name for short writing evaluation jobs.')
 param evaluationQueueName string = 'writing-evaluations'
@@ -57,7 +51,6 @@ param instanceMemoryMB int = 2048
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var resolvedFunctionAppName = empty(functionAppName) ? 'storyteller-func-${environmentName}-${token}' : functionAppName
 var resolvedStorageAccountName = empty(storageAccountName) ? take('storyteller${replace(token, '-', '')}', 24) : storageAccountName
-var resolvedPostgresServerName = empty(postgresServerName) ? 'storyteller-pg-${environmentName}-${token}' : postgresServerName
 var planName = 'storyteller-plan-${environmentName}-${token}'
 var logAnalyticsName = 'storyteller-log-${environmentName}-${token}'
 var appInsightsName = 'storyteller-ai-${environmentName}-${token}'
@@ -128,52 +121,6 @@ resource evaluationQueue 'Microsoft.Storage/storageAccounts/queueServices/queues
   name: evaluationQueueName
 }
 
-resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
-  name: resolvedPostgresServerName
-  location: location
-  sku: {
-    name: 'Standard_B1ms'
-    tier: 'Burstable'
-  }
-  properties: {
-    administratorLogin: postgresAdminLogin
-    administratorLoginPassword: postgresAdminPassword
-    version: '16'
-    storage: {
-      storageSizeGB: 32
-    }
-    backup: {
-      backupRetentionDays: 7
-      geoRedundantBackup: 'Disabled'
-    }
-    highAvailability: {
-      mode: 'Disabled'
-    }
-    authConfig: {
-      activeDirectoryAuth: 'Disabled'
-      passwordAuth: 'Enabled'
-    }
-  }
-}
-
-resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
-  parent: postgres
-  name: databaseName
-  properties: {
-    charset: 'UTF8'
-    collation: 'en_US.utf8'
-  }
-}
-
-resource postgresAzureFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = {
-  parent: postgres
-  name: 'AllowAzureServices'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
@@ -190,8 +137,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     accessPolicies: []
   }
 }
-
-var databaseUrl = 'postgresql+asyncpg://${postgresAdminLogin}:${postgresAdminPassword}@${postgres.properties.fullyQualifiedDomainName}:5432/${databaseName}'
 
 resource databaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
@@ -240,6 +185,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
+    virtualNetworkSubnetId: functionSubnetResourceId
     functionAppConfig: {
       deployment: {
         storage: {
@@ -261,11 +207,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       }
     }
     siteConfig: {
+      vnetRouteAllEnabled: true
       appSettings: [
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'python'
-        }
         {
           name: 'AzureWebJobsStorage'
           value: storageConnectionString
@@ -332,8 +275,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   dependsOn: [
     packageContainer
     evaluationQueue
-    postgresDatabase
-    postgresAzureFirewall
   ]
 }
 
@@ -359,5 +300,5 @@ output functionAppName string = functionApp.name
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 output resourceGroupName string = resourceGroup().name
 output keyVaultName string = keyVault.name
-output postgresServerName string = postgres.name
+output databaseSecretName string = databaseUrlSecret.name
 output evaluationQueueName string = evaluationQueue.name

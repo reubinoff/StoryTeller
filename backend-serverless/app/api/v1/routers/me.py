@@ -5,6 +5,7 @@ plus dashboard / metrics / achievements / notifications.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from fastapi import APIRouter, Response, status
 from sqlalchemy import delete, select
@@ -68,8 +69,15 @@ async def put_interests(
         )
 
     await db.execute(delete(UserInterest).where(UserInterest.user_id == current_user.id))
-    for slug in body.interest_ids:
-        db.add(UserInterest(user_id=current_user.id, interest_slug=slug))
+    created_at = utcnow()
+    for position, slug in enumerate(body.interest_ids):
+        db.add(
+            UserInterest(
+                user_id=current_user.id,
+                interest_slug=slug,
+                created_at=created_at + timedelta(microseconds=position),
+            )
+        )
     await db.commit()
     return UpdateInterestsResponse(interests=body.interest_ids)
 

@@ -197,10 +197,29 @@ The Bicep template creates:
 
 - Linux Azure Function App on Flex Consumption, Python 3.13
 - Storage account, deployment blob container, and `writing-evaluations` queue
-- PostgreSQL Flexible Server and database
+- VNet-integrated Function App access to an existing private PostgreSQL server
 - Key Vault with `database-url`, `jwt-secret`, and `anthropic-api-key`
 - Application Insights and Log Analytics
 - Function App settings with Key Vault references for app secrets
+
+The production database is expected to already exist. For the current Azure
+environment, use:
+
+```text
+Server: guide-me.postgres.database.azure.com
+Database: storyteller
+VNet: guide-me-infra-vnet
+Function subnet: storyteller-functions
+Migration subnet: storyteller-migrations
+```
+
+The Function subnet must be delegated to `Microsoft.App/environments`, which is
+the subnet delegation required by Azure Functions Flex Consumption VNet
+integration.
+
+Do not point StoryTeller at the existing `guide-me` database. That database has
+its own Alembic migration history. Use the dedicated `storyteller` database on
+the same PostgreSQL Flexible Server.
 
 Create a resource group:
 
@@ -215,6 +234,19 @@ Copy and edit parameters:
 ```bash
 cd backend-serverless
 cp infra/main.parameters.json.example infra/main.parameters.json
+```
+
+Set `databaseUrl` to the existing private PostgreSQL connection string:
+
+```text
+postgresql+asyncpg://guideme:<password>@guide-me.postgres.database.azure.com:5432/storyteller?ssl=require
+```
+
+Set `functionSubnetResourceId` to the subnet used for Function App VNet
+integration:
+
+```text
+/subscriptions/<subscription-id>/resourceGroups/guide-me-infra/providers/Microsoft.Network/virtualNetworks/guide-me-infra-vnet/subnets/storyteller-functions
 ```
 
 Deploy infrastructure:
@@ -232,7 +264,7 @@ Record the outputs:
 - `functionAppUrl`
 - `resourceGroupName`
 - `keyVaultName`
-- `postgresServerName`
+- `databaseSecretName`
 
 Use these values for GitHub repository variables.
 
@@ -246,8 +278,6 @@ branch. Grant it:
 - `Reader` on the resource group
 - `Key Vault Secrets User` on the Key Vault if you use the manual migration
   workflow
-- PostgreSQL firewall management permission if you use the manual migration
-  workflow from GitHub-hosted runners
 
 Set GitHub repository variables:
 
@@ -259,7 +289,6 @@ AZURE_RESOURCE_GROUP
 AZURE_FUNCTIONAPP_NAME
 AZURE_FUNCTIONAPP_BASE_URL
 AZURE_KEYVAULT_NAME
-AZURE_POSTGRES_SERVER_NAME
 ```
 
 `AZURE_FUNCTIONAPP_BASE_URL` can be omitted if the app is reachable at
@@ -301,12 +330,14 @@ Optional GitHub gate:
 
 1. Run `Backend Serverless Manual Migrations`.
 2. Enter `RUN`.
-3. The workflow opens a temporary PostgreSQL firewall rule for the runner,
-   reads `database-url` from Key Vault, runs `alembic upgrade head`, and removes
-   the firewall rule.
+3. The workflow reads `database-url` from Key Vault and runs
+   `alembic upgrade head`.
 
-If your database is private-networked later, replace the GitHub-hosted migration
-workflow with an Azure-side job or run migrations from a machine inside the VNet.
+Because the production database is private-networked, run migrations from a
+machine inside the VNet, through the VPN, or an Azure-side one-off job that has
+VNet access. The production deployment used a temporary Azure Container Instance
+in the `storyteller-migrations` subnet, delegated to
+`Microsoft.ContainerInstance/containerGroups`.
 
 ## Production Troubleshooting
 
@@ -328,7 +359,6 @@ workflow with an Azure-side job or run migrations from a machine inside the VNet
   - Check queue length and worker logs.
   - Check Anthropic failures and PostgreSQL connectivity.
 - Migrations fail from GitHub:
-  - Confirm `AZURE_KEYVAULT_NAME` and `AZURE_POSTGRES_SERVER_NAME`.
-  - Confirm the deploy identity can read Key Vault secrets and edit PostgreSQL
-    firewall rules.
-  - Confirm the runner IP firewall rule was removed after the run.
+  - Confirm `AZURE_KEYVAULT_NAME`.
+  - Confirm the deploy identity can read Key Vault secrets.
+  - Confirm the runner or job has private network access to PostgreSQL.

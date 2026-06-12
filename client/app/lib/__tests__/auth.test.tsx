@@ -125,8 +125,8 @@ describe("useAuth", () => {
     localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.user?.email).toBe("test@test.com");
+    await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
+    expect(result.current.ready).toBe(true);
   });
 
   it("ignores corrupted localStorage data", async () => {
