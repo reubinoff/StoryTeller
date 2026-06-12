@@ -16,7 +16,7 @@ const LoginSchema = z.object({
 type LoginValues = z.infer<typeof LoginSchema>;
 
 export function meta() {
-  return [{ title: "Log in · LinguaQuest" }];
+  return [{ title: "Log in · StoryTeller" }];
 }
 
 export default function LoginRoute() {

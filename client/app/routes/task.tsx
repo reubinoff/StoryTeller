@@ -24,7 +24,7 @@ import {
 import type { Task, TaskQuestion } from "~/lib/api/types";
 
 export function meta() {
-  return [{ title: "Task · LinguaQuest" }];
+  return [{ title: "Task · StoryTeller" }];
 }
 
 export default function TaskRoute() {

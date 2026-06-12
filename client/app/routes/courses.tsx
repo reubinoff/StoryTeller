@@ -7,7 +7,7 @@ import {
 import { SectionHeader } from "~/components/SectionHeader";
 
 export function meta() {
-  return [{ title: "Courses · LinguaQuest" }];
+  return [{ title: "Courses · StoryTeller" }];
 }
 
 export default function CoursesRoute() {

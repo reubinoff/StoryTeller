@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-PROBLEM_BASE = "https://errors.linguaquest.app/"
+PROBLEM_BASE = "https://errors.storyteller.app/"
 PROBLEM_CONTENT_TYPE = "application/problem+json"
 
 

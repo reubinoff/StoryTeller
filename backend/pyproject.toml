@@ -1,7 +1,7 @@
 [project]
-name = "linguaquest-backend"
+name = "storyteller-backend"
 version = "0.1.0"
-description = "LinguaQuest backend API — FastAPI, SQLAlchemy 2 async, Postgres, Anthropic Claude generation"
+description = "StoryTeller backend API — FastAPI, SQLAlchemy 2 async, Postgres, Anthropic Claude generation"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

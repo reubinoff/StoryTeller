@@ -259,7 +259,7 @@ function scheduleWritingEvaluation(taskId: string, userId: string) {
     commit();
     // Publish to subscribers (frontend toast).
     window.dispatchEvent(
-      new CustomEvent("lq:task-completed", {
+      new CustomEvent("storyteller:task-completed", {
         detail: notif.payload,
       })
     );

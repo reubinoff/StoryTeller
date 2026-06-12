@@ -57,7 +57,7 @@ export function err(
   return {
     kind: "error",
     problem: {
-      type: `https://errors.linguaquest.app/${code}`,
+      type: `https://errors.storyteller.app/${code}`,
       title,
       status,
       detail,

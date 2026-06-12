@@ -52,7 +52,7 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
     <div className="row gap-12">
       <BrandMark size={32} color="var(--paper)" />
       <div className="brand-name" style={{ color: "var(--paper)" }}>
-        LinguaQuest
+        StoryTeller
       </div>
     </div>
     <div style={{ marginTop: "auto", position: "relative", zIndex: 2 }}>

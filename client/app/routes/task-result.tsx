@@ -19,7 +19,7 @@ import type {
 import { useAuth } from "~/lib/auth";
 
 export function meta() {
-  return [{ title: "Result · LinguaQuest" }];
+  return [{ title: "Result · StoryTeller" }];
 }
 
 export default function TaskResultRoute() {

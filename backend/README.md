@@ -1,6 +1,6 @@
-# LinguaQuest Backend
+# StoryTeller Backend
 
-FastAPI backend for the LinguaQuest English-learning app. Implements the API contract consumed by the React Router 7 SPA in `../client`.
+FastAPI backend for the StoryTeller English-learning app. Implements the API contract consumed by the React Router 7 SPA in `../client`.
 
 ## Stack
 
@@ -19,9 +19,9 @@ cp .env.example .env
 # edit .env: set ANTHROPIC_API_KEY, JWT_SECRET, DATABASE_URL
 
 # Local Postgres via docker (one-liner):
-docker run -d --name lq-pg -p 5432:5432 \
+docker run -d --name storyteller-pg -p 5432:5432 \
   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=linguaquest postgres:17
+  -e POSTGRES_DB=storyteller postgres:17
 
 uv sync
 uv run --no-sync alembic upgrade head

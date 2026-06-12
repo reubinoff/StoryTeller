@@ -45,7 +45,7 @@ type SignupInput = z.input<typeof SignupSchema>;
 type SignupOutput = z.output<typeof SignupSchema>;
 
 export function meta() {
-  return [{ title: "Sign up · LinguaQuest" }];
+  return [{ title: "Sign up · StoryTeller" }];
 }
 
 export default function SignupRoute() {

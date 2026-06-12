@@ -1,4 +1,4 @@
-# LinguaQuest
+# StoryTeller
 
 Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and a FastAPI backend.
 
@@ -37,9 +37,9 @@ cd backend
 cp .env.example .env
 # Set ANTHROPIC_API_KEY, JWT_SECRET, DATABASE_URL in .env
 
-docker run -d --name lq-pg -p 5432:5432 \
+docker run -d --name storyteller-pg -p 5432:5432 \
   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=linguaquest postgres:17
+  -e POSTGRES_DB=storyteller postgres:17
 
 uv sync
 uv run --no-sync alembic upgrade head

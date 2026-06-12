@@ -2,7 +2,7 @@ import { Skeleton } from "~/components/Skeleton";
 import { useAchievements } from "~/lib/api/queries";
 
 export function meta() {
-  return [{ title: "Achievements · LinguaQuest" }];
+  return [{ title: "Achievements · StoryTeller" }];
 }
 
 export default function AchievementsRoute() {

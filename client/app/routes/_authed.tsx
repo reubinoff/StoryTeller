@@ -33,8 +33,8 @@ export default function AuthedLayout() {
         onAction: () => navigate(`/tasks/${detail.task_id}/result`),
       });
     };
-    window.addEventListener("lq:task-completed", handler);
-    return () => window.removeEventListener("lq:task-completed", handler);
+    window.addEventListener("storyteller:task-completed", handler);
+    return () => window.removeEventListener("storyteller:task-completed", handler);
   }, [push, navigate]);
 
   if (!ready || !user) {

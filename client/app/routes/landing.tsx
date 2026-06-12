@@ -12,7 +12,7 @@ import { useAuth } from "~/lib/auth";
 
 export function meta() {
   return [
-    { title: "LinguaQuest — English that feels like a quest" },
+    { title: "StoryTeller — English that feels like a quest" },
     {
       name: "description",
       content:
@@ -52,7 +52,7 @@ export default function Landing() {
           style={{ color: "inherit", flex: "0 0 auto" }}
         >
           <BrandMark size={32} color="var(--ink)" />
-          <div className="brand-name">LinguaQuest</div>
+          <div className="brand-name">StoryTeller</div>
         </Link>
         <div
           className="row gap-24"

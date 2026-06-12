@@ -16,11 +16,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "LinguaQuest"
+    app_name: str = "StoryTeller"
     environment: str = "dev"
 
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/linguaquest"
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/storyteller"
     )
 
     jwt_secret: str = Field(default="change-me-in-prod-please-use-a-long-random-string")

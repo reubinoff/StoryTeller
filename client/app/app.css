@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ===== LinguaQuest — global styles =====
+/* ===== StoryTeller — global styles =====
  * Verbatim port of the Claude Design "DailyEnglish" prototype styles.css,
  * with the Tailwind 4 base import on top so resets/utilities are still available
  * to ad-hoc layout classes inside individual components.

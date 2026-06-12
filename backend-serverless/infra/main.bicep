@@ -18,10 +18,10 @@ param storageAccountName string = ''
 param postgresServerName string = ''
 
 @description('PostgreSQL database name.')
-param databaseName string = 'linguaquest'
+param databaseName string = 'storyteller'
 
 @description('PostgreSQL administrator login.')
-param postgresAdminLogin string = 'lqadmin'
+param postgresAdminLogin string = 'storytelleradmin'
 
 @secure()
 @description('PostgreSQL administrator password.')
@@ -55,13 +55,13 @@ param maximumInstanceCount int = 100
 param instanceMemoryMB int = 2048
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
-var resolvedFunctionAppName = empty(functionAppName) ? 'lq-func-${environmentName}-${token}' : functionAppName
-var resolvedStorageAccountName = empty(storageAccountName) ? take('lqst${replace(token, '-', '')}', 24) : storageAccountName
-var resolvedPostgresServerName = empty(postgresServerName) ? 'lq-pg-${environmentName}-${token}' : postgresServerName
-var planName = 'lq-plan-${environmentName}-${token}'
-var logAnalyticsName = 'lq-log-${environmentName}-${token}'
-var appInsightsName = 'lq-ai-${environmentName}-${token}'
-var keyVaultName = take('lq-kv-${environmentName}-${token}', 24)
+var resolvedFunctionAppName = empty(functionAppName) ? 'storyteller-func-${environmentName}-${token}' : functionAppName
+var resolvedStorageAccountName = empty(storageAccountName) ? take('storyteller${replace(token, '-', '')}', 24) : storageAccountName
+var resolvedPostgresServerName = empty(postgresServerName) ? 'storyteller-pg-${environmentName}-${token}' : postgresServerName
+var planName = 'storyteller-plan-${environmentName}-${token}'
+var logAnalyticsName = 'storyteller-log-${environmentName}-${token}'
+var appInsightsName = 'storyteller-ai-${environmentName}-${token}'
+var keyVaultName = take('storyteller-kv-${environmentName}-${token}', 24)
 var packageContainerName = 'function-packages'
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 

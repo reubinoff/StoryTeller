@@ -1,1 +1,1 @@
-"""LinguaQuest backend application package."""
+"""StoryTeller backend application package."""

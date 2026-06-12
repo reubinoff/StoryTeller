@@ -64,7 +64,7 @@ The mock backend simulates network delay (~300ms) and persists state to `localSt
 
 ### Async Task Completion
 
-Writing tasks have an 8-second processing phase. The mock backend dispatches a custom `lq:task-completed` event; `_authed.tsx` listens and fires a toast with a "View result" CTA.
+Writing tasks have an 8-second processing phase. The mock backend dispatches a custom `storyteller:task-completed` event; `_authed.tsx` listens and fires a toast with a "View result" CTA.
 
 ### Shell & Responsive Layout
 

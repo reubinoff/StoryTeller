@@ -1,4 +1,4 @@
-"""Azure Functions entrypoints for the LinguaQuest serverless backend."""
+"""Azure Functions entrypoints for the StoryTeller serverless backend."""
 
 from __future__ import annotations
 

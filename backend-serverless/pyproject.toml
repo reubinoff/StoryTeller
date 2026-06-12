@@ -1,7 +1,7 @@
 [project]
-name = "linguaquest-backend-serverless"
+name = "storyteller-backend-serverless"
 version = "0.1.0"
-description = "LinguaQuest Azure Functions backend - FastAPI ASGI, queue worker, SQLAlchemy async, PostgreSQL, Claude"
+description = "StoryTeller Azure Functions backend - FastAPI ASGI, queue worker, SQLAlchemy async, PostgreSQL, Claude"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

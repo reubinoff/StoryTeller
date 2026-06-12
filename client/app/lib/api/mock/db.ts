@@ -12,7 +12,7 @@ import type {
   WritingEvaluation,
 } from "../types";
 
-const STORAGE_KEY = "lq.mock.v1";
+const STORAGE_KEY = "storyteller.mock.v1";
 
 interface MockState {
   users: Record<string, User & { password_hash?: string }>;

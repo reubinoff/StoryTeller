@@ -20,7 +20,7 @@ import type { CourseId, RecentTask, TaskStatus } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
 
 export function meta() {
-  return [{ title: "Dashboard · LinguaQuest" }];
+  return [{ title: "Dashboard · StoryTeller" }];
 }
 
 const formatDate = () => {

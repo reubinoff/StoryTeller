@@ -3,7 +3,7 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5432/linguaquest",
+    "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5432/storyteller",
     "JWT_SECRET": "change-me-in-prod-please-use-a-long-random-string",
     "JWT_ALGORITHM": "HS256",
     "JWT_ACCESS_TTL_SECONDS": "900",

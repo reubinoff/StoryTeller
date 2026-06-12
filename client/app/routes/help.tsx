@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { BrandMark } from "~/components/Mascot";
 
 export function meta() {
-  return [{ title: "Help & FAQ · LinguaQuest" }];
+  return [{ title: "Help & FAQ · StoryTeller" }];
 }
 
 const FAQS: Array<[string, string]> = [
@@ -35,12 +35,12 @@ export default function HelpRoute() {
         >
           <BrandMark size={28} color="var(--ink)" />
           <div className="brand-name" style={{ fontSize: 18 }}>
-            LinguaQuest
+            StoryTeller
           </div>
         </Link>
         <h1 style={{ fontSize: 42, marginBottom: 8 }}>Help & FAQ</h1>
         <p style={{ color: "var(--ink-3)", marginBottom: 24 }}>
-          Common questions about LinguaQuest.
+          Common questions about StoryTeller.
         </p>
         <div className="col gap-12">
           {FAQS.map(([q, a]) => (

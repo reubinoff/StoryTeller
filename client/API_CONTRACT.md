@@ -1,7 +1,7 @@
-# LinguaQuest — Frontend API Contract
+# StoryTeller — Frontend API Contract
 
 This document is the source of truth for every backend endpoint the
-LinguaQuest web client expects, and the exact JSON shape of every entity it
+StoryTeller web client expects, and the exact JSON shape of every entity it
 consumes. The frontend is implemented against these contracts and ships with a
 localStorage-backed mock backend (toggle with `VITE_USE_MOCK`) that mimics them
 1:1 — when the real backend lands, set `VITE_USE_MOCK=false` and the real
@@ -397,7 +397,7 @@ Content-Type: application/problem+json
 X-Request-Id: 0192f7...
 
 {
-  "type": "https://errors.linguaquest.app/validation_error",
+  "type": "https://errors.storyteller.app/validation_error",
   "title": "Validation failed",
   "status": 422,
   "code": "validation_error",

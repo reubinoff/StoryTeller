@@ -121,8 +121,8 @@ describe("useAuth", () => {
   });
 
   it("restores user from localStorage on mount", async () => {
-    localStorage.setItem("lq.auth.accessToken", "tok-test");
-    localStorage.setItem("lq.auth.user", JSON.stringify(mockUser));
+    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
+    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -130,8 +130,8 @@ describe("useAuth", () => {
   });
 
   it("ignores corrupted localStorage data", async () => {
-    localStorage.setItem("lq.auth.accessToken", "tok-test");
-    localStorage.setItem("lq.auth.user", "{bad json");
+    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
+    localStorage.setItem("storyteller.auth.user", "{bad json");
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -209,7 +209,7 @@ describe("signout", () => {
     await result.current.signin("test@test.com", "pass");
     result.current.signout();
 
-    expect(localStorage.getItem("lq.auth.accessToken")).toBeNull();
+    expect(localStorage.getItem("storyteller.auth.accessToken")).toBeNull();
   });
 });
 

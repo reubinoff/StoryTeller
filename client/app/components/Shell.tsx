@@ -99,7 +99,7 @@ export const Shell = ({ children }: ShellProps) => {
             <div className="brand-mark">
               <BrandMark size={32} color="var(--ink)" />
             </div>
-            <div className="brand-name">LinguaQuest</div>
+            <div className="brand-name">StoryTeller</div>
           </Link>
           <div className="col gap-4">
             {NAV_ITEMS.map(({ id, label, to, Icon, match }) => {

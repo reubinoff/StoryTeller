@@ -1,6 +1,6 @@
-# LinguaQuest — Frontend
+# StoryTeller — Frontend
 
-A fully-clickable single-page implementation of **LinguaQuest**, the gamified
+A fully-clickable single-page implementation of **StoryTeller**, the gamified
 English-learning web app described in `English for fun PRD.pdf`. Every screen
 from the design hand-off (Landing, Auth, Onboarding, Dashboard, Courses,
 Course detail, Reading task, Writing task, Writing processing, Reading result,
@@ -41,7 +41,7 @@ is fully clickable without a server. To point at a real `/api/v1` instead:
 ```bash
 # .env.local
 VITE_USE_MOCK=false
-VITE_API_BASE_URL=https://api.linguaquest.app/api/v1
+VITE_API_BASE_URL=https://api.storyteller.app/api/v1
 ```
 
 The mock is implemented in [`app/lib/api/mock/`](app/lib/api/mock/):
@@ -124,7 +124,7 @@ that conforms to it.
 5. **Settings** with theme / text-size / reduce-motion controls that apply
    live via `data-*` attributes on `<body>` (see `lib/auth.tsx`).
 6. **Async writing notifications** — the mock backend dispatches a
-   `lq:task-completed` event 8 s after submit; the `_authed` layout listens
+   `storyteller:task-completed` event 8 s after submit; the `_authed` layout listens
    and pushes a toast with a "View result" CTA (PRD §7.3).
 
 ## Accessibility & responsive

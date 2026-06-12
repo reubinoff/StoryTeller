@@ -702,7 +702,7 @@ wheels = [
 ]
 
 [[package]]
-name = "linguaquest-backend"
+name = "storyteller-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

@@ -17,7 +17,7 @@ import { ApiError, getAccessToken, setAccessToken } from "./api/client";
 import { api } from "./api/endpoints";
 import type { DashboardMetrics, InterestId, User } from "./api/types";
 
-const USER_KEY = "lq.auth.user";
+const USER_KEY = "storyteller.auth.user";
 
 const DEFAULT_METRICS: DashboardMetrics = {
   tasks_completed: 0,
@@ -104,10 +104,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const onCompleted = () => {
       void load();
     };
-    window.addEventListener("lq:task-completed", onCompleted);
+    window.addEventListener("storyteller:task-completed", onCompleted);
     return () => {
       cancelled = true;
-      window.removeEventListener("lq:task-completed", onCompleted);
+      window.removeEventListener("storyteller:task-completed", onCompleted);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);

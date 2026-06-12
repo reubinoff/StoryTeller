@@ -13,7 +13,7 @@ import type { InterestId } from "~/lib/api/types";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
-  return [{ title: "Welcome · LinguaQuest" }];
+  return [{ title: "Welcome · StoryTeller" }];
 }
 
 export default function OnboardingRoute() {
@@ -74,7 +74,7 @@ export default function OnboardingRoute() {
       >
         <BrandMark size={28} color="var(--ink)" />
         <div className="brand-name" style={{ fontSize: 18 }}>
-          LinguaQuest
+          StoryTeller
         </div>
         <div
           style={{

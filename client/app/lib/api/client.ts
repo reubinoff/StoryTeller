@@ -1,5 +1,5 @@
 /**
- * Typed API client for LinguaQuest.
+ * Typed API client for StoryTeller.
  *
  * Sits in front of two transports:
  *   - the localStorage-backed mock router (default in dev)
@@ -11,7 +11,7 @@
 import type { Problem } from "./types";
 import { mockHandle } from "./mock/router";
 
-const ACCESS_TOKEN_KEY = "lq.auth.accessToken";
+const ACCESS_TOKEN_KEY = "storyteller.auth.accessToken";
 
 const useMock =
   typeof import.meta !== "undefined" &&

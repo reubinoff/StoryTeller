@@ -1,6 +1,6 @@
-# LinguaQuest Backend Serverless
+# StoryTeller Backend Serverless
 
-Azure Functions version of the LinguaQuest backend. This project is intentionally
+Azure Functions version of the StoryTeller backend. This project is intentionally
 standalone from `../backend`: it carries its own FastAPI app, services, models,
 migrations, tests, Functions host config, and deployment assets.
 
@@ -81,24 +81,24 @@ Do not commit `local.settings.json`; it can contain secrets and is ignored.
 Start PostgreSQL:
 
 ```bash
-docker run -d --name lq-pg -p 5432:5432 \
+docker run -d --name storyteller-pg -p 5432:5432 \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=linguaquest \
+  -e POSTGRES_DB=storyteller \
   postgres:17
 ```
 
 Start Azurite for local queues:
 
 ```bash
-docker run -d --name lq-azurite -p 10000:10000 -p 10001:10001 -p 10002:10002 \
+docker run -d --name storyteller-azurite -p 10000:10000 -p 10001:10001 -p 10002:10002 \
   mcr.microsoft.com/azure-storage/azurite
 ```
 
 If the containers already exist:
 
 ```bash
-docker start lq-pg lq-azurite
+docker start storyteller-pg storyteller-azurite
 ```
 
 Install dependencies and migrate the database:
@@ -206,7 +206,7 @@ Create a resource group:
 
 ```bash
 az group create \
-  --name rg-linguaquest-prod \
+  --name rg-storyteller-prod \
   --location israelcentral
 ```
 
@@ -221,7 +221,7 @@ Deploy infrastructure:
 
 ```bash
 az deployment group create \
-  --resource-group rg-linguaquest-prod \
+  --resource-group rg-storyteller-prod \
   --template-file infra/main.bicep \
   --parameters @infra/main.parameters.json
 ```
