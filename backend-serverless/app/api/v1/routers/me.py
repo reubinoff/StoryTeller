@@ -29,6 +29,7 @@ from app.api.v1.schemas.user import (
 from app.core.errors import AppError
 from app.db.models._helpers import utcnow
 from app.db.models.interest import Interest, UserInterest
+from app.db.models.task import Task
 from app.deps import CurrentUser, DbSession
 from app.services import auth_service, dashboard_service
 from app.services.user_service import to_user_out
@@ -51,6 +52,11 @@ async def _replace_interests(
             errors=[{"field": "interest_ids", "message": f"Unknown: {', '.join(missing)}"}],
         )
 
+    previous = await db.execute(
+        select(UserInterest.interest_slug).where(UserInterest.user_id == current_user.id)
+    )
+    removed_interest_ids = {r[0] for r in previous.all()}.difference(interest_ids)
+
     await db.execute(delete(UserInterest).where(UserInterest.user_id == current_user.id))
     created_at = utcnow()
     for position, slug in enumerate(interest_ids):
@@ -59,6 +65,13 @@ async def _replace_interests(
                 user_id=current_user.id,
                 interest_slug=slug,
                 created_at=created_at + timedelta(microseconds=position),
+            )
+        )
+    if removed_interest_ids:
+        await db.execute(
+            delete(Task).where(
+                Task.user_id == current_user.id,
+                Task.interest_slug.in_(removed_interest_ids),
             )
         )
     return interest_ids

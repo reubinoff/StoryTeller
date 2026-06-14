@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AuthResponse, Notification } from "../../types";
+import type { AuthResponse, Notification, Task } from "../../types";
 import { getState, reset } from "../db";
 import { handleAuth } from "../handlers/auth";
 import { handleMe } from "../handlers/me";
+import { handleTasks } from "../handlers/tasks";
 import type { MockRequest, MockResponse } from "../router";
 
 function req(
@@ -24,13 +25,13 @@ function problem(res: MockResponse<unknown> | null) {
   return res.problem;
 }
 
-function createUser() {
+function createUser(email = "maya@example.com") {
   return data<AuthResponse>(
     handleAuth(
       req("POST", "/auth/signup", {
         first_name: "Maya",
         last_name: "Patel",
-        email: "maya@example.com",
+        email,
         password: "Snowflake42",
         year_of_birth: 2017,
       })
@@ -79,6 +80,74 @@ describe("mock me handler contract", () => {
         )
       )
     ).toMatchObject({ status: 422, code: "validation_error" });
+  });
+
+  it("removes only the current user's tasks for dropped interests", () => {
+    const authA = createUser("maya@example.com");
+    data(
+      handleMe(
+        req(
+          "PUT",
+          "/me/interests",
+          { interest_ids: ["space", "travel"] },
+          authA.access_token
+        )
+      )
+    );
+    const spaceTask = data<Task>(
+      handleTasks(
+        req(
+          "POST",
+          "/courses/reading/tasks",
+          { interest_id: "space" },
+          authA.access_token
+        )
+      )
+    );
+    const travelTask = data<Task>(
+      handleTasks(
+        req(
+          "POST",
+          "/courses/writing/tasks",
+          { interest_id: "travel" },
+          authA.access_token
+        )
+      )
+    );
+
+    const authB = createUser("leo@example.com");
+    data(
+      handleMe(
+        req("PUT", "/me/interests", { interest_ids: ["space"] }, authB.access_token)
+      )
+    );
+    const otherUserSpaceTask = data<Task>(
+      handleTasks(
+        req(
+          "POST",
+          "/courses/reading/tasks",
+          { interest_id: "space" },
+          authB.access_token
+        )
+      )
+    );
+
+    data(
+      handleMe(
+        req("PUT", "/me/interests", { interest_ids: ["travel"] }, authA.access_token)
+      )
+    );
+
+    const state = getState();
+    expect(state.tasks[spaceTask.id]).toBeUndefined();
+    expect(state.user_tasks[authA.user.id]).not.toContain(spaceTask.id);
+    expect(state.tasks[travelTask.id]?.interest_id).toBe("travel");
+    expect(state.user_tasks[authA.user.id]).toContain(travelTask.id);
+    expect(state.tasks[otherUserSpaceTask.id]?.interest_id).toBe("space");
+    expect(state.user_tasks[authB.user.id]).toContain(otherUserSpaceTask.id);
+    expect(
+      problem(handleTasks(req("GET", `/tasks/${spaceTask.id}`, undefined, authA.access_token)))
+    ).toMatchObject({ status: 404, code: "not_found" });
   });
 
   it("marks a single notification read and leaves missing ids as a no-op", () => {

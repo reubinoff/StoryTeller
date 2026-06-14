@@ -225,7 +225,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const setInterests = useCallback(async (ids: InterestId[]) => {
     await api.me.setInterests(ids);
     setUserState((prev) => (prev ? { ...prev, interests: ids } : prev));
-  }, []);
+    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    void queryClient.invalidateQueries({ queryKey: ["me", "dashboard"] });
+  }, [queryClient]);
 
   const completeOnboarding = useCallback(async (data: CompleteOnboardingRequest) => {
     const updated = await api.me.completeOnboarding(data);

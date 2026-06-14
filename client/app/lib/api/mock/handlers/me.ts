@@ -139,6 +139,21 @@ function validateInterestIds(interestIds: unknown): InterestId[] | MockResponse<
   return interestIds as InterestId[];
 }
 
+function removeTasksForDroppedInterests(user: User, nextInterests: InterestId[]): void {
+  const state = getState();
+  const removed = new Set(user.interests.filter((id) => !nextInterests.includes(id)));
+  if (removed.size === 0) return;
+
+  const taskIds = state.user_tasks[user.id] ?? [];
+  state.user_tasks[user.id] = taskIds.filter((taskId) => {
+    const task = state.tasks[taskId];
+    if (!task || !removed.has(task.interest_id)) return true;
+    delete state.tasks[taskId];
+    delete state.drafts[taskId];
+    return false;
+  });
+}
+
 function recentTasks(userId: string): RecentTask[] {
   const state = getState();
   const taskIds = state.user_tasks[userId] ?? [];
@@ -279,6 +294,7 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
     const body = req.body as { interest_ids: InterestId[] };
     const ids = validateInterestIds(body?.interest_ids);
     if (!Array.isArray(ids)) return ids;
+    removeTasksForDroppedInterests(user, ids);
     user.interests = ids;
     commit();
     return ok({ interests: ids });
@@ -295,6 +311,7 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
     }
     const ids = validateInterestIds(body.interest_ids);
     if (!Array.isArray(ids)) return ids;
+    removeTasksForDroppedInterests(user, ids);
     user.year_of_birth = body.year_of_birth;
     user.grade_level = body.grade_level;
     user.interests = ids;

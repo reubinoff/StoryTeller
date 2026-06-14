@@ -157,7 +157,9 @@ Replaces the user's interest selection.
 { "interests": ["animals", "space", "games"] }
 ```
 
-Server enforces `1 ≤ length ≤ 6`.
+Server enforces `1 ≤ length ≤ 6`. When an interest is removed from the
+selection, the server deletes that user's tasks for the removed interest across
+all statuses. Other users' tasks and shared generated content remain unchanged.
 
 ### `PUT /me/onboarding`
 

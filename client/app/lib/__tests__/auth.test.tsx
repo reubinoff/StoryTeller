@@ -304,6 +304,7 @@ describe("signout", () => {
 
 describe("setInterests", () => {
   it("updates the user's interests", async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     vi.mocked(api.auth.login).mockResolvedValue(mockAuthResponse);
     vi.mocked(api.me.setInterests).mockResolvedValue({ interests: ["animals", "space"] });
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -316,6 +317,8 @@ describe("setInterests", () => {
     await waitFor(() =>
       expect(result.current.user?.interests).toEqual(["animals", "space"])
     );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["me", "dashboard"] });
   });
 });
 

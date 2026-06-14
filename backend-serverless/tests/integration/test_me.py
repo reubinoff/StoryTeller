@@ -8,7 +8,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.db.models.user import User
-from tests.integration._helpers import signup_and_login
+from tests.integration._helpers import set_interests, signup_and_login
 
 
 @pytest.mark.parametrize(
@@ -115,6 +115,86 @@ async def test_put_interests_replaces_selection(client: AsyncClient) -> None:
     assert resp.json()["interests"] == ["space", "animals", "tech"]
     me = await client.get("/me", headers=headers)
     assert me.json()["interests"] == ["space", "animals", "tech"]
+
+
+@pytest.mark.asyncio
+async def test_put_interests_removes_only_current_users_dropped_interest_tasks(
+    client: AsyncClient,
+) -> None:
+    _user_a, headers_a = await signup_and_login(client, email="user-a@example.com")
+    await set_interests(client, headers_a, ["space", "travel"])
+
+    space = await client.post(
+        "/courses/reading/tasks",
+        headers=headers_a,
+        json={"interest_id": "space"},
+    )
+    assert space.status_code == 201, space.text
+    space_task = space.json()
+    answers = []
+    for question in space_task["reading"]["questions"]:
+        if question["question_type"] == "multiple_choice":
+            answers.append({"question_id": question["id"], "answer": 0})
+        elif question["question_type"] == "true_false":
+            answers.append({"question_id": question["id"], "answer": "True"})
+        else:
+            answers.append({"question_id": question["id"], "answer": "things"})
+    submitted = await client.post(
+        f"/tasks/{space_task['id']}/submit",
+        headers=headers_a,
+        json={"answers": answers},
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["status"] == "completed"
+
+    travel = await client.post(
+        "/courses/writing/tasks",
+        headers=headers_a,
+        json={"interest_id": "travel"},
+    )
+    assert travel.status_code == 201, travel.text
+    travel_task_id = travel.json()["id"]
+
+    _user_b, headers_b = await signup_and_login(client, email="user-b@example.com")
+    await set_interests(client, headers_b, ["space"])
+    other_user_space = await client.post(
+        "/courses/reading/tasks",
+        headers=headers_b,
+        json={"interest_id": "space"},
+    )
+    assert other_user_space.status_code == 201, other_user_space.text
+    other_user_space_task_id = other_user_space.json()["id"]
+
+    resp = await client.put(
+        "/me/interests",
+        headers=headers_a,
+        json={"interest_ids": ["travel"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"interests": ["travel"]}
+
+    deleted = await client.get(f"/tasks/{space_task['id']}", headers=headers_a)
+    assert deleted.status_code == 404
+
+    kept = await client.get(f"/tasks/{travel_task_id}", headers=headers_a)
+    assert kept.status_code == 200
+    assert kept.json()["interest_id"] == "travel"
+
+    other_kept = await client.get(
+        f"/tasks/{other_user_space_task_id}", headers=headers_b
+    )
+    assert other_kept.status_code == 200
+    assert other_kept.json()["interest_id"] == "space"
+
+    tasks = await client.get("/tasks", headers=headers_a)
+    assert tasks.status_code == 200
+    items = tasks.json()["items"]
+    assert all(item["interest_id"] != "space" for item in items)
+    assert any(item["id"] == travel_task_id for item in items)
+
+    metrics = await client.get("/me/metrics", headers=headers_a)
+    assert metrics.status_code == 200
+    assert metrics.json()["tasks_completed"] == 0
 
 
 @pytest.mark.asyncio
