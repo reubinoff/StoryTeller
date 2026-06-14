@@ -11,6 +11,15 @@ from tests.__conftest_helpers__ import WRITING_EVAL_RESPONSE
 from tests.integration._helpers import set_interests, signup_and_login
 
 
+def _assert_problem_response(resp, *, status_code: int, code: str) -> dict[str, object]:
+    assert resp.status_code == status_code, resp.text
+    assert resp.headers["content-type"].startswith("application/problem+json")
+    body = resp.json()
+    assert body["status"] == status_code
+    assert body["code"] == code
+    return body
+
+
 @pytest.mark.asyncio
 async def test_roll_reading_task_with_empty_cache_calls_claude(
     client: AsyncClient, claude_stub
@@ -115,6 +124,26 @@ async def test_roll_with_no_interests_returns_422(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_roll_unknown_interest_returns_422_problem_json(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    resp = await client.post(
+        "/courses/reading/tasks",
+        headers=headers,
+        json={"interest_id": "not-a-real-interest"},
+    )
+
+    body = _assert_problem_response(resp, status_code=422, code="validation_error")
+    assert body["errors"] == [
+        {
+            "field": "interest_id",
+            "message": "Unknown interest: not-a-real-interest",
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_roll_unknown_course_returns_404(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["space"])
@@ -165,6 +194,16 @@ async def test_get_task_masks_correct_answer_until_completed(
 
 
 @pytest.mark.asyncio
+async def test_get_task_with_invalid_uuid_returns_404_problem_json(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    resp = await client.get("/tasks/not-a-uuid", headers=headers)
+
+    _assert_problem_response(resp, status_code=404, code="not_found")
+
+
+@pytest.mark.asyncio
 async def test_start_task_is_idempotent(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["space"])
@@ -201,6 +240,77 @@ async def test_answer_endpoint_does_not_reveal_correctness(
     assert resp.status_code == 200
     body = resp.json()
     assert body == {"accepted": True}
+
+
+@pytest.mark.asyncio
+async def test_wrong_course_mutations_return_invalid_state(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space", "travel"])
+    reading = await client.post(
+        "/courses/reading/tasks",
+        headers=headers,
+        json={"interest_id": "space"},
+    )
+    writing = await client.post(
+        "/courses/writing/tasks",
+        headers=headers,
+        json={"interest_id": "travel"},
+    )
+    reading_id = reading.json()["id"]
+    writing_id = writing.json()["id"]
+
+    draft_reading = await client.post(
+        f"/tasks/{reading_id}/draft",
+        headers=headers,
+        json={"text": "draft"},
+    )
+    _assert_problem_response(draft_reading, status_code=400, code="invalid_state")
+
+    answer_writing = await client.post(
+        f"/tasks/{writing_id}/answer",
+        headers=headers,
+        json={"question_id": str(uuid.uuid4()), "answer": "Nope"},
+    )
+    _assert_problem_response(answer_writing, status_code=400, code="invalid_state")
+
+    retry_reading = await client.post(f"/tasks/{reading_id}/retry", headers=headers)
+    _assert_problem_response(retry_reading, status_code=400, code="invalid_state")
+
+
+@pytest.mark.asyncio
+async def test_malformed_reading_submit_body_returns_422_problem_json(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space"])
+    rolled = await client.post("/courses/reading/tasks", headers=headers, json={})
+    task_id = rolled.json()["id"]
+
+    resp = await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers,
+        json={"answers": [{"question_id": "not-a-uuid", "answer": 0}]},
+    )
+
+    body = _assert_problem_response(resp, status_code=422, code="validation_error")
+    assert body["errors"][0]["field"] == "answers.0.question_id"
+
+
+@pytest.mark.asyncio
+async def test_malformed_writing_submit_body_returns_422_problem_json(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+    task_id = rolled.json()["id"]
+
+    resp = await client.post(f"/tasks/{task_id}/submit", headers=headers, json={})
+
+    body = _assert_problem_response(resp, status_code=422, code="validation_error")
+    assert body["errors"][0]["field"] == "full_text"
 
 
 @pytest.mark.asyncio
@@ -346,6 +456,38 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rbody["evaluation"] is not None
     assert rbody["evaluation"]["score_overall"] == 84
     assert rbody["answer_text"].startswith("I would love")
+
+
+@pytest.mark.asyncio
+async def test_completed_writing_rejects_submit_retry_and_redo(
+    client: AsyncClient,
+) -> None:
+    from app.services.evaluation_service import run_writing_evaluation
+
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+    task_id = rolled.json()["id"]
+    submit = await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers,
+        json={"full_text": "Kyoto is amazing because of bamboo and tea."},
+    )
+    assert submit.status_code == 202
+    await run_writing_evaluation(uuid.UUID(task_id))
+
+    resubmit = await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers,
+        json={"full_text": "Trying to submit twice."},
+    )
+    _assert_problem_response(resubmit, status_code=400, code="invalid_state")
+
+    retry = await client.post(f"/tasks/{task_id}/retry", headers=headers)
+    _assert_problem_response(retry, status_code=400, code="invalid_state")
+
+    redo = await client.post(f"/tasks/{task_id}/redo", headers=headers)
+    _assert_problem_response(redo, status_code=400, code="invalid_state")
 
 
 @pytest.mark.asyncio

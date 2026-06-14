@@ -10,6 +10,7 @@ import type {
   CourseId,
   RollTaskRequest,
   SubmitTaskRequest,
+  SubmitTaskResponse,
   Task,
   TaskStatus,
   UpdateUserRequest,
@@ -129,7 +130,7 @@ export function useAnswerQuestion(taskId: string) {
 
 export function useSubmitTask(
   options?: UseMutationOptions<
-    Task,
+    SubmitTaskResponse,
     unknown,
     { taskId: string; body: SubmitTaskRequest }
   >
@@ -139,7 +140,11 @@ export function useSubmitTask(
   return useMutation({
     mutationFn: ({ taskId, body }) => api.tasks.submit(taskId, body),
     onSuccess: (data, vars, onMutateResult, ctx) => {
-      qc.setQueryData(queryKeys.task(data.id), data);
+      if ("course_type" in data) {
+        qc.setQueryData(queryKeys.task(data.id), data);
+      } else {
+        void qc.invalidateQueries({ queryKey: queryKeys.task(vars.taskId) });
+      }
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
       callerOnSuccess?.(data, vars, onMutateResult, ctx);

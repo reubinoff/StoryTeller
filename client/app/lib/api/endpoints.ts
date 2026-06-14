@@ -22,11 +22,13 @@ import type {
   RollTaskRequest,
   SignupRequest,
   SubmitTaskRequest,
+  SubmitTaskResponse,
   Task,
   TaskResult,
   TaskStatus,
   UpdateUserRequest,
   User,
+  WritingSubmitAccepted,
 } from "./types";
 
 export const api = {
@@ -61,6 +63,8 @@ export const api = {
     dashboard: () => request<DashboardResponse>("/me/dashboard"),
     achievements: () => request<Achievement[]>("/me/achievements"),
     notifications: () => request<Page<Notification>>("/me/notifications"),
+    notificationRead: (id: string) =>
+      request<null>(`/me/notifications/${id}/read`, { method: "POST" }),
     notificationsReadAll: () =>
       request<null>("/me/notifications/read-all", { method: "POST" }),
   },
@@ -83,14 +87,14 @@ export const api = {
         body,
       }),
     submit: (id: string, body: SubmitTaskRequest) =>
-      request<Task>(`/tasks/${id}/submit`, { method: "POST", body }),
+      request<SubmitTaskResponse>(`/tasks/${id}/submit`, { method: "POST", body }),
     saveDraft: (id: string, text: string) =>
       request<{ saved_at: string }>(`/tasks/${id}/draft`, {
         method: "POST",
         body: { text },
       }),
     retry: (id: string) =>
-      request<Task>(`/tasks/${id}/retry`, { method: "POST" }),
+      request<WritingSubmitAccepted>(`/tasks/${id}/retry`, { method: "POST" }),
     redo: (id: string) =>
       request<Task>(`/tasks/${id}/redo`, { method: "POST" }),
     result: (id: string) => request<TaskResult>(`/tasks/${id}/result`),

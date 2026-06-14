@@ -13,6 +13,7 @@ import type {
 import { PASSING_SCORE } from "../../types";
 import { ACHIEVEMENTS_TEMPLATE, COURSES, commit, getState } from "../db";
 import { err, ok, pathParts, type MockRequest, type MockResponse } from "../router";
+import { TOPIC_BY_ID } from "~/lib/topics";
 
 function getCurrentUser(token: string | null): User | null {
   const state = getState();
@@ -108,6 +109,34 @@ function computeProgress(task: Task): TaskProgress | null {
 
 function taskPassed(task: Task): boolean | null {
   return task.score == null ? null : task.score >= PASSING_SCORE;
+}
+
+function validateInterestIds(interestIds: unknown): InterestId[] | MockResponse<never> {
+  if (!Array.isArray(interestIds)) {
+    return err(422, "validation_error", "interest_ids[] required");
+  }
+  if (interestIds.length < 1 || interestIds.length > 6) {
+    return err(
+      422,
+      "validation_error",
+      "Validation failed",
+      "Choose between 1 and 6 interests.",
+      [{ field: "interest_ids", message: "Choose between 1 and 6 interests." }]
+    );
+  }
+  const unknown = interestIds.filter(
+    (id): id is string => typeof id !== "string" || !TOPIC_BY_ID[id as InterestId]
+  );
+  if (unknown.length > 0) {
+    return err(
+      422,
+      "validation_error",
+      "Validation failed",
+      "Unknown interest slug",
+      [{ field: "interest_ids", message: `Unknown: ${unknown.join(", ")}` }]
+    );
+  }
+  return interestIds as InterestId[];
 }
 
 function recentTasks(userId: string): RecentTask[] {
@@ -248,10 +277,8 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
 
   if (pathname === "/me/interests" && req.method === "PUT") {
     const body = req.body as { interest_ids: InterestId[] };
-    if (!Array.isArray(body?.interest_ids)) {
-      return err(422, "validation_error", "interest_ids[] required");
-    }
-    const ids = body.interest_ids.slice(0, 6);
+    const ids = validateInterestIds(body?.interest_ids);
+    if (!Array.isArray(ids)) return ids;
     user.interests = ids;
     commit();
     return ok({ interests: ids });
@@ -263,16 +290,14 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
       grade_level?: number;
       interest_ids?: InterestId[];
     };
-    if (
-      !body?.year_of_birth ||
-      !body?.grade_level ||
-      !Array.isArray(body.interest_ids)
-    ) {
+    if (!body?.year_of_birth || !body?.grade_level) {
       return err(422, "validation_error", "Onboarding fields are required");
     }
+    const ids = validateInterestIds(body.interest_ids);
+    if (!Array.isArray(ids)) return ids;
     user.year_of_birth = body.year_of_birth;
     user.grade_level = body.grade_level;
-    user.interests = body.interest_ids.slice(0, 6);
+    user.interests = ids;
     user.onboarding_completed = true;
     commit();
     return ok(user);
@@ -316,6 +341,18 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
       items: state.notifications[user.id] ?? [],
       next_cursor: null,
     });
+  }
+
+  const notificationReadMatch = pathname.match(/^\/me\/notifications\/([^/]+)\/read$/);
+  if (notificationReadMatch && req.method === "POST") {
+    const list = state.notifications[user.id] ?? [];
+    state.notifications[user.id] = list.map<Notification>((n) =>
+      n.id === notificationReadMatch[1]
+        ? { ...n, read_at: n.read_at ?? new Date().toISOString() }
+        : n
+    );
+    commit();
+    return ok(null);
   }
 
   if (pathname === "/me/notifications/read-all" && req.method === "POST") {

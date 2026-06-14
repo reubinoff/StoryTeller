@@ -112,6 +112,18 @@ describe("OnboardingRoute — auth guard", () => {
     const { container } = renderOnboarding();
     expect(container.firstChild).toBeNull();
   });
+
+  it("redirects completed users to the dashboard", async () => {
+    mockAuthState = {
+      user: { ...mockUser, onboarding_completed: true },
+      ready: true,
+      completeOnboarding: mockCompleteOnboarding,
+    };
+    renderOnboarding();
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true })
+    );
+  });
 });
 
 describe("OnboardingRoute — step 1 (welcome)", () => {

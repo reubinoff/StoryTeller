@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskResultRoute from "../task-result";
-import type { ReadingResult, Task } from "~/lib/api/types";
+import type { ReadingResult, Task, WritingResult } from "~/lib/api/types";
 
 const mockNavigate = vi.fn();
 const mockRoll = vi.fn();
@@ -26,7 +26,7 @@ vi.mock("~/lib/auth", () => ({
 }));
 
 let mockTask: Task;
-let mockResult: ReadingResult;
+let mockResult: ReadingResult | WritingResult;
 
 vi.mock("~/lib/api/queries", () => ({
   useTask: () => ({ isLoading: false, data: mockTask }),
@@ -92,6 +92,46 @@ const readingResult = (overrides: Partial<ReadingResult> = {}): ReadingResult =>
   ...overrides,
 });
 
+const writingResult = (overrides: Partial<WritingResult> = {}): WritingResult => ({
+  task_id: "task-1",
+  mode: "writing",
+  status: "completed",
+  answer_text: "I walked through the market and wrote about every smell.",
+  evaluation: {
+    score_overall: 84,
+    score_grammar: 80,
+    score_vocabulary: 82,
+    score_structure: 88,
+    score_relevance: 86,
+    feedback_summary: "Your paragraph stays focused and includes clear details.",
+    feedback_detail: [
+      "The response has a clear setting and enough supporting details.",
+      "Try making the verbs more vivid next time.",
+    ],
+    focus_next: ["sensory details", "stronger verbs"],
+    highlights: [
+      {
+        start: 2,
+        end: 8,
+        kind: "word_choice",
+        message: "Use a stronger verb.",
+      },
+    ],
+  },
+  xp_earned: 62,
+  passed: true,
+  passing_score: 70,
+  submitted_at: "2026-06-01T10:05:00Z",
+  completed_at: "2026-06-01T10:06:00Z",
+  ...overrides,
+});
+
+const resultCardFor = (prompt: string) => {
+  const card = screen.getByText(prompt).closest(".card");
+  if (!card) throw new Error(`No result card found for ${prompt}`);
+  return within(card as HTMLElement);
+};
+
 describe("TaskResultRoute", () => {
   beforeEach(() => {
     mockNavigate.mockReset();
@@ -139,6 +179,106 @@ describe("TaskResultRoute", () => {
     await waitFor(() => {
       expect(mockRedo).toHaveBeenCalledWith("task-1");
       expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-1");
+    });
+  });
+
+  it("shows reading result answers and correct-answer explanations", () => {
+    mockResult = readingResult({
+      score: 1,
+      total: 3,
+      percentage: 33,
+      passed: false,
+      xp_earned: 12,
+      questions: [
+        {
+          id: "q-mc",
+          position: 1,
+          question_type: "multiple_choice",
+          prompt: "Which planet was behind the ridge?",
+          options: ["Moon", "Mars", "Venus"],
+          correct_answer: "1",
+          explanation: "The passage names Mars as the planet behind the ridge.",
+          max_points: 1,
+          user_answer: 0,
+          is_correct: false,
+        },
+        {
+          id: "q-tf",
+          position: 2,
+          question_type: "true_false",
+          prompt: "The rover found a signal.",
+          options: ["True", "False"],
+          correct_answer: "0",
+          explanation: "The rover heard the signal near the ridge.",
+          max_points: 1,
+          user_answer: 0,
+          is_correct: true,
+        },
+        {
+          id: "q-fill",
+          position: 3,
+          question_type: "fill_blank",
+          prompt: "The sky was full of ____.",
+          options: null,
+          correct_answer: "stars",
+          explanation: "The passage says the sky was full of stars.",
+          max_points: 1,
+          user_answer: "clouds",
+          is_correct: false,
+        },
+      ],
+    });
+
+    render(<TaskResultRoute />);
+
+    const multipleChoice = resultCardFor("Which planet was behind the ridge?");
+    expect(multipleChoice.getByText("Moon")).toBeInTheDocument();
+    expect(multipleChoice.getByText("Mars")).toBeInTheDocument();
+    expect(multipleChoice.getByText(/The passage names Mars/i)).toBeInTheDocument();
+
+    const trueFalse = resultCardFor("The rover found a signal.");
+    expect(trueFalse.getByText("Correct")).toBeInTheDocument();
+    expect(trueFalse.getAllByText("True")).toHaveLength(2);
+
+    const fillBlank = resultCardFor("The sky was full of ____.");
+    expect(fillBlank.getByText("clouds")).toBeInTheDocument();
+    expect(fillBlank.getByText("stars")).toBeInTheDocument();
+    expect(fillBlank.getByText(/sky was full of stars/i)).toBeInTheDocument();
+  });
+
+  it("shows the pending writing result branch while feedback is processing", () => {
+    mockResult = writingResult({
+      status: "processing",
+      evaluation: null,
+      passed: null,
+      completed_at: null,
+    });
+
+    render(<TaskResultRoute />);
+
+    expect(screen.getByText(/still cooking/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/we'll notify you when the feedback is ready/i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows completed writing feedback with highlights and next-task action", async () => {
+    mockResult = writingResult();
+    mockRoll.mockResolvedValue({ id: "task-writing-next", status: "not_started" });
+
+    render(<TaskResultRoute />);
+
+    expect(screen.getByText(/nicely done, Maya/i)).toBeInTheDocument();
+    expect(screen.getByText("84")).toBeInTheDocument();
+    expect(screen.getByText(/clear details/i)).toBeInTheDocument();
+    expect(screen.getByTitle("Use a stronger verb.")).toHaveTextContent("walked");
+    expect(screen.getByText("sensory details")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
+
+    await waitFor(() => {
+      expect(mockRoll).toHaveBeenCalledWith({ courseId: "writing" });
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next");
     });
   });
 });

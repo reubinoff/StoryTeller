@@ -101,6 +101,35 @@ async def test_dashboard_in_progress_includes_needs_retry_task(
 
 
 @pytest.mark.asyncio
+async def test_dashboard_writing_progress_caps_at_one_hundred_percent(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+    task_id = rolled.json()["id"]
+    draft = " ".join(f"word{i}" for i in range(75))
+    saved = await client.post(
+        f"/tasks/{task_id}/draft",
+        headers=headers,
+        json={"text": draft},
+    )
+    assert saved.status_code == 200
+
+    dash = await client.get("/me/dashboard", headers=headers)
+    assert dash.status_code == 200
+    items = dash.json()["in_progress"]
+    item = next(t for t in items if t["id"] == task_id)
+    assert item["status"] == "in_progress"
+    assert item["progress"] == {
+        "current": 75,
+        "total": 60,
+        "percentage": 100,
+        "label": "75 / 60 words",
+    }
+
+
+@pytest.mark.asyncio
 async def test_achievements_returns_full_catalog(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     resp = await client.get("/me/achievements", headers=headers)
@@ -161,3 +190,54 @@ async def test_mark_all_notifications_read(client: AsyncClient) -> None:
     notifs = await client.get("/me/notifications", headers=headers)
     items = notifs.json()["items"]
     assert all(n["read_at"] is not None for n in items)
+
+
+@pytest.mark.asyncio
+async def test_mark_all_notifications_read_with_empty_inbox_is_noop(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+
+    resp = await client.post("/me/notifications/read-all", headers=headers)
+    assert resp.status_code == 204
+
+    notifs = await client.get("/me/notifications", headers=headers)
+    assert notifs.status_code == 200
+    assert notifs.json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_user_cannot_mark_another_users_notification_read(
+    client: AsyncClient,
+) -> None:
+    from app.services.evaluation_service import run_writing_evaluation
+
+    _user_a, headers_a = await signup_and_login(
+        client,
+        email="user-a@example.com",
+    )
+    await set_interests(client, headers_a, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers_a, json={})
+    task_id = rolled.json()["id"]
+    await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers_a,
+        json={"full_text": "Kyoto is amazing because of bamboo and tea."},
+    )
+    await run_writing_evaluation(uuid.UUID(task_id))
+    notifs = await client.get("/me/notifications", headers=headers_a)
+    notification = notifs.json()["items"][0]
+    assert notification["read_at"] is None
+
+    _user_b, headers_b = await signup_and_login(
+        client,
+        email="user-b@example.com",
+    )
+    resp = await client.post(
+        f"/me/notifications/{notification['id']}/read",
+        headers=headers_b,
+    )
+    assert resp.status_code == 204
+
+    notifs_after = await client.get("/me/notifications", headers=headers_a)
+    assert notifs_after.json()["items"][0]["read_at"] is None

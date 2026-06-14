@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardRoute from "../dashboard";
-import type { DashboardResponse, User } from "~/lib/api/types";
+import type { DashboardResponse, RecentTask, User } from "~/lib/api/types";
 
 const mockNavigate = vi.fn();
 
@@ -23,7 +23,7 @@ let mockRollTask: {
   mutateAsync: ReturnType<typeof vi.fn>;
 };
 
-const dashboardData: DashboardResponse = {
+const baseDashboardData: DashboardResponse = {
   greeting: "Hi Maya",
   metrics: {
     tasks_completed: 4,
@@ -40,8 +40,13 @@ const dashboardData: DashboardResponse = {
   achievements_recent: [],
 };
 
+let mockDashboard: {
+  isLoading: boolean;
+  data?: DashboardResponse;
+};
+
 vi.mock("~/lib/api/queries", () => ({
-  useDashboard: () => ({ isLoading: false, data: dashboardData }),
+  useDashboard: () => mockDashboard,
   useRollTask: () => mockRollTask,
 }));
 
@@ -68,11 +73,145 @@ const mockUser: User = {
   onboarding_completed: true,
 };
 
+const recentTask = (overrides: Partial<RecentTask>): RecentTask => ({
+  id: "task-1",
+  course: "Story Reading",
+  course_type: "unseen_text",
+  topic: "Moon mystery",
+  status: "in_progress",
+  score: null,
+  when: "Today",
+  progress: null,
+  passed: null,
+  passing_score: 70,
+  ...overrides,
+});
+
 vi.mock("~/lib/auth", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 
 describe("DashboardRoute", () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockPush.mockReset();
+    mockDashboard = {
+      isLoading: false,
+      data: {
+        ...baseDashboardData,
+        metrics: { ...baseDashboardData.metrics },
+        in_progress: [],
+        recent: [],
+        recommended: [],
+        achievements_recent: [],
+      },
+    };
+    mockRollTask = {
+      isPending: false,
+      mutateAsync: vi.fn(),
+    };
+  });
+
+  it("shows the loading state while dashboard data is unavailable", () => {
+    mockDashboard = { isLoading: true };
+
+    const { container } = render(<DashboardRoute />);
+
+    expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(/ready for today's story practice/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows loaded metrics and empty dashboard sections", () => {
+    render(<DashboardRoute />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: /hi maya! ready for today's story practice/i,
+      }),
+    ).toBeInTheDocument();
+    expect(metricCard("Tasks completed")).toHaveTextContent("4");
+    expect(metricCard("Current streak")).toHaveTextContent("7 days");
+    expect(metricCard("Average score")).toHaveTextContent("86%");
+    expect(metricCard("Total XP")).toHaveTextContent("1,240");
+    expect(screen.getByText("No tasks in progress.")).toBeInTheDocument();
+    expect(screen.getByText("0 of 0").parentElement).toHaveTextContent(
+      "badges earned",
+    );
+  });
+
+  it("rolls tasks from the dashboard and routes to the returned task", async () => {
+    mockRollTask.mutateAsync.mockResolvedValue({
+      id: "task-new",
+      status: "not_started",
+    });
+
+    render(<DashboardRoute />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /roll a reading task/i }),
+    );
+
+    await waitFor(() => {
+      expect(mockRollTask.mutateAsync).toHaveBeenCalledWith({
+        courseId: "reading",
+      });
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-new");
+    });
+  });
+
+  it("surfaces roll failures from the dashboard", async () => {
+    mockRollTask.mutateAsync.mockRejectedValue(new Error("roll failed"));
+
+    render(<DashboardRoute />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /roll a writing task/i }),
+    );
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        icon: "⚠️",
+        title: "Couldn't roll a task. Try again.",
+      }),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("routes recent tasks to active tasks or result pages", () => {
+    mockDashboard.data = {
+      ...(mockDashboard.data as DashboardResponse),
+      recent: [
+        recentTask({
+          id: "active-task",
+          topic: "Moon mystery",
+          status: "in_progress",
+        }),
+        recentTask({
+          id: "completed-task",
+          topic: "Garden story",
+          status: "completed",
+          score: 92,
+        }),
+      ],
+    };
+
+    render(<DashboardRoute />);
+
+    const activeRow = screen.getByText("Moon mystery").closest("tr");
+    const completedRow = screen.getByText("Garden story").closest("tr");
+
+    expect(activeRow).not.toBeNull();
+    expect(completedRow).not.toBeNull();
+
+    fireEvent.click(activeRow as HTMLElement);
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/active-task");
+
+    fireEvent.keyDown(completedRow as HTMLElement, { key: "Enter" });
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/completed-task/result");
+  });
+
   it("shows a visible progress state while a reading task is rolling", () => {
     mockRollTask = {
       isPending: true,
@@ -83,13 +222,19 @@ describe("DashboardRoute", () => {
     render(<DashboardRoute />);
 
     expect(
-      screen.getByRole("button", { name: /generating reading/i })
+      screen.getByRole("button", { name: /generating reading/i }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("status", { name: /generating your reading task/i })
+      screen.getByRole("status", { name: /generating your reading task/i }),
     ).toHaveTextContent("Building a fresh passage and questions");
     expect(
-      screen.getByRole("progressbar", { name: /task generation in progress/i })
+      screen.getByRole("progressbar", { name: /task generation in progress/i }),
     ).toBeInTheDocument();
   });
 });
+
+function metricCard(label: string): HTMLElement {
+  const card = screen.getByText(label).closest(".card");
+  if (!card) throw new Error(`No metric card found for ${label}`);
+  return card as HTMLElement;
+}

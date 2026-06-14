@@ -63,6 +63,16 @@ function pickWritingContent(interestId?: InterestId): WritingPromptContent {
   return WRITING_BANK[0];
 }
 
+function isKnownInterest(interestId: string | undefined): interestId is InterestId {
+  return Boolean(interestId && TOPIC_BY_ID[interestId as InterestId]);
+}
+
+function getOwnedTask(userId: string, taskId: string): Task | null {
+  const task = getState().tasks[taskId];
+  if (!task || task.user_id !== userId) return null;
+  return task;
+}
+
 function buildReadingPayload(content: ReadingContent): {
   payload: ReadingPayload;
   correct: Map<string, { type: TaskQuestion["question_type"]; correct: string | string[] }>;
@@ -348,11 +358,32 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   const rollMatch = pathname.match(/^\/courses\/([^/]+)\/tasks$/);
   if (req.method === "POST" && rollMatch) {
     if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const state = getState();
+    const user = state.users[userId];
+    if (!user) return err(401, "unauthenticated", "Sign in required");
     const courseId = rollMatch[1] as CourseId;
     if (courseId !== "reading" && courseId !== "writing") {
       return err(404, "not_found", "Unknown course");
     }
     const body = (req.body ?? {}) as RollTaskRequest;
+    if (body.interest_id && !isKnownInterest(String(body.interest_id))) {
+      return err(
+        422,
+        "validation_error",
+        "Validation failed",
+        `Unknown interest: ${body.interest_id}`,
+        [{ field: "interest_id", message: `Unknown interest: ${body.interest_id}` }]
+      );
+    }
+    if (!body.interest_id && user.interests.length === 0) {
+      return err(
+        422,
+        "validation_error",
+        "No interests selected",
+        "Pick at least one interest before rolling a task.",
+        [{ field: "interest_id", message: "Pick at least one interest first" }]
+      );
+    }
     const task =
       findSameCourseBlocker(userId, courseId) ??
       createTask(userId, courseId, body.interest_id);
@@ -369,7 +400,12 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
       .filter(Boolean)
       .map((t) => publicTask(t));
     const status = query.get("status");
-    const filtered = status ? items.filter((t) => t.status === status) : items;
+    const courseType = query.get("course_type");
+    const limit = Math.max(1, Math.min(100, Number(query.get("limit") ?? 20)));
+    const filtered = items
+      .filter((t) => (status ? t.status === status : true))
+      .filter((t) => (courseType ? t.course_type === courseType : true))
+      .slice(0, Number.isFinite(limit) ? limit : 20);
     return ok({ items: filtered, next_cursor: null });
   }
 
@@ -385,13 +421,15 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   const state = getState();
 
   if (req.method === "GET" && taskMatch) {
-    const task = state.tasks[taskMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, taskMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
     return ok(publicTask(task));
   }
 
   if (req.method === "PATCH" && startMatch) {
-    const task = state.tasks[startMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, startMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
     if (task.status === "not_started") {
       task.status = "in_progress";
@@ -403,7 +441,8 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   }
 
   if (req.method === "POST" && answerMatch) {
-    const task = state.tasks[answerMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, answerMatch[1]);
     if (!task || !task.reading) return err(404, "not_found", "Task not found");
     const body = req.body as AnswerQuestionRequest;
     if (!body?.question_id) {
@@ -424,7 +463,8 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   }
 
   if (req.method === "POST" && submitMatch) {
-    const task = state.tasks[submitMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, submitMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
     const body = (req.body ?? {}) as SubmitTaskRequest;
 
@@ -482,7 +522,8 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   }
 
   if (req.method === "POST" && draftMatch) {
-    const task = state.tasks[draftMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, draftMatch[1]);
     if (!task || !task.writing) return err(404, "not_found", "Task not found");
     const body = req.body as { text: string };
     task.writing.draft = body.text ?? "";
@@ -493,19 +534,28 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   }
 
   if (req.method === "POST" && retryMatch) {
-    const task = state.tasks[retryMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, retryMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
+    if (task.course_type !== "short_writing" || task.status !== "failed") {
+      return err(400, "invalid_state", "Only failed writing tasks can be retried");
+    }
     task.status = "processing";
     task.failed_at = null;
     task.fail_reason = null;
     task.updated_at = new Date().toISOString();
     commit();
     if (userId) scheduleWritingEvaluation(task.id, userId);
-    return ok(publicTask(task));
+    return ok({
+      id: task.id,
+      status: task.status,
+      submitted_at: task.submitted_at,
+    });
   }
 
   if (req.method === "POST" && redoMatch) {
-    const task = state.tasks[redoMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, redoMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
     if (task.status !== "needs_retry") {
       return err(400, "invalid_state", "Only tasks that need retry can be redone");
@@ -536,10 +586,14 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   }
 
   if (req.method === "GET" && resultMatch) {
-    const task = state.tasks[resultMatch[1]];
+    if (!userId) return err(401, "unauthenticated", "Sign in required");
+    const task = getOwnedTask(userId, resultMatch[1]);
     if (!task) return err(404, "not_found", "Task not found");
 
     if (task.course_type === "unseen_text" && task.reading) {
+      if (task.status !== "completed" && task.status !== "needs_retry") {
+        return err(400, "invalid_state", "Task is not completed yet");
+      }
       const correctMap = getCorrectMap(task);
       const userAnswers =
         ((task as unknown as { _answers?: Record<string, string | number> })._answers) ??

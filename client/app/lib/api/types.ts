@@ -218,6 +218,19 @@ export type SubmitTaskRequest =
   | { full_text: string }
   | { answers: Array<{ question_id: UUID; answer: string | number }> };
 
+export interface ReadingSubmitResponse extends Task {
+  correct_count: number;
+  total: number;
+}
+
+export interface WritingSubmitAccepted {
+  id: UUID;
+  status: TaskStatus;
+  submitted_at: ISO8601 | null;
+}
+
+export type SubmitTaskResponse = ReadingSubmitResponse | WritingSubmitAccepted;
+
 export interface ReadingResult {
   task_id: UUID;
   mode: "reading";

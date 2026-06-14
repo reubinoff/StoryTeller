@@ -81,16 +81,105 @@ describe("TasksRoute", () => {
     expect(completedRow).not.toBeNull();
 
     fireEvent.click(
-      within(activeRow as HTMLElement).getByRole("button", { name: /resume/i })
+      within(activeRow as HTMLElement).getByRole("button", { name: /resume/i }),
     );
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-active");
 
     fireEvent.click(
       within(completedRow as HTMLElement).getByRole("button", {
         name: /view result/i,
-      })
+      }),
     );
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-done/result");
+  });
+
+  it("shows loading, error, and empty states", () => {
+    mockTaskList = {
+      isLoading: true,
+      isError: false,
+      refetch: vi.fn(),
+    };
+
+    const { rerender } = render(<TasksRoute />);
+
+    expect(screen.getByLabelText("Loading tasks")).toBeInTheDocument();
+
+    const refetch = vi.fn();
+    mockTaskList = {
+      isLoading: false,
+      isError: true,
+      refetch,
+    };
+    rerender(<TasksRoute />);
+
+    expect(screen.getByText("Tasks could not load")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(refetch).toHaveBeenCalled();
+
+    mockTaskList = {
+      isLoading: false,
+      isError: false,
+      data: { items: [], next_cursor: null },
+      refetch: vi.fn(),
+    };
+    rerender(<TasksRoute />);
+
+    expect(screen.getByText("No tasks yet")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: /new task/i })[1]);
+    expect(mockNavigate).toHaveBeenCalledWith("/courses");
+  });
+
+  it("sorts tasks by newest update and summarizes task stats", () => {
+    mockTaskList.data = {
+      items: [
+        task({
+          id: "old-failed",
+          title: "Old Failed",
+          status: "failed",
+          updated_at: "2026-06-01T10:00:00Z",
+          failed_at: "2026-06-01T10:00:00Z",
+        }),
+        task({
+          id: "new-completed",
+          title: "New Completed",
+          status: "completed",
+          score: 90,
+          completed_at: "2026-06-03T10:00:00Z",
+          updated_at: "2026-06-03T10:00:00Z",
+        }),
+        task({
+          id: "middle-active",
+          title: "Middle Active",
+          status: "processing",
+          updated_at: "2026-06-02T10:00:00Z",
+        }),
+        task({
+          id: "older-completed",
+          title: "Older Completed",
+          status: "completed",
+          score: 70,
+          completed_at: "2026-05-31T10:00:00Z",
+          updated_at: "2026-05-31T10:00:00Z",
+        }),
+      ],
+      next_cursor: null,
+    };
+
+    render(<TasksRoute />);
+
+    expect(taskStat("Active")).toHaveTextContent("1");
+    expect(taskStat("Completed")).toHaveTextContent("2");
+    expect(taskStat("Average score")).toHaveTextContent("80%");
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual([
+      "New Completed",
+      "Middle Active",
+      "Old Failed",
+      "Older Completed",
+    ]);
   });
 
   it("filters the task history by completion state", () => {
@@ -113,5 +202,18 @@ describe("TasksRoute", () => {
 
     expect(screen.getByText("Garden Story")).toBeInTheDocument();
     expect(screen.queryByText("Lost Moon")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Failed" }));
+
+    expect(screen.getByText("No failed tasks")).toBeInTheDocument();
   });
 });
+
+function taskStat(label: string): HTMLElement {
+  const labelNode = Array.from(
+    document.querySelectorAll(".task-stat-label"),
+  ).find((node) => node.textContent === label);
+  const stat = labelNode?.closest(".task-stat");
+  if (!stat) throw new Error(`No task stat found for ${label}`);
+  return stat as HTMLElement;
+}

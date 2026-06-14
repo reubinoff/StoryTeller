@@ -109,16 +109,110 @@ describe("SettingsRoute", () => {
 
     await waitFor(() =>
       expect(mockUpdateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({ theme_preference: "dark" })
-      )
+        expect.objectContaining({ theme_preference: "dark" }),
+      ),
     );
     expect(mockSetInterests).toHaveBeenCalledWith(["animals"]);
     expect(mockSetUser).toHaveBeenCalledWith(
       expect.objectContaining({
         theme_preference: "dark",
         interests: ["animals"],
-      })
+      }),
     );
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
   });
+
+  it("saves profile preferences, interests, and notification choices", async () => {
+    const user = userEvent.setup();
+    mockUpdateProfile.mockResolvedValue({
+      ...mockUser,
+      first_name: "Mira",
+      last_name: "Stone",
+      phone_number: "+1 555 0100",
+      text_size_preference: "lg",
+      reduce_motion: true,
+      notif_email_enabled: false,
+      notif_inapp_enabled: false,
+    });
+
+    render(<SettingsRoute />);
+
+    const firstNameInput = screen.getByDisplayValue("Maya");
+    const lastNameInput = screen.getByDisplayValue("Patel");
+    const phoneInput = screen.getByPlaceholderText("+1 555 0100");
+
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, "Mira");
+    await user.clear(lastNameInput);
+    await user.type(lastNameInput, "Stone");
+    await user.type(phoneInput, "+1 555 0100");
+    await user.click(screen.getByRole("button", { name: "Large" }));
+    await user.click(rowActionButton("Reduce motion"));
+    await user.click(rowActionButton("Email reminders"));
+    await user.click(rowActionButton("In-app notifications"));
+    await user.click(screen.getByRole("button", { name: /animals & pets/i }));
+    await user.click(
+      screen.getByRole("button", { name: /space & astronomy/i }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /animals & pets/i }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByRole("button", { name: /space & astronomy/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("1 of 6 selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(mockUpdateProfile).toHaveBeenCalledWith({
+        first_name: "Mira",
+        last_name: "Stone",
+        phone_number: "+1 555 0100",
+        theme_preference: "auto",
+        text_size_preference: "lg",
+        reduce_motion: true,
+        notif_email_enabled: false,
+        notif_inapp_enabled: false,
+      }),
+    );
+    expect(mockSetInterests).toHaveBeenCalledWith(["space"]);
+    expect(mockSetUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        first_name: "Mira",
+        last_name: "Stone",
+        phone_number: "+1 555 0100",
+        interests: ["space"],
+      }),
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("shows a toast and stays put when saving fails", async () => {
+    const user = userEvent.setup();
+    mockUpdateProfile.mockRejectedValue(new Error("save failed"));
+
+    render(<SettingsRoute />);
+
+    await user.click(screen.getByRole("button", { name: "Small" }));
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        icon: "⚠️",
+        title: "Couldn't save settings",
+      }),
+    );
+    expect(mockSetInterests).not.toHaveBeenCalled();
+    expect(mockSetUser).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });
+
+function rowActionButton(label: string): HTMLButtonElement {
+  const row = screen.getByText(label).closest(".row");
+  const button = row?.querySelector("button");
+  if (!button) throw new Error(`No action button found for ${label}`);
+  return button;
+}

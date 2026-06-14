@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
+from app.db.models.user import User
 from tests.integration._helpers import signup_and_login
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [
+        "Bearer",
+        "Basic not-a-bearer-token",
+        "Bearer not-a-jwt",
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_me_rejects_malformed_or_invalid_auth_headers(
+    client: AsyncClient, authorization: str
+) -> None:
+    resp = await client.get("/me", headers={"Authorization": authorization})
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "unauthenticated"
 
 
 @pytest.mark.asyncio
@@ -40,6 +60,24 @@ async def test_get_me_returns_full_user(client: AsyncClient) -> None:
     }
     assert expected_keys.issubset(body.keys())
     assert body["onboarding_completed"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_me_rejects_inactive_user(
+    client: AsyncClient, db_engine
+) -> None:
+    user, headers = await signup_and_login(client)
+    user_id = uuid.UUID(user["id"])
+    _engine, sessionmaker = db_engine
+    async with sessionmaker() as session:
+        db_user = await session.get(User, user_id)
+        assert db_user is not None
+        db_user.status = "suspended"
+        await session.commit()
+
+    resp = await client.get("/me", headers=headers)
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "unauthenticated"
 
 
 @pytest.mark.asyncio
@@ -141,10 +179,29 @@ async def test_delete_me_soft_deletes_and_blocks_future_calls(client: AsyncClien
 
 
 @pytest.mark.asyncio
+async def test_delete_me_blocks_refresh_with_existing_cookie(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client)
+    resp = await client.request("DELETE", "/me", headers=headers, json={"confirm": True})
+    assert resp.status_code == 204
+
+    refresh = await client.post("/auth/refresh")
+    assert refresh.status_code == 401
+    assert refresh.json()["code"] == "unauthenticated"
+
+
+@pytest.mark.asyncio
 async def test_delete_me_requires_confirm_true(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     resp = await client.request("DELETE", "/me", headers=headers, json={"confirm": False})
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_avatar_upload_returns_not_implemented(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client)
+    resp = await client.post("/me/avatar", headers=headers)
+    assert resp.status_code == 501
+    assert resp.json()["code"] == "not_implemented"
 
 
 @pytest.mark.asyncio

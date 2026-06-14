@@ -6,6 +6,8 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Query, status
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.common import Page
@@ -29,6 +31,15 @@ from app.services import task_service
 from app.services.evaluation_queue import EvaluationQueueError, enqueue_writing_evaluation
 
 router = APIRouter(tags=["tasks"])
+
+
+def _model_validate_submit_body[SubmitBody: (ReadingSubmitRequest, WritingSubmitRequest)](
+    model: type[SubmitBody], body: dict[str, object]
+) -> SubmitBody:
+    try:
+        return model.model_validate(body)
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc
 
 
 @router.post(
@@ -145,14 +156,14 @@ async def submit_task(
         db, user_id=current_user.id, task_id=_parse_task_id(task_id)
     )
     if task.course_type == "unseen_text":
-        parsed = ReadingSubmitRequest.model_validate(body)
+        parsed = _model_validate_submit_body(ReadingSubmitRequest, body)
         answers_map: dict[uuid.UUID, str | int] = {a.question_id: a.answer for a in parsed.answers}
         correct, total = await task_service.submit_reading(db, task=task, answers=answers_map)
         out = await task_service.task_to_out(db, task)
         return ReadingSubmitResponse(**out.model_dump(), correct_count=correct, total=total)
 
     if task.course_type == "short_writing":
-        parsed_w = WritingSubmitRequest.model_validate(body)
+        parsed_w = _model_validate_submit_body(WritingSubmitRequest, body)
         task = await task_service.submit_writing(db, task=task, full_text=parsed_w.full_text)
         await _enqueue_evaluation_or_fail(db, task)
         from fastapi.responses import JSONResponse

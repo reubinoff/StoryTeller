@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { ApiError, getAccessToken, setAccessToken } from "../client";
+import { ApiError, buildUrl, getAccessToken, setAccessToken } from "../client";
 
 describe("getAccessToken / setAccessToken", () => {
   beforeEach(() => {
@@ -73,5 +73,22 @@ describe("ApiError", () => {
     };
     const err = new ApiError(problem);
     expect(err.problem).toEqual(problem);
+  });
+});
+
+describe("buildUrl", () => {
+  it("adds a leading slash when the path omits one", () => {
+    expect(buildUrl("tasks")).toBe("/tasks");
+  });
+
+  it("serializes defined query params and skips empty values", () => {
+    expect(
+      buildUrl("/tasks", {
+        status: "completed",
+        limit: 10,
+        cursor: null,
+        ignored: undefined,
+      })
+    ).toBe("/tasks?status=completed&limit=10");
   });
 });

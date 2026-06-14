@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router";
 import LoginRoute from "../login";
+import type { User } from "~/lib/api/types";
 
 // ---------------------------------------------------------------------------
 // Module mocks
@@ -17,15 +18,39 @@ vi.mock("react-router", async (importOriginal) => {
 
 const mockSignin = vi.fn();
 const mockSigninGoogle = vi.fn();
+let mockAuthState: {
+  user: User | null;
+  ready: boolean;
+  signin: ReturnType<typeof vi.fn>;
+  signinGoogle: ReturnType<typeof vi.fn>;
+};
 
 vi.mock("~/lib/auth", () => ({
-  useAuth: () => ({
-    user: null,
-    ready: true,
-    signin: mockSignin,
-    signinGoogle: mockSigninGoogle,
-  }),
+  useAuth: () => mockAuthState,
 }));
+
+const completedUser: User = {
+  id: "user-1",
+  email: "maya@example.com",
+  email_verified: true,
+  first_name: "Maya",
+  last_name: "Patel",
+  year_of_birth: 2014,
+  grade_level: 7,
+  phone_number: null,
+  avatar_url: null,
+  display_locale: "en",
+  theme_preference: "auto",
+  text_size_preference: "md",
+  reduce_motion: false,
+  notif_email_enabled: true,
+  notif_inapp_enabled: true,
+  interests: ["animals"],
+  role: "user",
+  status: "active",
+  created_at: "2024-01-01T00:00:00Z",
+  onboarding_completed: true,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,6 +66,12 @@ function renderLogin(search = "") {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockAuthState = {
+    user: null,
+    ready: true,
+    signin: mockSignin,
+    signinGoogle: mockSigninGoogle,
+  };
 });
 
 // ---------------------------------------------------------------------------
@@ -120,6 +151,14 @@ describe("LoginRoute submission", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/courses"));
   });
 
+  it("falls back to /dashboard when returnTo is unsafe after login", async () => {
+    mockSignin.mockResolvedValue(completedUser);
+    renderLogin("?returnTo=//evil.example/path");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
+  });
+
   it("displays the API error detail on failed login", async () => {
     const { ApiError } = await import("~/lib/api/client");
     mockSignin.mockRejectedValue(
@@ -164,6 +203,17 @@ describe("Google sign-in", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
   });
 
+  it("passes only safe returnTo values to Google sign-in", async () => {
+    mockSigninGoogle.mockResolvedValue(completedUser);
+    renderLogin("?returnTo=https://evil.example/path");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() =>
+      expect(mockSigninGoogle).toHaveBeenCalledWith("/dashboard", "login")
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
   it("shows an error when Google sign-in fails", async () => {
     mockSigninGoogle.mockRejectedValue(new Error("OAuth error"));
     renderLogin();
@@ -172,5 +222,36 @@ describe("Google sign-in", () => {
     await waitFor(() =>
       expect(screen.getByText("Couldn't sign in with Google")).toBeInTheDocument()
     );
+  });
+});
+
+describe("LoginRoute auth redirect", () => {
+  it("redirects authenticated users away from login", async () => {
+    mockAuthState.user = completedUser;
+    renderLogin("?returnTo=/courses");
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/courses", { replace: true })
+    );
+  });
+
+  it("ignores unsafe returnTo values for authenticated users", async () => {
+    mockAuthState.user = completedUser;
+    renderLogin("?returnTo=/login");
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true })
+    );
+  });
+
+  it("does not redirect authenticated users before auth is ready", () => {
+    mockAuthState = {
+      ...mockAuthState,
+      user: completedUser,
+      ready: false,
+    };
+    renderLogin("?returnTo=/courses");
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
