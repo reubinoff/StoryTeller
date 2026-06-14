@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     google_oauth_redirect_uri: str = "http://localhost:7071/api/v1/auth/google/callback"
 
     anthropic_api_key: str = Field(default="")
-    claude_model: str = Field(default="claude-sonnet-4-5-20250929")
+    claude_model: str = Field(default="claude-haiku-4-5-20251001")
     claude_max_tokens: int = 4096
 
     azure_web_jobs_storage: str = Field(
