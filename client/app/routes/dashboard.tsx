@@ -64,8 +64,8 @@ export default function DashboardRoute() {
       <div
         className="card"
         style={{
-          background: "var(--ink)",
-          color: "var(--paper)",
+          background: "var(--dashboard-hero-bg)",
+          color: "var(--dashboard-hero-fg)",
           padding: 32,
           position: "relative",
           overflow: "hidden",
@@ -105,7 +105,7 @@ export default function DashboardRoute() {
             </span>
             <h1
               style={{
-                color: "var(--paper)",
+                color: "var(--dashboard-hero-fg)",
                 fontSize: 42,
                 margin: "14px 0 10px",
               }}
@@ -114,7 +114,7 @@ export default function DashboardRoute() {
             </h1>
             <p
               style={{
-                color: "rgba(251,245,233,0.72)",
+                color: "var(--dashboard-hero-muted)",
                 fontSize: 16,
                 maxWidth: 520,
                 marginBottom: 22,
@@ -148,8 +148,8 @@ export default function DashboardRoute() {
                   rollingCourse === "writing" ? "btn-loading" : ""
                 }`}
                 style={{
-                  color: "var(--paper)",
-                  borderColor: "rgba(251,245,233,0.25)",
+                  color: "var(--dashboard-hero-fg)",
+                  borderColor: "var(--dashboard-hero-border)",
                 }}
                 onClick={() => onRoll("writing")}
                 disabled={rollTask.isPending}

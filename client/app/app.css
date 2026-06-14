@@ -58,6 +58,11 @@
   --shadow-lg: 0 2px 0 rgba(38, 35, 63, 0.08),
     0 24px 56px -12px rgba(38, 35, 63, 0.18);
 
+  --dashboard-hero-bg: var(--ink);
+  --dashboard-hero-fg: var(--paper);
+  --dashboard-hero-muted: rgba(251, 245, 233, 0.72);
+  --dashboard-hero-border: rgba(251, 245, 233, 0.25);
+
   --font-display: "Fraunces", "Times New Roman", serif;
   --font-body: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
@@ -127,6 +132,11 @@
     0 12px 28px -10px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 24px 56px -12px rgba(0, 0, 0, 0.65);
+
+  --dashboard-hero-bg: var(--paper-2);
+  --dashboard-hero-fg: var(--ink);
+  --dashboard-hero-muted: var(--ink-3);
+  --dashboard-hero-border: var(--line-strong);
 }
 
 /* Color palette swap */
