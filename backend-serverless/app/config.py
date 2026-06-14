@@ -57,6 +57,7 @@ class Settings(BaseSettings):
 
     seed_on_startup: bool = True
     auto_create_schema: bool = False
+    run_migrations_on_startup: bool = False
 
 
 @lru_cache(maxsize=1)
