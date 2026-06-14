@@ -7,6 +7,7 @@ import {
   IconX,
 } from "~/components/Icons";
 import { BrandMark, Mascot } from "~/components/Mascot";
+import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { Skeleton } from "~/components/Skeleton";
 import { useToast } from "~/components/Toast";
@@ -46,6 +47,9 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
   const great = result.percentage >= 80;
   const rollTask = useRollTask();
   const { push } = useToast();
+  const rollingCourse = rollTask.isPending
+    ? rollTask.variables?.courseId ?? "reading"
+    : undefined;
   const onAgain = async () => {
     try {
       const t = await rollTask.mutateAsync({ courseId: "reading" });
@@ -306,13 +310,27 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
           <IconArrowLeft size={14} /> Dashboard
         </button>
         <button
-          className="btn btn-accent btn-lg"
+          className={`btn btn-accent btn-lg ${
+            rollTask.isPending ? "btn-loading" : ""
+          }`}
           onClick={onAgain}
           disabled={rollTask.isPending}
+          aria-busy={rollTask.isPending}
         >
-          <IconRefresh size={14} /> Roll another task
+          {rollTask.isPending ? (
+            <>
+              <span className="spinner" /> Generating task...
+            </>
+          ) : (
+            <>
+              <IconRefresh size={14} /> Roll another task
+            </>
+          )}
         </button>
       </div>
+      {rollingCourse && (
+        <RollTaskProgress courseId={rollingCourse} className="roll-task-progress-result" />
+      )}
     </div>
   );
 };
@@ -362,6 +380,9 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
   const { user } = useAuth();
   const rollTask = useRollTask();
   const { push } = useToast();
+  const rollingCourse = rollTask.isPending
+    ? rollTask.variables?.courseId ?? "writing"
+    : undefined;
 
   const evalData = result.evaluation;
 
@@ -688,13 +709,27 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
           <IconArrowLeft size={14} /> Dashboard
         </button>
         <button
-          className="btn btn-accent btn-lg"
+          className={`btn btn-accent btn-lg ${
+            rollTask.isPending ? "btn-loading" : ""
+          }`}
           onClick={onAgain}
           disabled={rollTask.isPending}
+          aria-busy={rollTask.isPending}
         >
-          <IconRefresh size={14} /> Roll another task
+          {rollTask.isPending ? (
+            <>
+              <span className="spinner" /> Generating task...
+            </>
+          ) : (
+            <>
+              <IconRefresh size={14} /> Roll another task
+            </>
+          )}
         </button>
       </div>
+      {rollingCourse && (
+        <RollTaskProgress courseId={rollingCourse} className="roll-task-progress-result" />
+      )}
     </div>
   );
 };

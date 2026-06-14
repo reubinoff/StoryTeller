@@ -12,6 +12,7 @@ import {
   IconTarget,
 } from "~/components/Icons";
 import { BrandMark, Mascot } from "~/components/Mascot";
+import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { StatusPill } from "~/components/StatusPill";
 import { useToast } from "~/components/Toast";
@@ -55,6 +56,7 @@ export default function DashboardRoute() {
 
   const { metrics, in_progress: inProgress, recent, achievements_recent } =
     dashboard.data;
+  const rollingCourse = rollTask.isPending ? rollTask.variables?.courseId : undefined;
 
   return (
     <div className="col gap-32">
@@ -121,26 +123,55 @@ export default function DashboardRoute() {
               with a fresh reading or writing task. It should take about 5
               minutes.
             </p>
-            <div className="row gap-12" style={{ flexWrap: "wrap" }}>
+            <div className="row gap-12 roll-action-buttons" style={{ flexWrap: "wrap" }}>
               <button
-                className="btn btn-accent btn-lg"
+                className={`btn btn-accent btn-lg ${
+                  rollingCourse === "reading" ? "btn-loading" : ""
+                }`}
                 onClick={() => onRoll("reading")}
                 disabled={rollTask.isPending}
+                aria-busy={rollingCourse === "reading"}
               >
-                <IconSparkle size={16} /> Roll a Reading task
+                {rollingCourse === "reading" ? (
+                  <>
+                    <span className="spinner" /> Generating reading...
+                  </>
+                ) : (
+                  <>
+                    <IconSparkle size={16} /> Roll a Reading task
+                  </>
+                )}
               </button>
               <button
-                className="btn btn-ghost btn-lg"
+                className={`btn btn-ghost btn-lg ${
+                  rollingCourse === "writing" ? "btn-loading" : ""
+                }`}
                 style={{
                   color: "var(--paper)",
                   borderColor: "rgba(251,245,233,0.25)",
                 }}
                 onClick={() => onRoll("writing")}
                 disabled={rollTask.isPending}
+                aria-busy={rollingCourse === "writing"}
               >
-                <IconPen size={14} /> Roll a Writing task
+                {rollingCourse === "writing" ? (
+                  <>
+                    <span className="spinner" /> Generating writing...
+                  </>
+                ) : (
+                  <>
+                    <IconPen size={14} /> Roll a Writing task
+                  </>
+                )}
               </button>
             </div>
+            {rollingCourse && (
+              <RollTaskProgress
+                courseId={rollingCourse}
+                tone="dark"
+                className="roll-task-progress-dashboard"
+              />
+            )}
           </div>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Mascot size={180} pose="cheer" kind="ferret" />

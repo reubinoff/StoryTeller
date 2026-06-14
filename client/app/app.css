@@ -258,6 +258,16 @@ select:focus-visible {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.btn.btn-loading:disabled {
+  opacity: 1;
+  cursor: wait;
+}
+.btn.btn-loading .spinner {
+  flex: 0 0 14px;
+}
+.roll-action-buttons .btn-lg {
+  min-width: 196px;
+}
 
 .card {
   background: var(--paper);
@@ -681,6 +691,89 @@ select:focus-visible {
   background: var(--teal);
   border-radius: 999px;
   transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.roll-task-progress {
+  --roll-progress-surface: var(--paper-2);
+  --roll-progress-border: var(--line);
+  --roll-progress-text: var(--ink);
+  --roll-progress-muted: var(--ink-3);
+  --roll-progress-track: var(--paper);
+  --roll-progress-fill: var(--teal);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 520px);
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--roll-progress-border);
+  background: var(--roll-progress-surface);
+  color: var(--roll-progress-text);
+}
+.roll-task-progress-dark {
+  --roll-progress-surface: rgba(251, 245, 233, 0.1);
+  --roll-progress-border: rgba(251, 245, 233, 0.18);
+  --roll-progress-text: var(--paper);
+  --roll-progress-muted: rgba(251, 245, 233, 0.72);
+  --roll-progress-track: rgba(251, 245, 233, 0.16);
+  --roll-progress-fill: var(--amber);
+}
+.roll-task-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.roll-task-progress-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--roll-progress-fill);
+  color: #fff;
+}
+.roll-task-progress-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--roll-progress-muted);
+}
+.roll-task-progress-text strong {
+  color: var(--roll-progress-text);
+  font-size: 14px;
+}
+.roll-task-progress .progress-bar {
+  height: 7px;
+  background: var(--roll-progress-track);
+  border-color: transparent;
+}
+.roll-task-progress-fill {
+  width: 42%;
+  min-width: 72px;
+  background: var(--roll-progress-fill);
+  animation: rollProgressSlide 1.25s ease-in-out infinite;
+  will-change: transform;
+}
+.roll-task-progress-result {
+  margin: 16px auto 0;
+}
+@keyframes rollProgressSlide {
+  0% {
+    transform: translateX(-115%);
+  }
+  50% {
+    transform: translateX(70%);
+  }
+  100% {
+    transform: translateX(245%);
+  }
 }
 
 /* Tap targets */

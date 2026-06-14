@@ -5,6 +5,7 @@ import {
   IconSparkle,
 } from "~/components/Icons";
 import { Mascot } from "~/components/Mascot";
+import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { Skeleton } from "~/components/Skeleton";
 import { StatusPill } from "~/components/StatusPill";
@@ -58,6 +59,7 @@ export default function CourseDetailRoute() {
   }
 
   const course = courseQ.data;
+  const rollingCourse = rollTask.isPending ? rollTask.variables?.courseId ?? id : undefined;
 
   return (
     <div className="col gap-32">
@@ -107,15 +109,29 @@ export default function CourseDetailRoute() {
             >
               {course.description}
             </p>
-            <div className="row gap-12" style={{ marginBottom: 28, flexWrap: "wrap" }}>
-              <button
-                className="btn btn-accent btn-lg"
-                onClick={onRoll}
-                disabled={rollTask.isPending}
-              >
-                <IconSparkle size={16} /> Roll a new task
-              </button>
-              <button className="btn btn-ghost btn-lg">See an example</button>
+            <div className="col gap-12" style={{ marginBottom: 28, alignItems: "flex-start" }}>
+              <div className="row gap-12 roll-action-buttons" style={{ flexWrap: "wrap" }}>
+                <button
+                  className={`btn btn-accent btn-lg ${
+                    rollTask.isPending ? "btn-loading" : ""
+                  }`}
+                  onClick={onRoll}
+                  disabled={rollTask.isPending}
+                  aria-busy={rollTask.isPending}
+                >
+                  {rollTask.isPending ? (
+                    <>
+                      <span className="spinner" /> Generating task...
+                    </>
+                  ) : (
+                    <>
+                      <IconSparkle size={16} /> Roll a new task
+                    </>
+                  )}
+                </button>
+                <button className="btn btn-ghost btn-lg">See an example</button>
+              </div>
+              {rollingCourse && <RollTaskProgress courseId={rollingCourse} />}
             </div>
             <div className="row gap-32" style={{ flexWrap: "wrap" }}>
               {[
