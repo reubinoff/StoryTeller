@@ -1,0 +1,4 @@
+interface:
+  display_name: "StoryTeller Logs"
+  short_description: "Read StoryTeller Azure Function logs"
+  default_prompt: "Use $storyteller-logs to inspect recent Azure Function logs for StoryTeller."

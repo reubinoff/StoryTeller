@@ -23,6 +23,8 @@ from app.seed import seed_static_catalog
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_migration_lock = asyncio.Lock()
+_migrations_checked = False
 
 
 def _run_alembic_upgrade() -> None:
@@ -30,14 +32,25 @@ def _run_alembic_upgrade() -> None:
     command.upgrade(config, "head")
 
 
+async def run_migrations_if_requested() -> None:
+    global _migrations_checked
+    settings = get_settings()
+    if not settings.run_migrations_on_startup or _migrations_checked:
+        return
+    async with _migration_lock:
+        if _migrations_checked:
+            return
+        LOGGER.warning("Running database migrations")
+        await asyncio.to_thread(_run_alembic_upgrade)
+        _migrations_checked = True
+        LOGGER.warning("Database migrations completed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     engine = get_engine()
-    if settings.run_migrations_on_startup:
-        LOGGER.info("Running database migrations on startup")
-        await asyncio.to_thread(_run_alembic_upgrade)
-        LOGGER.info("Database migrations completed")
+    await run_migrations_if_requested()
     if settings.auto_create_schema:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

@@ -6,7 +6,7 @@ import logging
 
 import azure.functions as func
 
-from app.main import app as fastapi_app
+from app.main import app as fastapi_app, run_migrations_if_requested
 from app.services.evaluation_queue import parse_writing_evaluation_message
 from app.services.evaluation_service import run_writing_evaluation
 
@@ -22,6 +22,7 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
 )
 async def http_api(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
+    await run_migrations_if_requested()
     return await func.AsgiMiddleware(fastapi_app).handle_async(req, context)
 
 
