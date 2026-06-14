@@ -10,6 +10,7 @@ const MAP: Record<TaskStatus, { cls: string; label: string }> = {
   processing: { cls: "chip chip-sky", label: "Processing" },
   submitted: { cls: "chip chip-sky", label: "Submitted" },
   completed: { cls: "chip chip-good", label: "Completed" },
+  needs_retry: { cls: "chip chip-amber", label: "Needs retry" },
   failed: { cls: "chip chip-bad", label: "Failed" },
 };
 
@@ -19,6 +20,7 @@ const DOT_CLASS: Record<TaskStatus, string> = {
   processing: "processing",
   submitted: "processing",
   completed: "completed",
+  needs_retry: "inprogress",
   failed: "failed",
 };
 

@@ -204,6 +204,19 @@ async def retry_task(
     )
 
 
+@router.post("/tasks/{task_id}/redo", response_model=TaskOut)
+async def redo_task(
+    task_id: str,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> TaskOut:
+    task = await task_service.get_owned_task(
+        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
+    )
+    task = await task_service.redo_task(db, task=task)
+    return await task_service.task_to_out(db, task)
+
+
 @router.get("/tasks/{task_id}/result")
 async def get_result(
     task_id: str, current_user: CurrentUser, db: DbSession
@@ -212,7 +225,7 @@ async def get_result(
         db, user_id=current_user.id, task_id=_parse_task_id(task_id)
     )
     if task.course_type == "unseen_text":
-        if task.status != "completed":
+        if task.status not in ("completed", "needs_retry"):
             raise AppError(
                 status_code=400,
                 code="invalid_state",

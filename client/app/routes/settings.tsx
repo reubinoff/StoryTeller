@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconCheck } from "~/components/Icons";
 import { SettingsRow, SettingsSection } from "~/components/Settings";
 import { Toggle } from "~/components/Toggle";
@@ -10,6 +10,11 @@ import type {
   ThemePreference,
 } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
+import {
+  applyDisplayPreferences,
+  displayPreferencesFromUser,
+  watchAutoThemePreference,
+} from "~/lib/display-preferences";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
@@ -41,6 +46,24 @@ export default function SettingsRoute() {
   const [notifApp, setNotifApp] = useState<boolean>(
     user?.notif_inapp_enabled ?? true
   );
+
+  useEffect(() => {
+    if (!user) return;
+
+    const previewPreferences = {
+      theme_preference: theme,
+      text_size_preference: textSize,
+      reduce_motion: reduceMotion,
+    };
+
+    applyDisplayPreferences(previewPreferences);
+    const stopWatchingAutoTheme = watchAutoThemePreference(previewPreferences);
+
+    return () => {
+      stopWatchingAutoTheme?.();
+      void applyDisplayPreferences(displayPreferencesFromUser(user));
+    };
+  }, [reduceMotion, textSize, theme, user]);
 
   if (!user) return null;
 
@@ -348,6 +371,7 @@ const Segmented = ({ value, onChange, options }: SegmentedProps) => (
         key={o.value}
         type="button"
         onClick={() => onChange(o.value)}
+        aria-pressed={value === o.value}
         style={{
           padding: "6px 14px",
           borderRadius: 999,

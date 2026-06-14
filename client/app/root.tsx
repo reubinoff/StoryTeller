@@ -38,10 +38,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body
-        data-theme="default"
+        data-theme="light"
+        data-theme-preference="auto"
         data-palette="default"
         data-density="default"
         data-text-size="md"
+        data-reduce-motion="false"
       >
         {children}
         <ScrollRestoration />

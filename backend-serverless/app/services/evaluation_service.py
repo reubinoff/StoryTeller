@@ -12,6 +12,7 @@ from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas.task import PASSING_SCORE
 from app.db.models._helpers import utcnow
 from app.db.models.content import WritingPrompt
 from app.db.models.notification import Notification
@@ -19,7 +20,7 @@ from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_evaluation import TaskEvaluation
 from app.db.session import get_sessionmaker
-from app.services import content_service
+from app.services import content_service, task_service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,9 +90,10 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
     db.add(task_eval)
 
     task.score = float(evaluation.score_overall)
-    task.status = "completed"
+    passed = task.score >= PASSING_SCORE
+    task.status = "completed" if passed else "needs_retry"
     task.completed_at = utcnow()
-    task.xp_awarded = max(task.xp_awarded, 80)
+    task.xp_awarded = max(task.xp_awarded, 80) if passed else 0
 
     db.add(
         Notification(
@@ -107,6 +109,13 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
     )
 
     await db.commit()
+    if passed:
+        await task_service.ensure_next_task_ready(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
 
 
 async def _load_full_text_answer(db: AsyncSession, task_id: uuid.UUID) -> str | None:

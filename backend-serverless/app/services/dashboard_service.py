@@ -17,6 +17,7 @@ from app.api.v1.schemas.dashboard import (
     TaskProgress,
 )
 from app.api.v1.schemas.catalog import CourseOut
+from app.api.v1.schemas.task import PASSING_SCORE
 from app.db.models.achievement import Achievement, UserAchievement
 from app.db.models.course import Course
 from app.db.models.notification import Notification
@@ -51,6 +52,12 @@ COURSE_LABELS = {
     "unseen_text": "Reading Adventure",
     "short_writing": "Writing Studio",
 }
+
+
+def _passed(score: float | None) -> bool | None:
+    if score is None:
+        return None
+    return score >= PASSING_SCORE
 
 
 def _relative_when(when: datetime) -> str:
@@ -135,6 +142,7 @@ async def _build_recent(
                 score=float(t.score) if t.score is not None else None,
                 when=_relative_when(t.updated_at),
                 progress=progress,
+                passed=_passed(float(t.score) if t.score is not None else None),
             )
         )
     return out
@@ -169,7 +177,10 @@ async def get_dashboard(db: AsyncSession, user: User) -> DashboardResponse:
     metrics = await get_metrics(db, user)
     recent = await _build_recent(db, user.id, limit=20)
     in_progress = [
-        rt for rt in recent if rt.status in ("not_started", "in_progress", "processing")
+        rt
+        for rt in recent
+        if rt.status
+        in ("not_started", "in_progress", "submitted", "processing", "needs_retry", "failed")
     ]
     courses = await db.execute(
         select(Course).where(Course.is_active.is_(True)).order_by(Course.display_order)

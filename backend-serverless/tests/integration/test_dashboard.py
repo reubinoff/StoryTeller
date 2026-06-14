@@ -33,9 +33,12 @@ async def test_metrics_aggregates_completed_tasks(client: AsyncClient) -> None:
     await set_interests(client, headers, ["space"])
     rolled = await client.post("/courses/reading/tasks", headers=headers, json={})
     task = rolled.json()
-    answers = [
-        {"question_id": q["id"], "answer": 0} for q in task["reading"]["questions"]
-    ]
+    answers = []
+    for q in task["reading"]["questions"]:
+        if q["question_type"] == "fill_blank":
+            answers.append({"question_id": q["id"], "answer": "things"})
+        else:
+            answers.append({"question_id": q["id"], "answer": 0})
     submit = await client.post(
         f"/tasks/{task['id']}/submit", headers=headers, json={"answers": answers}
     )
@@ -67,6 +70,34 @@ async def test_dashboard_in_progress_includes_started_reading_task(
     assert in_progress["status"] == "in_progress"
     assert in_progress["progress"] is not None
     assert in_progress["progress"]["total"] == 3
+
+
+@pytest.mark.asyncio
+async def test_dashboard_in_progress_includes_needs_retry_task(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space"])
+    rolled = await client.post("/courses/reading/tasks", headers=headers, json={})
+    task = rolled.json()
+    answers = [
+        {"question_id": q["id"], "answer": "WRONG"} for q in task["reading"]["questions"]
+    ]
+    submit = await client.post(
+        f"/tasks/{task['id']}/submit", headers=headers, json={"answers": answers}
+    )
+    assert submit.status_code == 200
+
+    dash = await client.get("/me/dashboard", headers=headers)
+    assert dash.status_code == 200
+    body = dash.json()
+    assert body["metrics"]["tasks_completed"] == 0
+    assert body["metrics"]["xp_total"] == 0
+    assert len(body["in_progress"]) == 1
+    retry_task = body["in_progress"][0]
+    assert retry_task["status"] == "needs_retry"
+    assert retry_task["passed"] is False
+    assert retry_task["passing_score"] == 70
 
 
 @pytest.mark.asyncio

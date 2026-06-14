@@ -10,6 +10,7 @@ import type {
   UpdateUserRequest,
   User,
 } from "../../types";
+import { PASSING_SCORE } from "../../types";
 import { ACHIEVEMENTS_TEMPLATE, COURSES, commit, getState } from "../db";
 import { err, ok, pathParts, type MockRequest, type MockResponse } from "../router";
 
@@ -105,6 +106,10 @@ function computeProgress(task: Task): TaskProgress | null {
   return null;
 }
 
+function taskPassed(task: Task): boolean | null {
+  return task.score == null ? null : task.score >= PASSING_SCORE;
+}
+
 function recentTasks(userId: string): RecentTask[] {
   const state = getState();
   const taskIds = state.user_tasks[userId] ?? [];
@@ -124,6 +129,8 @@ function recentTasks(userId: string): RecentTask[] {
     score: t.score,
     when: relativeWhen(t.updated_at),
     progress: computeProgress(t),
+    passed: taskPassed(t),
+    passing_score: PASSING_SCORE,
   }));
 }
 
@@ -137,6 +144,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: 90,
     when: "2 hr ago",
     progress: null,
+    passed: true,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9920",
@@ -147,6 +156,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: null,
     when: "4 hr ago",
     progress: null,
+    passed: null,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9918",
@@ -157,6 +168,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: 75,
     when: "Yesterday",
     progress: null,
+    passed: true,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9917",
@@ -172,6 +185,8 @@ const DEMO_RECENT: RecentTask[] = [
       percentage: 67,
       label: "4 of 6 answered",
     },
+    passed: null,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9914",
@@ -182,6 +197,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: 82,
     when: "2 days ago",
     progress: null,
+    passed: true,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9911",
@@ -192,6 +209,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: 100,
     when: "3 days ago",
     progress: null,
+    passed: true,
+    passing_score: PASSING_SCORE,
   },
   {
     id: "demo-9908",
@@ -202,6 +221,8 @@ const DEMO_RECENT: RecentTask[] = [
     score: null,
     when: "4 days ago",
     progress: null,
+    passed: null,
+    passing_score: PASSING_SCORE,
   },
 ];
 
@@ -265,7 +286,10 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
       (t) =>
         t.status === "not_started" ||
         t.status === "in_progress" ||
-        t.status === "processing"
+        t.status === "submitted" ||
+        t.status === "processing" ||
+        t.status === "needs_retry" ||
+        t.status === "failed"
     );
     const ach = ensureAchievements(user.id);
     const resp: DashboardResponse = {

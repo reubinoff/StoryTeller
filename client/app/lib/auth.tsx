@@ -16,6 +16,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, getAccessToken, isUsingMock, setAccessToken } from "./api/client";
 import { api } from "./api/endpoints";
+import {
+  applyDisplayPreferences,
+  displayPreferencesFromUser,
+  watchAutoThemePreference,
+} from "./display-preferences";
 import type {
   CompleteOnboardingRequest,
   DashboardMetrics,
@@ -145,14 +150,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return;
     if (user) {
       window.localStorage.setItem(USER_KEY, JSON.stringify(user));
-      // Apply user display preferences to <body>.
-      document.body.dataset.theme =
-        user.theme_preference === "auto" ? "default" : user.theme_preference;
-      document.body.dataset.textSize = user.text_size_preference;
-      document.body.dataset.reduceMotion = user.reduce_motion ? "true" : "false";
     } else {
       window.localStorage.removeItem(USER_KEY);
     }
+
+    const displayPreferences = displayPreferencesFromUser(user);
+    applyDisplayPreferences(displayPreferences);
+    return watchAutoThemePreference(displayPreferences);
   }, [user]);
 
   // Auto-refresh metrics so the topbar stays current after a task completes.

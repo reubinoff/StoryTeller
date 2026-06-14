@@ -44,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "tasks",
     label: "My Tasks",
-    to: "/dashboard",
+    to: "/tasks",
     Icon: IconDoc,
     match: (p) => p.startsWith("/tasks"),
   },

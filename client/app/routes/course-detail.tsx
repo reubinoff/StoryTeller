@@ -12,6 +12,7 @@ import { StatusPill } from "~/components/StatusPill";
 import { useToast } from "~/components/Toast";
 import { useCourse, useDashboard, useRollTask } from "~/lib/api/queries";
 import type { CourseId } from "~/lib/api/types";
+import { taskActionLabel, taskTarget } from "~/lib/task-routing";
 
 export function meta() {
   return [{ title: "Course · Storyteller" }];
@@ -43,7 +44,7 @@ export default function CourseDetailRoute() {
   const onRoll = async () => {
     try {
       const task = await rollTask.mutateAsync({ courseId: id });
-      navigate(`/tasks/${task.id}`);
+      navigate(taskTarget(task));
     } catch {
       push({ icon: "⚠️", title: "Couldn't roll a task. Try again." });
     }
@@ -249,12 +250,10 @@ export default function CourseDetailRoute() {
               <button
                 className="btn btn-soft btn-sm"
                 onClick={() =>
-                  t.status === "completed"
-                    ? navigate(`/tasks/${t.id}/result`)
-                    : navigate(`/tasks/${t.id}`)
+                  navigate(taskTarget(t))
                 }
               >
-                {t.status === "completed" ? "Review" : "Open"}{" "}
+                {taskActionLabel(t.status)}{" "}
                 <IconArrowRight size={12} />
               </button>
             </div>

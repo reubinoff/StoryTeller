@@ -8,7 +8,7 @@ from uuid import UUID
 
 from app.api.v1.schemas.catalog import CourseOut
 from app.api.v1.schemas.common import ApiModel
-from app.api.v1.schemas.task import CourseType, TaskStatus
+from app.api.v1.schemas.task import PASSING_SCORE, CourseType, TaskStatus
 
 
 class DashboardMetrics(ApiModel):
@@ -37,6 +37,8 @@ class RecentTask(ApiModel):
     score: float | None
     when: str
     progress: TaskProgress | None = None
+    passed: bool | None = None
+    passing_score: int = PASSING_SCORE
 
 
 class AchievementOut(ApiModel):

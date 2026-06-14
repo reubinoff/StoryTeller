@@ -7,10 +7,11 @@ import random
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.task import (
+    PASSING_SCORE,
     ReadingPayloadOut,
     ReadingResultOut,
     ReadingResultQuestion,
@@ -35,6 +36,16 @@ from app.db.models.user import User
 from app.services import content_service
 
 LOGGER = logging.getLogger(__name__)
+
+
+ROLL_BLOCKER_PRIORITY = (
+    "in_progress",
+    "processing",
+    "submitted",
+    "needs_retry",
+    "failed",
+    "not_started",
+)
 
 
 # ---------- helpers ----------
@@ -158,15 +169,51 @@ async def _materialise_reading_questions(
 # ---------- roll ----------
 
 
-async def roll_task(
+async def _find_same_course_blocker(
+    db: AsyncSession, *, user_id: uuid.UUID, course_type: str
+) -> Task | None:
+    for task_status in ROLL_BLOCKER_PRIORITY:
+        stmt = (
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.course_type == course_type,
+                Task.status == task_status,
+            )
+            .order_by(Task.updated_at.desc())
+            .limit(1)
+        )
+        task = (await db.execute(stmt)).scalar_one_or_none()
+        if task is not None:
+            return task
+    return None
+
+
+async def _find_ready_next_task(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_type: str,
+    exclude_task_id: uuid.UUID | None = None,
+) -> Task | None:
+    stmt = select(Task).where(
+        Task.user_id == user_id,
+        Task.course_type == course_type,
+        Task.status == "not_started",
+    )
+    if exclude_task_id is not None:
+        stmt = stmt.where(Task.id != exclude_task_id)
+    stmt = stmt.order_by(Task.created_at.asc()).limit(1)
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def _create_new_task(
     db: AsyncSession,
     *,
     user: User,
-    course_slug: str,
-    override_interest: str | None,
+    course: Course,
+    override_interest: str | None = None,
 ) -> Task:
-    """Create a new task, reusing cached content where possible."""
-    course = await _course(db, course_slug)
     interest_slug, interest_label = await _resolve_interest(db, user, override_interest)
 
     if course.type == "unseen_text":
@@ -210,7 +257,6 @@ async def roll_task(
         await db.refresh(task)
         return task
 
-    # short_writing
     prompt = await _find_unused_writing_prompt(
         db,
         user_id=user.id,
@@ -250,6 +296,46 @@ async def roll_task(
     return task
 
 
+async def ensure_next_task_ready(
+    db: AsyncSession, *, user_id: uuid.UUID, course_slug: str, exclude_task_id: uuid.UUID
+) -> Task:
+    user = await db.get(User, user_id)
+    if user is None:
+        raise AppError(status_code=404, code="not_found", title="User not found")
+    course = await _course(db, course_slug)
+    existing = await _find_ready_next_task(
+        db,
+        user_id=user.id,
+        course_type=course.type,
+        exclude_task_id=exclude_task_id,
+    )
+    if existing is not None:
+        return existing
+    return await _create_new_task(db, user=user, course=course)
+
+
+async def roll_task(
+    db: AsyncSession,
+    *,
+    user: User,
+    course_slug: str,
+    override_interest: str | None,
+) -> Task:
+    """Resume same-course work first, otherwise create a ready task."""
+    course = await _course(db, course_slug)
+    blocker = await _find_same_course_blocker(
+        db, user_id=user.id, course_type=course.type
+    )
+    if blocker is not None:
+        return blocker
+    return await _create_new_task(
+        db,
+        user=user,
+        course=course,
+        override_interest=override_interest,
+    )
+
+
 # ---------- read helpers ----------
 
 
@@ -283,12 +369,18 @@ def _question_to_out(q: TaskQuestion, *, reveal: bool) -> TaskQuestionOut:
     )
 
 
+def _passed(score: float | None) -> bool | None:
+    if score is None:
+        return None
+    return float(score) >= PASSING_SCORE
+
+
 async def task_to_out(db: AsyncSession, task: Task) -> TaskOut:
     course_id: str = "reading" if task.course_slug == "reading" else "writing"
     reading_payload: ReadingPayloadOut | None = None
     writing_payload: WritingPayloadOut | None = None
 
-    reveal_correct = task.status == "completed"
+    reveal_correct = task.status in ("completed", "needs_retry")
 
     if task.course_type == "unseen_text":
         questions = await _load_questions(db, task.id)
@@ -341,6 +433,7 @@ async def task_to_out(db: AsyncSession, task: Task) -> TaskOut:
         completed_at=task.completed_at,
         failed_at=task.failed_at,
         fail_reason=task.fail_reason,
+        passed=_passed(float(task.score) if task.score is not None else None),
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -484,15 +577,23 @@ async def submit_reading(
             record.submitted_at = utcnow()
 
     percentage = round((correct_count / total) * 100) if total else 0
+    passed = percentage >= PASSING_SCORE
     task.score = float(percentage)
-    task.status = "completed"
+    task.status = "completed" if passed else "needs_retry"
     now = utcnow()
     task.submitted_at = now
     task.completed_at = now
-    task.xp_awarded = reading_xp(correct_count, total)
+    task.xp_awarded = reading_xp(correct_count, total) if passed else 0
 
     await db.commit()
     await db.refresh(task)
+    if passed:
+        await ensure_next_task_ready(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
     return correct_count, total
 
 
@@ -560,6 +661,57 @@ async def retry_writing(db: AsyncSession, *, task: Task) -> Task:
     await db.commit()
     await db.refresh(task)
     return task
+
+
+async def redo_task(db: AsyncSession, *, task: Task) -> Task:
+    if task.status != "needs_retry":
+        raise AppError(
+            status_code=400,
+            code="invalid_state",
+            title="Only tasks that need retry can be redone",
+        )
+
+    if task.course_type == "unseen_text":
+        await db.execute(delete(TaskAnswer).where(TaskAnswer.task_id == task.id))
+        task.status = "not_started"
+        task.score = None
+        task.xp_awarded = 0
+        task.started_at = None
+        task.submitted_at = None
+        task.completed_at = None
+        task.failed_at = None
+        task.fail_reason = None
+        await db.commit()
+        await db.refresh(task)
+        return task
+
+    if task.course_type == "short_writing":
+        answer_row_q = await db.execute(
+            select(TaskAnswer).where(
+                TaskAnswer.task_id == task.id,
+                TaskAnswer.question_id.is_(None),
+            )
+        )
+        answer_row = answer_row_q.scalar_one_or_none()
+        task.writing_draft = (
+            (answer_row.answer_text if answer_row is not None else None)
+            or task.writing_draft
+            or ""
+        )
+        await db.execute(delete(TaskEvaluation).where(TaskEvaluation.task_id == task.id))
+        task.status = "in_progress"
+        task.score = None
+        task.xp_awarded = 0
+        task.started_at = utcnow()
+        task.submitted_at = None
+        task.completed_at = None
+        task.failed_at = None
+        task.fail_reason = None
+        await db.commit()
+        await db.refresh(task)
+        return task
+
+    raise AppError(status_code=400, code="invalid_state", title="Unknown task type")
 
 
 async def mark_writing_evaluation_failed(
@@ -638,6 +790,7 @@ async def reading_result(db: AsyncSession, task: Task) -> ReadingResultOut:
         percentage=percentage,
         duration_seconds=duration,
         xp_earned=task.xp_awarded,
+        passed=percentage >= PASSING_SCORE,
         questions=out_questions,
     )
 
@@ -677,6 +830,7 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
         answer_text=answer_text,
         evaluation=evaluation,
         xp_earned=task.xp_awarded,
+        passed=_passed(float(task.score) if task.score is not None else None),
         submitted_at=task.submitted_at,
         completed_at=task.completed_at,
     )

@@ -13,10 +13,17 @@ from app.api.v1.schemas.content import GeneratedWritingEvaluation
 
 QuestionType = Literal["multiple_choice", "true_false", "fill_blank"]
 TaskStatus = Literal[
-    "not_started", "in_progress", "submitted", "processing", "completed", "failed"
+    "not_started",
+    "in_progress",
+    "submitted",
+    "processing",
+    "completed",
+    "needs_retry",
+    "failed",
 ]
 CourseType = Literal["unseen_text", "short_writing"]
 CourseId = Literal["reading", "writing"]
+PASSING_SCORE = 70
 
 
 class TaskQuestionOut(ApiModel):
@@ -75,6 +82,8 @@ class TaskOut(ApiModel):
     completed_at: datetime | None = None
     failed_at: datetime | None = None
     fail_reason: str | None = None
+    passed: bool | None = None
+    passing_score: int = PASSING_SCORE
     created_at: datetime
     updated_at: datetime
 
@@ -137,6 +146,8 @@ class ReadingResultOut(ApiModel):
     percentage: int
     duration_seconds: int
     xp_earned: int
+    passed: bool
+    passing_score: int = PASSING_SCORE
     questions: list[ReadingResultQuestion]
 
 
@@ -151,5 +162,7 @@ class WritingResultOut(ApiModel):
     answer_text: str
     evaluation: WritingEvaluationOut | None
     xp_earned: int
+    passed: bool | None
+    passing_score: int = PASSING_SCORE
     submitted_at: datetime | None
     completed_at: datetime | None

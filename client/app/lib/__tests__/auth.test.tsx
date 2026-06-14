@@ -81,6 +81,23 @@ const mockDashboard: DashboardResponse = {
   achievements_recent: [],
 };
 
+function setSystemDarkMode(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Wrapper
 // ---------------------------------------------------------------------------
@@ -103,6 +120,12 @@ function wrapper({ children }: { children: ReactNode }) {
 beforeEach(() => {
   localStorage.clear();
   vi.resetAllMocks();
+  setSystemDarkMode(false);
+  document.body.dataset.theme = "light";
+  document.body.dataset.themePreference = "auto";
+  document.body.dataset.textSize = "md";
+  document.body.dataset.reduceMotion = "false";
+  document.documentElement.style.colorScheme = "";
   vi.mocked(api.auth.refresh).mockRejectedValue(new Error("No refresh cookie"));
   vi.mocked(api.me.get).mockRejectedValue(new Error("No access token"));
   vi.mocked(api.auth.logout).mockResolvedValue(null);
@@ -134,6 +157,38 @@ describe("useAuth", () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
     await waitFor(() => expect(result.current.ready).toBe(true));
+  });
+
+  it("applies display preferences from the loaded user", async () => {
+    const darkUser: User = {
+      ...mockUser,
+      theme_preference: "dark",
+      text_size_preference: "lg",
+      reduce_motion: true,
+    };
+    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
+    localStorage.setItem("storyteller.auth.user", JSON.stringify(darkUser));
+    vi.mocked(api.me.get).mockResolvedValue(darkUser);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
+    await waitFor(() => expect(document.body.dataset.theme).toBe("dark"));
+    expect(document.body.dataset.themePreference).toBe("dark");
+    expect(document.body.dataset.textSize).toBe("lg");
+    expect(document.body.dataset.reduceMotion).toBe("true");
+  });
+
+  it("resolves auto display preferences from system dark mode", async () => {
+    setSystemDarkMode(true);
+    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
+    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+    vi.mocked(api.me.get).mockResolvedValue(mockUser);
+
+    renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => expect(document.body.dataset.theme).toBe("dark"));
+    expect(document.body.dataset.themePreference).toBe("auto");
   });
 
   it("ignores corrupted localStorage data", async () => {
@@ -218,6 +273,32 @@ describe("signout", () => {
     result.current.signout();
 
     expect(localStorage.getItem("storyteller.auth.accessToken")).toBeNull();
+  });
+
+  it("resets display preferences on signout", async () => {
+    const darkUser: User = {
+      ...mockUser,
+      theme_preference: "dark",
+      text_size_preference: "lg",
+      reduce_motion: true,
+    };
+    vi.mocked(api.auth.login).mockResolvedValue({
+      ...mockAuthResponse,
+      user: darkUser,
+    });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await result.current.signin("test@test.com", "pass");
+    await waitFor(() => expect(document.body.dataset.theme).toBe("dark"));
+
+    result.current.signout();
+
+    await waitFor(() => expect(result.current.user).toBeNull());
+    expect(document.body.dataset.theme).toBe("light");
+    expect(document.body.dataset.themePreference).toBe("auto");
+    expect(document.body.dataset.textSize).toBe("md");
+    expect(document.body.dataset.reduceMotion).toBe("false");
   });
 });
 

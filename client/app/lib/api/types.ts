@@ -135,7 +135,10 @@ export type TaskStatus =
   | "submitted"
   | "processing"
   | "completed"
+  | "needs_retry"
   | "failed";
+
+export const PASSING_SCORE = 70;
 
 export type QuestionType = "multiple_choice" | "true_false" | "fill_blank";
 
@@ -196,6 +199,8 @@ export interface Task {
   completed_at: ISO8601 | null;
   failed_at: ISO8601 | null;
   fail_reason: string | null;
+  passed: boolean | null;
+  passing_score: number;
   created_at: ISO8601;
   updated_at: ISO8601;
 }
@@ -221,6 +226,8 @@ export interface ReadingResult {
   percentage: number; // 0..100
   duration_seconds: number;
   xp_earned: number;
+  passed: boolean;
+  passing_score: number;
   questions: Array<
     TaskQuestion & {
       user_answer: string | number | null;
@@ -257,6 +264,8 @@ export interface WritingResult {
   answer_text: string;
   evaluation: WritingEvaluation | null;
   xp_earned: number;
+  passed: boolean | null;
+  passing_score: number;
   submitted_at: ISO8601 | null;
   completed_at: ISO8601 | null;
 }
@@ -295,6 +304,8 @@ export interface RecentTask {
   score: number | null;
   when: string;
   progress: TaskProgress | null;
+  passed: boolean | null;
+  passing_score: number;
 }
 
 export interface DashboardResponse {

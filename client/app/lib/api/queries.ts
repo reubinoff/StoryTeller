@@ -154,6 +154,19 @@ export function useSaveDraft(taskId: string) {
   });
 }
 
+export function useRedoTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.tasks.redo(id),
+    onSuccess: (data) => {
+      qc.setQueryData(queryKeys.task(data.id), data);
+      void qc.invalidateQueries({ queryKey: queryKeys.result(data.id) });
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({

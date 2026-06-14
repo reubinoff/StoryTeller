@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { BackBar } from "~/components/BackBar";
 import {
   IconArrowRight,
@@ -51,6 +51,13 @@ export default function TaskRoute() {
   }
 
   const task = taskQ.data;
+  if (
+    task.status === "completed" ||
+    task.status === "needs_retry" ||
+    task.status === "failed"
+  ) {
+    return <Navigate to={`/tasks/${task.id}/result`} replace />;
+  }
   if (task.status === "processing") {
     return <WritingProcessing task={task} />;
   }

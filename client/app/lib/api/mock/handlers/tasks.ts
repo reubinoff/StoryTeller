@@ -1,3 +1,4 @@
+import { PASSING_SCORE } from "../../types";
 import type {
   AnswerQuestionRequest,
   CourseId,
@@ -32,6 +33,15 @@ function getCurrentUserId(token: string | null): string | null {
 
 const SAMPLE_WRITING_TEXT =
   "I would love to visit Kyoto, the old capital of Japan. I would walk through the bamboo forest in Arashiyama early in the morning, when it's quiet and a little misty. After that, I would stop at a small tea shop to try matcha and sweet mochi. In the afternoon, I would visit the Fushimi Inari shrine and slowly climb the path under thousands of red gates. Kyoto matters to me because my grandmother always told me stories about Japanese gardens, and I want to see them with my own eyes one day.";
+
+const ROLL_BLOCKER_PRIORITY: Task["status"][] = [
+  "in_progress",
+  "processing",
+  "submitted",
+  "needs_retry",
+  "failed",
+  "not_started",
+];
 
 function pickReadingContent(interestId?: InterestId): {
   topicId: InterestId;
@@ -119,7 +129,39 @@ function strippedQuestions(task: Task): TaskQuestion[] {
   }));
 }
 
-function rollTask(
+function taskPassed(task: Task): boolean | null {
+  return task.score == null ? null : task.score >= PASSING_SCORE;
+}
+
+function withDerivedTask(task: Task): Task {
+  return {
+    ...task,
+    passed: taskPassed(task),
+    passing_score: PASSING_SCORE,
+  };
+}
+
+function findSameCourseBlocker(userId: string, courseId: CourseId): Task | null {
+  const state = getState();
+  const desiredType = courseId === "reading" ? "unseen_text" : "short_writing";
+  const tasks = (state.user_tasks[userId] ?? [])
+    .map((id) => state.tasks[id])
+    .filter((task): task is Task => Boolean(task))
+    .filter((task) => task.course_type === desiredType);
+
+  for (const status of ROLL_BLOCKER_PRIORITY) {
+    const match = tasks
+      .filter((task) => task.status === status)
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )[0];
+    if (match) return match;
+  }
+  return null;
+}
+
+function createTask(
   userId: string,
   courseId: CourseId,
   interestId?: InterestId
@@ -157,6 +199,8 @@ function rollTask(
       completed_at: null,
       failed_at: null,
       fail_reason: null,
+      passed: null,
+      passing_score: PASSING_SCORE,
       created_at: now,
       updated_at: now,
     };
@@ -193,6 +237,8 @@ function rollTask(
     completed_at: null,
     failed_at: null,
     fail_reason: null,
+    passed: null,
+    passing_score: PASSING_SCORE,
     created_at: now,
     updated_at: now,
   };
@@ -202,15 +248,37 @@ function rollTask(
   return task;
 }
 
+function ensureNextTaskReady(
+  userId: string,
+  courseId: CourseId,
+  excludeTaskId: string
+): Task {
+  const state = getState();
+  const desiredType = courseId === "reading" ? "unseen_text" : "short_writing";
+  const existing = (state.user_tasks[userId] ?? [])
+    .map((id) => state.tasks[id])
+    .find(
+      (task) =>
+        task &&
+        task.id !== excludeTaskId &&
+        task.course_type === desiredType &&
+        task.status === "not_started"
+    );
+  return existing ?? createTask(userId, courseId);
+}
+
 function publicTask(task: Task): Task {
   // Hide the correct-answer map from the wire response.
   const { _correct, ...rest } = task as unknown as Task & {
     _correct?: CorrectMap;
   };
+  const derived = withDerivedTask(rest);
   if (rest.reading) {
-    return { ...rest, reading: { ...rest.reading, questions: strippedQuestions(rest) } };
+    const reveal = rest.status === "completed" || rest.status === "needs_retry";
+    const questions = reveal ? rest.reading.questions : strippedQuestions(rest);
+    return { ...derived, reading: { ...rest.reading, questions } };
   }
-  return rest;
+  return derived;
 }
 
 function isAnswerCorrect(
@@ -235,13 +303,19 @@ function scheduleWritingEvaluation(taskId: string, userId: string) {
     const task = state.tasks[taskId];
     if (!task) return;
     if (task.status !== "processing") return;
-    task.status = "completed";
     task.score = SAMPLE_WRITING_EVALUATION.score_overall;
-    task.xp_awarded = 80;
+    const passed = task.score >= PASSING_SCORE;
+    task.status = passed ? "completed" : "needs_retry";
+    task.xp_awarded = passed ? 80 : 0;
+    task.passed = passed;
+    task.passing_score = PASSING_SCORE;
     task.completed_at = new Date().toISOString();
     task.updated_at = task.completed_at;
     (task as unknown as { _evaluation: typeof SAMPLE_WRITING_EVALUATION })._evaluation =
       SAMPLE_WRITING_EVALUATION;
+    if (passed) {
+      ensureNextTaskReady(userId, "writing", taskId);
+    }
 
     const notif: Notification = {
       id: uuid(),
@@ -279,7 +353,9 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
       return err(404, "not_found", "Unknown course");
     }
     const body = (req.body ?? {}) as RollTaskRequest;
-    const task = rollTask(userId, courseId, body.interest_id);
+    const task =
+      findSameCourseBlocker(userId, courseId) ??
+      createTask(userId, courseId, body.interest_id);
     return ok(publicTask(task));
   }
 
@@ -303,6 +379,7 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
   const submitMatch = pathname.match(/^\/tasks\/([^/]+)\/submit$/);
   const draftMatch = pathname.match(/^\/tasks\/([^/]+)\/draft$/);
   const retryMatch = pathname.match(/^\/tasks\/([^/]+)\/retry$/);
+  const redoMatch = pathname.match(/^\/tasks\/([^/]+)\/redo$/);
   const resultMatch = pathname.match(/^\/tasks\/([^/]+)\/result$/);
 
   const state = getState();
@@ -368,13 +445,17 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
         }
       });
       task.score = Math.round((score / task.reading.questions.length) * 100);
-      task.status = "completed";
+      const passed = task.score >= PASSING_SCORE;
+      task.status = passed ? "completed" : "needs_retry";
       task.submitted_at = new Date().toISOString();
       task.completed_at = task.submitted_at;
       task.updated_at = task.submitted_at;
-      task.xp_awarded = 60 + score * 4;
+      task.xp_awarded = passed ? 60 + score * 4 : 0;
+      task.passed = passed;
+      task.passing_score = PASSING_SCORE;
       (task as unknown as { _answers?: Record<string, string | number> })._answers =
         answers;
+      if (passed && userId) ensureNextTaskReady(userId, "reading", task.id);
       commit();
       return ok({ ...publicTask(task), correct_count: score, total: task.reading.questions.length });
     }
@@ -423,6 +504,37 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
     return ok(publicTask(task));
   }
 
+  if (req.method === "POST" && redoMatch) {
+    const task = state.tasks[redoMatch[1]];
+    if (!task) return err(404, "not_found", "Task not found");
+    if (task.status !== "needs_retry") {
+      return err(400, "invalid_state", "Only tasks that need retry can be redone");
+    }
+    task.score = null;
+    task.xp_awarded = 0;
+    task.passed = null;
+    task.passing_score = PASSING_SCORE;
+    task.submitted_at = null;
+    task.completed_at = null;
+    task.failed_at = null;
+    task.fail_reason = null;
+    task.updated_at = new Date().toISOString();
+
+    if (task.course_type === "unseen_text") {
+      task.status = "not_started";
+      task.started_at = null;
+      (task as unknown as { _answers?: Record<string, string | number> })._answers =
+        {};
+    } else {
+      task.status = "in_progress";
+      task.started_at = task.updated_at;
+      delete (task as unknown as { _evaluation?: unknown })._evaluation;
+    }
+
+    commit();
+    return ok(publicTask(task));
+  }
+
   if (req.method === "GET" && resultMatch) {
     const task = state.tasks[resultMatch[1]];
     if (!task) return err(404, "not_found", "Task not found");
@@ -457,7 +569,9 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
         total,
         percentage: Math.round((correctCount / total) * 100),
         duration_seconds: 262,
-        xp_earned: task.xp_awarded || 60,
+        xp_earned: task.xp_awarded,
+        passed: Math.round((correctCount / total) * 100) >= PASSING_SCORE,
+        passing_score: PASSING_SCORE,
         questions,
       };
       return ok(result);
@@ -473,6 +587,8 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
         answer_text: task.writing.draft || SAMPLE_WRITING_TEXT,
         evaluation: evalData ?? null,
         xp_earned: task.xp_awarded,
+        passed: taskPassed(task),
+        passing_score: PASSING_SCORE,
         submitted_at: task.submitted_at,
         completed_at: task.completed_at,
       };

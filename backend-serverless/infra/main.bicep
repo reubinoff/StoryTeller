@@ -284,7 +284,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'CLAUDE_MODEL'
-          value: 'claude-sonnet-4-5-20250929'
+          value: 'claude-haiku-4-5-20251001'
         }
         {
           name: 'CLAUDE_MAX_TOKENS'

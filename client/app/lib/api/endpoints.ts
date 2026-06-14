@@ -91,6 +91,8 @@ export const api = {
       }),
     retry: (id: string) =>
       request<Task>(`/tasks/${id}/retry`, { method: "POST" }),
+    redo: (id: string) =>
+      request<Task>(`/tasks/${id}/redo`, { method: "POST" }),
     result: (id: string) => request<TaskResult>(`/tasks/${id}/result`),
   },
 };

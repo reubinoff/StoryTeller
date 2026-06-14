@@ -7,6 +7,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from tests.__conftest_helpers__ import WRITING_EVAL_RESPONSE
 from tests.integration._helpers import set_interests, signup_and_login
 
 
@@ -58,10 +59,9 @@ async def test_roll_reading_task_reuses_cache_for_second_user(
 
 
 @pytest.mark.asyncio
-async def test_same_user_second_roll_creates_new_content_when_unseen(
+async def test_same_user_second_roll_resumes_unfinished_task(
     client: AsyncClient, claude_stub
 ) -> None:
-    """Second roll for the same user must NOT return the same cached content."""
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["space"])
 
@@ -70,11 +70,40 @@ async def test_same_user_second_roll_creates_new_content_when_unseen(
     second = await client.post("/courses/reading/tasks", headers=headers, json={})
     assert second.status_code == 201
 
-    # Same user has now seen the first passage. The second roll must come from a
-    # newly-generated passage → Claude is called a second time.
+    assert second.json()["id"] == first.json()["id"]
+    assert len(claude_stub.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_passing_reading_creates_ready_next_task(
+    client: AsyncClient, claude_stub
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space"])
+
+    first = await client.post("/courses/reading/tasks", headers=headers, json={})
+    task = first.json()
+    answers = []
+    for q in task["reading"]["questions"]:
+        if q["question_type"] == "multiple_choice":
+            answers.append({"question_id": q["id"], "answer": 0})
+        elif q["question_type"] == "true_false":
+            answers.append({"question_id": q["id"], "answer": "True"})
+        else:
+            answers.append({"question_id": q["id"], "answer": "things"})
+
+    submit = await client.post(
+        f"/tasks/{task['id']}/submit", headers=headers, json={"answers": answers}
+    )
+    assert submit.status_code == 200
+    assert submit.json()["status"] == "completed"
+    assert submit.json()["passed"] is True
+
+    next_roll = await client.post("/courses/reading/tasks", headers=headers, json={})
+    assert next_roll.status_code == 201
+    assert next_roll.json()["id"] != task["id"]
+    assert next_roll.json()["status"] == "not_started"
     assert len(claude_stub.calls) == 2
-    # Tasks themselves are different rows.
-    assert first.json()["id"] != second.json()["id"]
 
 
 @pytest.mark.asyncio
@@ -91,6 +120,21 @@ async def test_roll_unknown_course_returns_404(client: AsyncClient) -> None:
     await set_interests(client, headers, ["space"])
     resp = await client.post("/courses/listening/tasks", headers=headers, json={})
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_unfinished_reading_does_not_block_writing_roll(
+    client: AsyncClient,
+) -> None:
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space", "travel"])
+    reading = await client.post("/courses/reading/tasks", headers=headers, json={})
+    writing = await client.post("/courses/writing/tasks", headers=headers, json={})
+
+    assert reading.status_code == 201
+    assert writing.status_code == 201
+    assert reading.json()["id"] != writing.json()["id"]
+    assert writing.json()["course_id"] == "writing"
 
 
 @pytest.mark.asyncio
@@ -221,6 +265,28 @@ async def test_submit_reading_with_wrong_answers_scores_partially(
     body = submit.json()
     assert body["correct_count"] == 0
     assert body["score"] == 0
+    assert body["status"] == "needs_retry"
+    assert body["passed"] is False
+    assert body["xp_awarded"] == 0
+
+    result = await client.get(f"/tasks/{task['id']}/result", headers=headers)
+    assert result.status_code == 200
+    assert result.json()["passed"] is False
+
+    rolled_again = await client.post("/courses/reading/tasks", headers=headers, json={})
+    assert rolled_again.status_code == 201
+    assert rolled_again.json()["id"] == task["id"]
+    assert rolled_again.json()["status"] == "needs_retry"
+
+    redo = await client.post(f"/tasks/{task['id']}/redo", headers=headers)
+    assert redo.status_code == 200
+    redo_body = redo.json()
+    assert redo_body["status"] == "not_started"
+    assert redo_body["score"] is None
+    assert redo_body["passed"] is None
+    for q in redo_body["reading"]["questions"]:
+        assert "correct_answer" not in q
+        assert "explanation" not in q
 
 
 @pytest.mark.asyncio
@@ -280,6 +346,64 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rbody["evaluation"] is not None
     assert rbody["evaluation"]["score_overall"] == 84
     assert rbody["answer_text"].startswith("I would love")
+
+
+@pytest.mark.asyncio
+async def test_low_writing_score_needs_retry_and_redo_keeps_draft(
+    client: AsyncClient,
+    claude_stub,
+    evaluation_queue,
+) -> None:
+    from app.services.evaluation_service import run_writing_evaluation
+
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+    task_id = rolled.json()["id"]
+
+    answer = "Kyoto is amazing because of bamboo and tea."
+    submit = await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers,
+        json={"full_text": answer},
+    )
+    assert submit.status_code == 202
+    assert evaluation_queue.task_ids == [uuid.UUID(task_id)]
+
+    claude_stub.next_response = {
+        **WRITING_EVAL_RESPONSE,
+        "score_overall": 62,
+        "score_grammar": 60,
+        "score_vocabulary": 64,
+        "score_structure": 62,
+        "score_relevance": 63,
+    }
+    await run_writing_evaluation(uuid.UUID(task_id))
+
+    fetched = await client.get(f"/tasks/{task_id}", headers=headers)
+    assert fetched.status_code == 200
+    body = fetched.json()
+    assert body["status"] == "needs_retry"
+    assert body["passed"] is False
+    assert body["xp_awarded"] == 0
+
+    rolled_again = await client.post("/courses/writing/tasks", headers=headers, json={})
+    assert rolled_again.status_code == 201
+    assert rolled_again.json()["id"] == task_id
+    assert rolled_again.json()["status"] == "needs_retry"
+
+    result = await client.get(f"/tasks/{task_id}/result", headers=headers)
+    assert result.status_code == 200
+    assert result.json()["passed"] is False
+    assert result.json()["evaluation"]["score_overall"] == 62
+
+    redo = await client.post(f"/tasks/{task_id}/redo", headers=headers)
+    assert redo.status_code == 200
+    redo_body = redo.json()
+    assert redo_body["status"] == "in_progress"
+    assert redo_body["score"] is None
+    assert redo_body["passed"] is None
+    assert redo_body["writing"]["draft"] == answer
 
 
 @pytest.mark.asyncio
@@ -532,6 +656,13 @@ async def test_duplicate_worker_message_is_idempotent(client: AsyncClient) -> No
 
     fetched = await client.get(f"/tasks/{task_id}", headers=headers)
     assert fetched.json()["status"] == "completed"
+
+    writing_tasks = await client.get(
+        "/tasks", headers=headers, params={"course_type": "short_writing"}
+    )
+    assert writing_tasks.status_code == 200
+    assert len(writing_tasks.json()["items"]) == 2
+    assert sum(1 for t in writing_tasks.json()["items"] if t["status"] == "not_started") == 1
 
     sm = get_sessionmaker()
     async with sm() as db:

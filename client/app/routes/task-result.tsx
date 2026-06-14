@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router";
 import { BackBar } from "~/components/BackBar";
 import {
   IconArrowLeft,
+  IconArrowRight,
   IconCheck,
   IconRefresh,
   IconX,
@@ -11,13 +12,14 @@ import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { Skeleton } from "~/components/Skeleton";
 import { useToast } from "~/components/Toast";
-import { useRollTask, useTask, useTaskResult } from "~/lib/api/queries";
+import { useRedoTask, useRollTask, useTask, useTaskResult } from "~/lib/api/queries";
 import type {
   HighlightKind,
   ReadingResult,
   WritingResult,
 } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
+import { taskTarget } from "~/lib/task-routing";
 
 export function meta() {
   return [{ title: "Result · Storyteller" }];
@@ -44,18 +46,27 @@ export default function TaskResultRoute() {
 
 const ReadingResultView = ({ result }: { result: ReadingResult }) => {
   const navigate = useNavigate();
-  const great = result.percentage >= 80;
+  const passed = result.passed;
   const rollTask = useRollTask();
+  const redoTask = useRedoTask();
   const { push } = useToast();
   const rollingCourse = rollTask.isPending
     ? rollTask.variables?.courseId ?? "reading"
     : undefined;
-  const onAgain = async () => {
+  const onNext = async () => {
     try {
       const t = await rollTask.mutateAsync({ courseId: "reading" });
-      navigate(`/tasks/${t.id}`);
+      navigate(taskTarget(t));
     } catch {
       push({ icon: "⚠️", title: "Couldn't roll a task." });
+    }
+  };
+  const onRedo = async () => {
+    try {
+      const t = await redoTask.mutateAsync(result.task_id);
+      navigate(taskTarget(t));
+    } catch {
+      push({ icon: "⚠️", title: "Couldn't reset this task." });
     }
   };
 
@@ -66,14 +77,14 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
         className="card"
         style={{
           padding: "40px 48px",
-          background: great ? "var(--teal)" : "var(--paper)",
-          color: great ? "#fff" : "var(--ink)",
+          background: passed ? "var(--teal)" : "var(--paper)",
+          color: passed ? "#fff" : "var(--ink)",
           position: "relative",
           overflow: "hidden",
           borderColor: "transparent",
         }}
       >
-        {great && (
+        {passed && (
           <div style={{ position: "absolute", right: -30, top: -30, opacity: 0.12 }}>
             <BrandMark size={260} color="#fff" />
           </div>
@@ -92,17 +103,17 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
             <span
               className="chip"
               style={{
-                background: great ? "rgba(255,255,255,0.2)" : "var(--paper-2)",
-                color: great ? "#fff" : "var(--ink-2)",
+                background: passed ? "rgba(255,255,255,0.2)" : "var(--paper-2)",
+                color: passed ? "#fff" : "var(--ink-2)",
                 borderColor: "transparent",
               }}
             >
-              {great ? "🎉 Nice work!" : "Good try"}
+              {passed ? "Nice work!" : "Try again"}
             </span>
             <h1
               style={{
                 fontSize: 64,
-                color: great ? "#fff" : "var(--ink)",
+                color: passed ? "#fff" : "var(--ink)",
                 margin: "14px 0 8px",
                 letterSpacing: 0,
               }}
@@ -110,13 +121,13 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
               <span className="tabnum">{result.score}</span>
               <span style={{ opacity: 0.55 }}> / {result.total}</span>
             </h1>
-            <div style={{ fontSize: 18, opacity: great ? 0.85 : 0.7 }}>
-              {great
-                ? `That's ${result.percentage}% — you're really getting this.`
-                : `You scored ${result.percentage}%. Let's see where you can sharpen up.`}
+            <div style={{ fontSize: 18, opacity: passed ? 0.85 : 0.7 }}>
+              {passed
+                ? `That's ${result.percentage}%. Your next task is ready.`
+                : `You scored ${result.percentage}%. You need ${result.passing_score}% to move on.`}
             </div>
           </div>
-          <Mascot size={140} pose={great ? "cheer" : "wave"} kind="ferret" />
+          <Mascot size={140} pose={passed ? "cheer" : "wave"} kind="ferret" />
         </div>
       </div>
 
@@ -311,19 +322,23 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
         </button>
         <button
           className={`btn btn-accent btn-lg ${
-            rollTask.isPending ? "btn-loading" : ""
+            rollTask.isPending || redoTask.isPending ? "btn-loading" : ""
           }`}
-          onClick={onAgain}
-          disabled={rollTask.isPending}
-          aria-busy={rollTask.isPending}
+          onClick={passed ? onNext : onRedo}
+          disabled={rollTask.isPending || redoTask.isPending}
+          aria-busy={rollTask.isPending || redoTask.isPending}
         >
-          {rollTask.isPending ? (
+          {rollTask.isPending || redoTask.isPending ? (
             <>
-              <span className="spinner" /> Generating task...
+              <span className="spinner" /> {passed ? "Opening next..." : "Resetting..."}
+            </>
+          ) : passed ? (
+            <>
+              <IconArrowRight size={14} /> Open next task
             </>
           ) : (
             <>
-              <IconRefresh size={14} /> Roll another task
+              <IconRefresh size={14} /> Try again
             </>
           )}
         </button>
@@ -379,6 +394,7 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rollTask = useRollTask();
+  const redoTask = useRedoTask();
   const { push } = useToast();
   const rollingCourse = rollTask.isPending
     ? rollTask.variables?.courseId ?? "writing"
@@ -386,12 +402,20 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
 
   const evalData = result.evaluation;
 
-  const onAgain = async () => {
+  const onNext = async () => {
     try {
       const t = await rollTask.mutateAsync({ courseId: "writing" });
-      navigate(`/tasks/${t.id}`);
+      navigate(taskTarget(t));
     } catch {
       push({ icon: "⚠️", title: "Couldn't roll a task." });
+    }
+  };
+  const onRedo = async () => {
+    try {
+      const t = await redoTask.mutateAsync(result.task_id);
+      navigate(taskTarget(t));
+    } catch {
+      push({ icon: "⚠️", title: "Couldn't reset this task." });
     }
   };
 
@@ -411,6 +435,7 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
   }
 
   const overall = evalData.score_overall;
+  const passed = result.passed ?? overall >= result.passing_score;
   const subscores: Array<{
     label: string;
     value: number;
@@ -506,9 +531,13 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
             </div>
           </div>
           <div>
-            <span className="chip chip-rust">🎉 Strong submission</span>
+            <span className={passed ? "chip chip-rust" : "chip chip-amber"}>
+              {passed ? "Strong submission" : "Try again"}
+            </span>
             <h1 style={{ fontSize: 36, margin: "12px 0 8px" }}>
-              Nicely done{user ? `, ${user.first_name}` : ""}!
+              {passed
+                ? `Nicely done${user ? `, ${user.first_name}` : ""}!`
+                : `You need ${result.passing_score}% to move on.`}
             </h1>
             <p
               style={{
@@ -518,7 +547,9 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
                 maxWidth: 520,
               }}
             >
-              {evalData.feedback_summary}
+              {passed
+                ? `${evalData.feedback_summary} Your next task is ready.`
+                : `${evalData.feedback_summary} You can try this task again.`}
             </p>
           </div>
         </div>
@@ -710,19 +741,23 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
         </button>
         <button
           className={`btn btn-accent btn-lg ${
-            rollTask.isPending ? "btn-loading" : ""
+            rollTask.isPending || redoTask.isPending ? "btn-loading" : ""
           }`}
-          onClick={onAgain}
-          disabled={rollTask.isPending}
-          aria-busy={rollTask.isPending}
+          onClick={passed ? onNext : onRedo}
+          disabled={rollTask.isPending || redoTask.isPending}
+          aria-busy={rollTask.isPending || redoTask.isPending}
         >
-          {rollTask.isPending ? (
+          {rollTask.isPending || redoTask.isPending ? (
             <>
-              <span className="spinner" /> Generating task...
+              <span className="spinner" /> {passed ? "Opening next..." : "Resetting..."}
+            </>
+          ) : passed ? (
+            <>
+              <IconArrowRight size={14} /> Open next task
             </>
           ) : (
             <>
-              <IconRefresh size={14} /> Roll another task
+              <IconRefresh size={14} /> Try again
             </>
           )}
         </button>

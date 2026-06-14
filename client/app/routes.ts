@@ -11,6 +11,7 @@ export default [
     route("dashboard", "routes/dashboard.tsx"),
     route("courses", "routes/courses.tsx"),
     route("courses/:courseId", "routes/course-detail.tsx"),
+    route("tasks", "routes/tasks.tsx"),
     route("tasks/:taskId", "routes/task.tsx"),
     route("tasks/:taskId/result", "routes/task-result.tsx"),
     route("achievements", "routes/achievements.tsx"),

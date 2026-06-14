@@ -17,8 +17,9 @@ import { SectionHeader } from "~/components/SectionHeader";
 import { StatusPill } from "~/components/StatusPill";
 import { useToast } from "~/components/Toast";
 import { useDashboard, useRollTask } from "~/lib/api/queries";
-import type { CourseId, RecentTask, TaskStatus } from "~/lib/api/types";
+import type { CourseId, RecentTask } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
+import { taskActionLabel, taskTarget } from "~/lib/task-routing";
 
 export function meta() {
   return [{ title: "Dashboard · Storyteller" }];
@@ -43,7 +44,7 @@ export default function DashboardRoute() {
   const onRoll = async (courseId: CourseId) => {
     try {
       const task = await rollTask.mutateAsync({ courseId });
-      navigate(`/tasks/${task.id}`);
+      navigate(taskTarget(task));
     } catch {
       push({ icon: "⚠️", title: "Couldn't roll a task. Try again." });
     }
@@ -248,8 +249,7 @@ export default function DashboardRoute() {
                 key={t.id}
                 task={t}
                 onResume={() => {
-                  const target = rowTarget(t.id, t.status);
-                  if (target) navigate(target);
+                  navigate(taskTarget(t));
                 }}
               />
             ))}
@@ -298,7 +298,7 @@ export default function DashboardRoute() {
               </thead>
               <tbody>
                 {recent.slice(0, 7).map((t, i) => {
-                  const target = rowTarget(t.id, t.status);
+                  const target = taskTarget(t);
                   return (
                     <tr
                       key={t.id}
@@ -527,39 +527,6 @@ const Metric = ({
   </div>
 );
 
-/**
- * Decide where a row in the recent-tasks list should navigate to, given its
- * status. Returns null for statuses with no useful destination (failed
- * writing tasks fall back to the result page so the user can retry).
- */
-function rowTarget(taskId: string, status: TaskStatus): string | null {
-  switch (status) {
-    case "not_started":
-    case "in_progress":
-    case "submitted":
-    case "processing":
-      return `/tasks/${taskId}`;
-    case "completed":
-    case "failed":
-      return `/tasks/${taskId}/result`;
-    default:
-      return null;
-  }
-}
-
-function resumeCta(status: TaskStatus): string {
-  switch (status) {
-    case "not_started":
-      return "Start";
-    case "processing":
-      return "Check status";
-    case "submitted":
-      return "Open";
-    default:
-      return "Resume";
-  }
-}
-
 const ResumeRow = ({
   task,
   onResume,
@@ -641,7 +608,7 @@ const ResumeRow = ({
         )}
       </div>
       <button className="btn btn-primary" onClick={onResume}>
-        {resumeCta(task.status)} <IconArrowRight size={14} />
+        {taskActionLabel(task.status)} <IconArrowRight size={14} />
       </button>
     </div>
   );

@@ -208,7 +208,10 @@ Returns `Course`. `course_id` is `"reading"` or `"writing"`.
 ### `POST /courses/{course_id}/tasks` — Roll a new task
 
 Body (optional): `{ "interest_id": "space" }`.  
-Server picks a random interest from the user's selection if omitted.
+Server first returns the user's most relevant unfinished same-course task
+(`in_progress`, `processing`, `submitted`, `needs_retry`, `failed`, then
+`not_started`). If no such task exists, it creates a new ready task and picks a
+random interest from the user's selection when omitted.
 
 **201 Created** — returns a `Task` with the appropriate payload (`reading` for unseen-text, `writing` for short-writing). For reading tasks the questions are returned **without** their `correct_answer` and `explanation` until the task is completed.
 
@@ -247,6 +250,8 @@ Server picks a random interest from the user's selection if omitted.
   "completed_at": null,
   "failed_at": null,
   "fail_reason": null,
+  "passed": null,
+  "passing_score": 70,
   "created_at": "2026-05-06T08:32:11Z",
   "updated_at": "2026-05-06T08:32:11Z"
 }
@@ -312,7 +317,10 @@ Reading body:
 }
 ```
 
-Reading **200 OK** — marks `status="completed"` and returns the full `Task` plus `correct_count` / `total`.
+Reading **200 OK** — returns the full `Task` plus `correct_count` / `total`.
+Scores `>= 70` mark `status="completed"` and guarantee one next same-course
+`not_started` task is ready. Scores below `70` mark `status="needs_retry"`,
+award no completion XP, and do not create the next task.
 
 Writing body:
 
@@ -320,7 +328,7 @@ Writing body:
 { "full_text": "I would love to visit Kyoto..." }
 ```
 
-Writing **202 Accepted** — `status="processing"`. Backend enqueues the LLM evaluation; the client polls the task or listens on the WebSocket until `status="completed"`.
+Writing **202 Accepted** — `status="processing"`. Backend enqueues the LLM evaluation; the client polls the task or listens on the WebSocket until `status="completed"` or `status="needs_retry"`.
 
 ```json
 { "id": "0192f5...", "status": "processing", "submitted_at": "..." }
@@ -342,9 +350,18 @@ Saves the user's draft (called by the auto-save loop every 10 seconds, PRD §7.2
 
 Re-queues a `failed` writing task. **202 Accepted**.
 
+### `POST /tasks/{task_id}/redo`
+
+Resets a `needs_retry` task for another attempt. Reading answers are cleared and
+the task returns to `not_started`. Writing keeps the previous answer as an
+editable draft and returns to `in_progress`. **200 OK** returns `Task`.
+
 ### `GET /tasks/{task_id}/result`
 
-Returns a `TaskResult` (reading or writing — discriminated by `mode`). Reading results unmask the correct answer and explanation per question. Writing results return the full `WritingEvaluation` once `status="completed"`, otherwise `evaluation` is `null`.
+Returns a `TaskResult` (reading or writing — discriminated by `mode`). Reading
+results unmask the correct answer and explanation for `completed` and
+`needs_retry` tasks. Writing results return the full `WritingEvaluation` once
+feedback is available; `evaluation` is `null` while still `processing`.
 
 ---
 
@@ -458,14 +475,20 @@ stateDiagram-v2
   not_started --> in_progress: first answer / draft save
   in_progress --> submitted: reading last answer or writing submit
   submitted --> processing: writing only
-  submitted --> completed: reading scoring is sync
-  processing --> completed: worker success
+  submitted --> completed: reading score >= 70
+  submitted --> needs_retry: reading score < 70
+  processing --> completed: writing score >= 70
+  processing --> needs_retry: writing score < 70
   processing --> failed: worker exhausts retries
   failed --> processing: user retry
+  needs_retry --> not_started: reading redo
+  needs_retry --> in_progress: writing redo
   completed --> [*]
 ```
 
-Reading tasks skip `submitted`/`processing` — submit returns 200 with `status="completed"`. Writing tasks always pass through `processing`.
+Reading tasks skip `submitted`/`processing` in the current implementation — submit
+returns 200 with `status="completed"` or `status="needs_retry"`. Writing tasks
+always pass through `processing`.
 
 ---
 
@@ -544,7 +567,7 @@ interface Course {
 // ----- Tasks -----
 type TaskStatus =
   | "not_started" | "in_progress" | "submitted"
-  | "processing" | "completed" | "failed";
+  | "processing" | "completed" | "needs_retry" | "failed";
 
 type QuestionType = "multiple_choice" | "true_false" | "fill_blank";
 
@@ -597,6 +620,8 @@ interface Task {
   completed_at: ISO8601 | null;
   failed_at: ISO8601 | null;
   fail_reason: string | null;
+  passed: boolean | null;
+  passing_score: number;           // 70
   created_at: ISO8601;
   updated_at: ISO8601;
 }
@@ -610,6 +635,8 @@ interface ReadingResult {
   percentage: number;        // 0..100
   duration_seconds: number;
   xp_earned: number;
+  passed: boolean;
+  passing_score: number;     // 70
   questions: Array<TaskQuestion & {
     user_answer: string | number | null;
     is_correct: boolean;
@@ -644,6 +671,8 @@ interface WritingResult {
   answer_text: string;
   evaluation: WritingEvaluation | null;
   xp_earned: number;
+  passed: boolean | null;
+  passing_score: number;     // 70
   submitted_at: ISO8601 | null;
   completed_at: ISO8601 | null;
 }
@@ -669,6 +698,9 @@ interface RecentTask {
   status: TaskStatus;
   score: number | null;
   when: string;             // human-readable "2 hr ago"
+  progress: TaskProgress | null;
+  passed: boolean | null;
+  passing_score: number;    // 70
 }
 
 interface DashboardResponse {
