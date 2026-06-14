@@ -39,6 +39,10 @@ Production builds require a canonical public URL so prerendered metadata,
 VITE_PUBLIC_SITE_URL=https://www.example.com npm run build
 ```
 
+The Azure Static Web Apps workflow uses the default Azure hostname when
+`VITE_PUBLIC_SITE_URL` is not set. Set the variable when switching to a custom
+domain.
+
 ## Mock backend
 
 The default dev experience runs a localStorage-backed mock backend so the app
