@@ -65,7 +65,6 @@ export default function Landing() {
         >
           <span style={{ cursor: "pointer" }}>Courses</span>
           <span style={{ cursor: "pointer" }}>For parents</span>
-          <span style={{ cursor: "pointer" }}>Pricing</span>
           <Link to="/login" style={{ cursor: "pointer" }}>
             Log in
           </Link>
