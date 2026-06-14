@@ -18,12 +18,13 @@ export function meta() {
 
 export default function OnboardingRoute() {
   const navigate = useNavigate();
-  const { user, ready, setInterests, setUser } = useAuth();
+  const { user, ready, completeOnboarding } = useAuth();
   const { push } = useToast();
   const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (ready && !user) navigate("/login");
+    if (ready && user?.onboarding_completed) navigate("/dashboard", { replace: true });
   }, [ready, user, navigate]);
 
   const initialYob = user?.year_of_birth ?? new Date().getFullYear() - 12;
@@ -48,8 +49,11 @@ export default function OnboardingRoute() {
   };
 
   const finish = async () => {
-    await setInterests(interests);
-    setUser({ ...user, grade_level: grade, year_of_birth: yob, interests });
+    await completeOnboarding({
+      year_of_birth: yob,
+      grade_level: grade,
+      interest_ids: interests,
+    });
     push({
       icon: "🎉",
       title: `Welcome, ${user.first_name}!`,

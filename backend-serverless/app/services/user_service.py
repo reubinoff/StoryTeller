@@ -52,5 +52,6 @@ async def to_user_out(db: AsyncSession, user: User) -> UserOut:
             "role": user.role,
             "status": user.status,
             "created_at": user.created_at,
+            "onboarding_completed": user.onboarding_completed,
         }
     )

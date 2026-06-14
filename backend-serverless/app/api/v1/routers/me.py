@@ -19,6 +19,7 @@ from app.api.v1.schemas.dashboard import (
     NotificationOut,
 )
 from app.api.v1.schemas.user import (
+    CompleteOnboardingRequest,
     DeleteAccountRequest,
     UpdateInterestsRequest,
     UpdateInterestsResponse,
@@ -35,15 +36,41 @@ from app.services.user_service import to_user_out
 router = APIRouter(prefix="/me", tags=["me"])
 
 
+async def _replace_interests(
+    db: DbSession, current_user: CurrentUser, interest_ids: list[str]
+) -> list[str]:
+    valid = await db.execute(select(Interest.slug).where(Interest.slug.in_(interest_ids)))
+    valid_set = {r[0] for r in valid.all()}
+    missing = [slug for slug in interest_ids if slug not in valid_set]
+    if missing:
+        raise AppError(
+            status_code=422,
+            code="validation_error",
+            title="Validation failed",
+            detail="Unknown interest slug",
+            errors=[{"field": "interest_ids", "message": f"Unknown: {', '.join(missing)}"}],
+        )
+
+    await db.execute(delete(UserInterest).where(UserInterest.user_id == current_user.id))
+    created_at = utcnow()
+    for position, slug in enumerate(interest_ids):
+        db.add(
+            UserInterest(
+                user_id=current_user.id,
+                interest_slug=slug,
+                created_at=created_at + timedelta(microseconds=position),
+            )
+        )
+    return interest_ids
+
+
 @router.get("", response_model=UserOut)
 async def get_me(current_user: CurrentUser, db: DbSession) -> UserOut:
     return await to_user_out(db, current_user)
 
 
 @router.patch("", response_model=UserOut)
-async def patch_me(
-    body: UpdateUserRequest, current_user: CurrentUser, db: DbSession
-) -> UserOut:
+async def patch_me(body: UpdateUserRequest, current_user: CurrentUser, db: DbSession) -> UserOut:
     payload = body.model_dump(exclude_unset=True)
     for field, value in payload.items():
         setattr(current_user, field, value)
@@ -56,30 +83,22 @@ async def patch_me(
 async def put_interests(
     body: UpdateInterestsRequest, current_user: CurrentUser, db: DbSession
 ) -> UpdateInterestsResponse:
-    valid = await db.execute(select(Interest.slug).where(Interest.slug.in_(body.interest_ids)))
-    valid_set = {r[0] for r in valid.all()}
-    missing = [slug for slug in body.interest_ids if slug not in valid_set]
-    if missing:
-        raise AppError(
-            status_code=422,
-            code="validation_error",
-            title="Validation failed",
-            detail="Unknown interest slug",
-            errors=[{"field": "interest_ids", "message": f"Unknown: {', '.join(missing)}"}],
-        )
-
-    await db.execute(delete(UserInterest).where(UserInterest.user_id == current_user.id))
-    created_at = utcnow()
-    for position, slug in enumerate(body.interest_ids):
-        db.add(
-            UserInterest(
-                user_id=current_user.id,
-                interest_slug=slug,
-                created_at=created_at + timedelta(microseconds=position),
-            )
-        )
+    await _replace_interests(db, current_user, body.interest_ids)
     await db.commit()
     return UpdateInterestsResponse(interests=body.interest_ids)
+
+
+@router.put("/onboarding", response_model=UserOut)
+async def complete_onboarding(
+    body: CompleteOnboardingRequest, current_user: CurrentUser, db: DbSession
+) -> UserOut:
+    await _replace_interests(db, current_user, body.interest_ids)
+    current_user.year_of_birth = body.year_of_birth
+    current_user.grade_level = body.grade_level
+    current_user.onboarding_completed_at = utcnow()
+    await db.commit()
+    await db.refresh(current_user)
+    return await to_user_out(db, current_user)
 
 
 @router.post("/password/change", status_code=status.HTTP_204_NO_CONTENT)
@@ -137,32 +156,24 @@ async def achievements(current_user: CurrentUser, db: DbSession) -> list[Achieve
 
 
 @router.get("/notifications", response_model=Page[NotificationOut])
-async def notifications(
-    current_user: CurrentUser, db: DbSession
-) -> Page[NotificationOut]:
+async def notifications(current_user: CurrentUser, db: DbSession) -> Page[NotificationOut]:
     items = await dashboard_service.list_notifications(db, current_user)
     return Page(items=items, next_cursor=None)
 
 
-@router.post(
-    "/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.post("/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_notification_read(
     notification_id: str, current_user: CurrentUser, db: DbSession
 ) -> Response:
     try:
         nid = uuid.UUID(notification_id)
     except ValueError as exc:
-        raise AppError(
-            status_code=404, code="not_found", title="Notification not found"
-        ) from exc
+        raise AppError(status_code=404, code="not_found", title="Notification not found") from exc
     await dashboard_service.mark_notification_read(db, current_user, nid)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/notifications/read-all", status_code=status.HTTP_204_NO_CONTENT)
-async def mark_all_notifications_read(
-    current_user: CurrentUser, db: DbSession
-) -> Response:
+async def mark_all_notifications_read(current_user: CurrentUser, db: DbSession) -> Response:
     await dashboard_service.mark_all_notifications_read(db, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

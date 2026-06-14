@@ -10,11 +10,12 @@ from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_evaluation import TaskEvaluation
 from app.db.models.task_question import TaskQuestion
-from app.db.models.user import AuthCredential, User
+from app.db.models.user import AuthCredential, AuthIdentity, User
 
 __all__ = [
     "Achievement",
     "AuthCredential",
+    "AuthIdentity",
     "ContentPassage",
     "Course",
     "Interest",

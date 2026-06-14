@@ -85,15 +85,28 @@ Same generic error for invalid email vs. invalid password.
 
 ### `POST /auth/google/exchange`
 
-Body: `{ "code": "<one-time auth code>" }`. Returns `AuthResponse` like login.
+Deprecated. Google sign-in now uses the redirect flow below.
+
+### `GET /auth/google/start`
+
+Query: `return_to` (internal path, default `/dashboard`), `intent` (`login` or
+`signup`). Redirects to Google OAuth with `openid email profile`.
+
+### `GET /auth/google/callback`
+
+Google redirects here with `code` + `state`. The backend validates state,
+exchanges the code, verifies the Google identity, creates or links the user,
+sets the refresh cookie, and redirects to frontend
+`/auth/callback?returnTo=<path>`. On failure, redirects there with `error`.
 
 ### `POST /auth/refresh`
 
-Cookie-only request. **200 OK** `{ "access_token": "...", "expires_in": 900 }` and rotates the refresh token cookie.
+Cookie-only request. **200 OK** `{ "access_token": "...", "expires_in": 900 }`
+and refreshes the signed refresh cookie.
 
 ### `POST /auth/logout`
 
-Revokes the current refresh-token family + access-token jti. **204 No Content**.
+Deletes the app refresh cookie. **204 No Content**.
 
 ### `POST /auth/email/verify/request` · `POST /auth/email/verify/confirm`
 
@@ -145,6 +158,20 @@ Replaces the user's interest selection.
 ```
 
 Server enforces `1 ≤ length ≤ 6`.
+
+### `PUT /me/onboarding`
+
+Completes first-run learner setup and returns the updated `User`.
+
+```json
+{
+  "year_of_birth": 2012,
+  "grade_level": 4,
+  "interest_ids": ["animals", "space"]
+}
+```
+
+Server validates the year range, `1 ≤ grade_level ≤ 12`, and `1 ≤ interests ≤ 6`.
 
 ### `POST /me/avatar`
 
@@ -482,6 +509,7 @@ interface User {
   role: UserRole;
   status: UserStatus;
   created_at: ISO8601;
+  onboarding_completed: boolean;
 }
 
 // ----- Catalog -----

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { AuthFrame, AuthSide } from "~/components/AuthFrame";
 import { IconGoogle } from "~/components/Icons";
 import { ApiError } from "~/lib/api/client";
 import { useAuth } from "~/lib/auth";
+import { postAuthDestination, safeReturnTo } from "~/lib/auth-routing";
 
 const LoginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -22,9 +23,15 @@ export function meta() {
 export default function LoginRoute() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { signin, signinGoogle } = useAuth();
+  const { user, ready, signin, signinGoogle } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const returnTo = params.get("returnTo") || "/dashboard";
+  const returnTo = safeReturnTo(params.get("returnTo"));
+
+  useEffect(() => {
+    if (ready && user) {
+      navigate(postAuthDestination(user, returnTo), { replace: true });
+    }
+  }, [ready, user, returnTo, navigate]);
 
   const {
     register,
@@ -38,8 +45,8 @@ export default function LoginRoute() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      await signin(values.email, values.password);
-      navigate(returnTo);
+      const signedIn = await signin(values.email, values.password);
+      navigate(postAuthDestination(signedIn, returnTo));
     } catch (e) {
       const msg =
         e instanceof ApiError
@@ -51,8 +58,8 @@ export default function LoginRoute() {
 
   const onGoogle = async () => {
     try {
-      await signinGoogle();
-      navigate(returnTo);
+      const signedIn = await signinGoogle(returnTo, "login");
+      navigate(postAuthDestination(signedIn, returnTo));
     } catch {
       setSubmitError("Couldn't sign in with Google");
     }

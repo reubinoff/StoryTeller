@@ -27,7 +27,20 @@ param jwtSecret string
 param anthropicApiKey string = ''
 
 @description('Allowed frontend origins as a JSON array string.')
-param corsOrigins string = '["http://localhost:5173","http://127.0.0.1:5173"]'
+param corsOrigins string = '["https://storyteller.reubinoff.com"]'
+
+@description('Public frontend base URL used after backend auth redirects.')
+param frontendBaseUrl string = 'https://storyteller.reubinoff.com'
+
+@description('Google OAuth web client ID.')
+param googleOauthClientId string = ''
+
+@secure()
+@description('Google OAuth web client secret.')
+param googleOauthClientSecret string = ''
+
+@description('Google OAuth callback URL for this Function App, for example https://<host>/api/v1/auth/google/callback.')
+param googleOauthRedirectUri string
 
 @description('Existing subnet resource ID for Function App VNet integration. For Flex Consumption, use a subnet delegated to Microsoft.App/environments.')
 param functionSubnetResourceId string
@@ -162,6 +175,14 @@ resource anthropicSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+resource googleOauthClientSecretResource 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'google-oauth-client-secret'
+  properties: {
+    value: googleOauthClientSecret
+  }
+}
+
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: planName
   location: location
@@ -232,6 +253,30 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'JWT_ACCESS_TTL_SECONDS'
           value: '900'
+        }
+        {
+          name: 'JWT_REFRESH_TTL_SECONDS'
+          value: '2592000'
+        }
+        {
+          name: 'AUTH_COOKIE_SECURE'
+          value: 'true'
+        }
+        {
+          name: 'FRONTEND_BASE_URL'
+          value: frontendBaseUrl
+        }
+        {
+          name: 'GOOGLE_OAUTH_CLIENT_ID'
+          value: googleOauthClientId
+        }
+        {
+          name: 'GOOGLE_OAUTH_CLIENT_SECRET'
+          value: '@Microsoft.KeyVault(SecretUri=${googleOauthClientSecretResource.properties.secretUri})'
+        }
+        {
+          name: 'GOOGLE_OAUTH_REDIRECT_URI'
+          value: googleOauthRedirectUri
         }
         {
           name: 'ANTHROPIC_API_KEY'

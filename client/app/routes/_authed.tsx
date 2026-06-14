@@ -15,6 +15,10 @@ export default function AuthedLayout() {
     if (!user) {
       const returnTo = encodeURIComponent(location.pathname + location.search);
       navigate(`/login?returnTo=${returnTo}`, { replace: true });
+      return;
+    }
+    if (!user.onboarding_completed) {
+      navigate("/onboarding", { replace: true });
     }
   }, [ready, user, location.pathname, location.search, navigate]);
 

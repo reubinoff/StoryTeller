@@ -13,9 +13,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ApiError, getAccessToken, setAccessToken } from "./api/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { ApiError, getAccessToken, isUsingMock, setAccessToken } from "./api/client";
 import { api } from "./api/endpoints";
-import type { DashboardMetrics, InterestId, User } from "./api/types";
+import type {
+  CompleteOnboardingRequest,
+  DashboardMetrics,
+  InterestId,
+  User,
+} from "./api/types";
 
 const USER_KEY = "storyteller.auth.user";
 
@@ -41,10 +47,12 @@ interface AuthContextValue {
     password: string;
     year_of_birth: number;
   }) => Promise<User>;
-  signinGoogle: () => Promise<User>;
+  signinGoogle: (returnTo?: string, intent?: "login" | "signup") => Promise<User>;
+  refreshSession: () => Promise<User | null>;
   signout: () => void;
   setUser: (u: User | null) => void;
   setInterests: (ids: InterestId[]) => Promise<void>;
+  completeOnboarding: (data: CompleteOnboardingRequest) => Promise<User>;
   setMetrics: (m: DashboardMetrics) => void;
 }
 
@@ -54,13 +62,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null);
   const [metrics, setMetricsState] = useState<DashboardMetrics>(DEFAULT_METRICS);
   const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
+
+  const setUser = useCallback((u: User | null) => setUserState(u), []);
+  const setMetrics = useCallback((m: DashboardMetrics) => setMetricsState(m), []);
+
+  const clearLocalSession = useCallback(() => {
+    setAccessToken(null);
+    setUserState(null);
+    setMetricsState(DEFAULT_METRICS);
+    queryClient.clear();
+  }, [queryClient]);
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const tokens = await api.auth.refresh();
+      setAccessToken(tokens.access_token);
+      const current = await api.me.get();
+      setUserState(current);
+      return current;
+    } catch {
+      clearLocalSession();
+      return null;
+    }
+  }, [clearLocalSession]);
+
+  const signout = useCallback(() => {
+    clearLocalSession();
+    void api.auth.logout().catch(() => {
+      /* ignore */
+    });
+  }, [clearLocalSession]);
 
   // Hydrate from localStorage on mount.
   useEffect(() => {
+    let cancelled = false;
+
+    const finish = () => {
+      if (!cancelled) setReady(true);
+    };
+
     if (typeof window === "undefined") {
-      setReady(true);
+      finish();
       return;
     }
+
     const cached = window.localStorage.getItem(USER_KEY);
     const token = getAccessToken();
     if (cached && token) {
@@ -70,8 +116,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.localStorage.removeItem(USER_KEY);
       }
     }
-    setReady(true);
-  }, []);
+
+    const hydrate = async () => {
+      if (token) {
+        try {
+          const current = await api.me.get();
+          if (!cancelled) setUserState(current);
+          return;
+        } catch (e) {
+          if (!(e instanceof ApiError && e.status === 401)) {
+            clearLocalSession();
+            return;
+          }
+        }
+      }
+      await refreshSession();
+    };
+
+    void hydrate().finally(finish);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearLocalSession, refreshSession]);
 
   // Persist user.
   useEffect(() => {
@@ -112,9 +179,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const setUser = useCallback((u: User | null) => setUserState(u), []);
-  const setMetrics = useCallback((m: DashboardMetrics) => setMetricsState(m), []);
-
   const signin = useCallback(async (email: string, password: string) => {
     const res = await api.auth.login({ email, password });
     setAccessToken(res.access_token);
@@ -138,25 +202,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
-  const signinGoogle = useCallback(async () => {
-    const res = await api.auth.google();
-    setAccessToken(res.access_token);
-    setUserState(res.user);
-    return res.user;
-  }, []);
-
-  const signout = useCallback(() => {
-    setAccessToken(null);
-    setUserState(null);
-    setMetricsState(DEFAULT_METRICS);
-    void api.auth.logout().catch(() => {
-      /* ignore */
-    });
-  }, []);
+  const signinGoogle = useCallback(
+    async (returnTo = "/dashboard", intent: "login" | "signup" = "login") => {
+      if (!isUsingMock && typeof window !== "undefined") {
+        window.location.assign(api.auth.googleStartUrl(returnTo, intent));
+        return await new Promise<User>(() => {
+          /* browser is navigating away */
+        });
+      }
+      const res = await api.auth.google();
+      setAccessToken(res.access_token);
+      setUserState(res.user);
+      return res.user;
+    },
+    []
+  );
 
   const setInterests = useCallback(async (ids: InterestId[]) => {
     await api.me.setInterests(ids);
     setUserState((prev) => (prev ? { ...prev, interests: ids } : prev));
+  }, []);
+
+  const completeOnboarding = useCallback(async (data: CompleteOnboardingRequest) => {
+    const updated = await api.me.completeOnboarding(data);
+    setUserState(updated);
+    return updated;
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -167,9 +237,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signin,
       signup,
       signinGoogle,
+      refreshSession,
       signout,
       setUser,
       setInterests,
+      completeOnboarding,
       setMetrics,
     }),
     [
@@ -179,9 +251,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signin,
       signup,
       signinGoogle,
+      refreshSession,
       signout,
       setUser,
       setInterests,
+      completeOnboarding,
       setMetrics,
     ]
   );

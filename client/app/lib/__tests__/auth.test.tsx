@@ -17,10 +17,13 @@ vi.mock("~/lib/api/endpoints", () => ({
       login: vi.fn(),
       signup: vi.fn(),
       google: vi.fn(),
+      refresh: vi.fn(),
       logout: vi.fn(),
     },
     me: {
+      get: vi.fn(),
       setInterests: vi.fn(),
+      completeOnboarding: vi.fn(),
       dashboard: vi.fn(),
     },
   },
@@ -52,6 +55,7 @@ const mockUser: User = {
   role: "user",
   status: "active",
   created_at: "2024-01-01T00:00:00Z",
+  onboarding_completed: true,
 };
 
 const mockAuthResponse: AuthResponse = {
@@ -99,6 +103,8 @@ function wrapper({ children }: { children: ReactNode }) {
 beforeEach(() => {
   localStorage.clear();
   vi.resetAllMocks();
+  vi.mocked(api.auth.refresh).mockRejectedValue(new Error("No refresh cookie"));
+  vi.mocked(api.me.get).mockRejectedValue(new Error("No access token"));
   vi.mocked(api.auth.logout).mockResolvedValue(null);
   vi.mocked(api.me.dashboard).mockResolvedValue(mockDashboard);
 });
@@ -123,6 +129,7 @@ describe("useAuth", () => {
   it("restores user from localStorage on mount", async () => {
     localStorage.setItem("storyteller.auth.accessToken", "tok-test");
     localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+    vi.mocked(api.me.get).mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
@@ -132,6 +139,7 @@ describe("useAuth", () => {
   it("ignores corrupted localStorage data", async () => {
     localStorage.setItem("storyteller.auth.accessToken", "tok-test");
     localStorage.setItem("storyteller.auth.user", "{bad json");
+    vi.mocked(api.me.get).mockRejectedValue(new Error("Expired token"));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -227,5 +235,32 @@ describe("setInterests", () => {
     await waitFor(() =>
       expect(result.current.user?.interests).toEqual(["animals", "space"])
     );
+  });
+});
+
+describe("completeOnboarding", () => {
+  it("persists onboarding and sets the returned user", async () => {
+    const completed: User = {
+      ...mockUser,
+      onboarding_completed: true,
+      interests: ["animals"],
+    };
+    vi.mocked(api.auth.login).mockResolvedValue({
+      ...mockAuthResponse,
+      user: { ...mockUser, onboarding_completed: false },
+    });
+    vi.mocked(api.me.completeOnboarding).mockResolvedValue(completed);
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await result.current.signin("test@test.com", "pass");
+    const user = await result.current.completeOnboarding({
+      year_of_birth: 2010,
+      grade_level: 6,
+      interest_ids: ["animals"],
+    });
+
+    expect(user.onboarding_completed).toBe(true);
+    await waitFor(() => expect(result.current.user?.interests).toEqual(["animals"]));
   });
 });

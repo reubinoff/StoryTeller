@@ -19,7 +19,12 @@ const mockSignin = vi.fn();
 const mockSigninGoogle = vi.fn();
 
 vi.mock("~/lib/auth", () => ({
-  useAuth: () => ({ signin: mockSignin, signinGoogle: mockSigninGoogle }),
+  useAuth: () => ({
+    user: null,
+    ready: true,
+    signin: mockSignin,
+    signinGoogle: mockSigninGoogle,
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -90,7 +95,7 @@ describe("LoginRoute form validation", () => {
 
 describe("LoginRoute submission", () => {
   it("calls signin with form values on submit", async () => {
-    mockSignin.mockResolvedValue({ email: "maya@example.com" });
+    mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /log in/i }));
@@ -100,7 +105,7 @@ describe("LoginRoute submission", () => {
   });
 
   it("navigates to /dashboard after successful login", async () => {
-    mockSignin.mockResolvedValue({ email: "maya@example.com" });
+    mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /log in/i }));
@@ -108,7 +113,7 @@ describe("LoginRoute submission", () => {
   });
 
   it("navigates to the returnTo query param after login", async () => {
-    mockSignin.mockResolvedValue({ email: "maya@example.com" });
+    mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin("?returnTo=/courses");
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /log in/i }));
@@ -148,7 +153,10 @@ describe("LoginRoute submission", () => {
 
 describe("Google sign-in", () => {
   it("calls signinGoogle and navigates to dashboard", async () => {
-    mockSigninGoogle.mockResolvedValue({ email: "maya@example.com" });
+    mockSigninGoogle.mockResolvedValue({
+      email: "maya@example.com",
+      onboarding_completed: true,
+    });
     renderLogin();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /continue with google/i }));

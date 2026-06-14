@@ -23,13 +23,11 @@ vi.mock("~/components/Toast", async (importOriginal) => {
   return { ...actual, useToast: () => ({ push: mockPush }) };
 });
 
-const mockSetInterests = vi.fn();
-const mockSetUser = vi.fn();
+const mockCompleteOnboarding = vi.fn();
 let mockAuthState: {
   user: User | null;
   ready: boolean;
-  setInterests: ReturnType<typeof vi.fn>;
-  setUser: ReturnType<typeof vi.fn>;
+  completeOnboarding: ReturnType<typeof vi.fn>;
 };
 
 vi.mock("~/lib/auth", () => ({
@@ -60,6 +58,7 @@ const mockUser: User = {
   role: "user",
   status: "active",
   created_at: "2024-01-01T00:00:00Z",
+  onboarding_completed: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -86,12 +85,14 @@ async function navigateToStep(user: ReturnType<typeof userEvent.setup>, step: 2 
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mockSetInterests.mockResolvedValue(undefined);
+  mockCompleteOnboarding.mockResolvedValue({
+    ...mockUser,
+    onboarding_completed: true,
+  });
   mockAuthState = {
     user: mockUser,
     ready: true,
-    setInterests: mockSetInterests,
-    setUser: mockSetUser,
+    completeOnboarding: mockCompleteOnboarding,
   };
 });
 
@@ -101,13 +102,13 @@ beforeEach(() => {
 
 describe("OnboardingRoute — auth guard", () => {
   it("redirects to /login when user is null", async () => {
-    mockAuthState = { user: null, ready: true, setInterests: mockSetInterests, setUser: mockSetUser };
+    mockAuthState = { user: null, ready: true, completeOnboarding: mockCompleteOnboarding };
     renderOnboarding();
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/login"));
   });
 
   it("renders nothing while not ready without a user", () => {
-    mockAuthState = { user: null, ready: false, setInterests: mockSetInterests, setUser: mockSetUser };
+    mockAuthState = { user: null, ready: false, completeOnboarding: mockCompleteOnboarding };
     const { container } = renderOnboarding();
     expect(container.firstChild).toBeNull();
   });
@@ -252,7 +253,7 @@ describe("OnboardingRoute — step 3 (topics)", () => {
 });
 
 describe("OnboardingRoute — finishing onboarding", () => {
-  it("calls setInterests with selected topic IDs", async () => {
+  it("calls completeOnboarding with selected topic IDs", async () => {
     renderOnboarding();
     const user = userEvent.setup();
     await navigateToStep(user, 3);
@@ -260,19 +261,26 @@ describe("OnboardingRoute — finishing onboarding", () => {
     await user.click(screen.getByText("Sports"));
     await user.click(screen.getByRole("button", { name: /roll my first task/i }));
     await waitFor(() =>
-      expect(mockSetInterests).toHaveBeenCalledWith(["animals", "sports"])
+      expect(mockCompleteOnboarding).toHaveBeenCalledWith(
+        expect.objectContaining({ interest_ids: ["animals", "sports"] })
+      )
     );
   });
 
-  it("calls setUser to persist grade and interests", async () => {
+  it("persists grade and year of birth", async () => {
     renderOnboarding();
     const user = userEvent.setup();
     await navigateToStep(user, 3);
     await user.click(screen.getByText("Animals & Pets"));
     await user.click(screen.getByRole("button", { name: /roll my first task/i }));
-    await waitFor(() => expect(mockSetUser).toHaveBeenCalled());
-    const updatedUser = mockSetUser.mock.calls[0][0] as User;
-    expect(updatedUser.interests).toContain("animals");
+    await waitFor(() => expect(mockCompleteOnboarding).toHaveBeenCalled());
+    const payload = mockCompleteOnboarding.mock.calls[0][0] as {
+      year_of_birth: number;
+      grade_level: number;
+      interest_ids: string[];
+    };
+    expect(payload.grade_level).toBeGreaterThanOrEqual(1);
+    expect(payload.year_of_birth).toBeGreaterThan(1900);
   });
 
   it("shows a welcome toast after finishing", async () => {

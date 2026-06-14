@@ -236,6 +236,27 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
     return ok({ interests: ids });
   }
 
+  if (pathname === "/me/onboarding" && req.method === "PUT") {
+    const body = req.body as {
+      year_of_birth?: number;
+      grade_level?: number;
+      interest_ids?: InterestId[];
+    };
+    if (
+      !body?.year_of_birth ||
+      !body?.grade_level ||
+      !Array.isArray(body.interest_ids)
+    ) {
+      return err(422, "validation_error", "Onboarding fields are required");
+    }
+    user.year_of_birth = body.year_of_birth;
+    user.grade_level = body.grade_level;
+    user.interests = body.interest_ids.slice(0, 6);
+    user.onboarding_completed = true;
+    commit();
+    return ok(user);
+  }
+
   if (pathname === "/me/dashboard" && req.method === "GET") {
     const m = metrics(user.id);
     const own = recentTasks(user.id);

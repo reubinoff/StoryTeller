@@ -4,11 +4,13 @@
  * consistent and easy to swap out when the real backend ships.
  */
 
-import { request } from "./client";
+import { apiUrl, request } from "./client";
 import type {
   Achievement,
   AnswerQuestionRequest,
   AuthResponse,
+  AuthTokens,
+  CompleteOnboardingRequest,
   Course,
   CourseId,
   DashboardResponse,
@@ -39,6 +41,10 @@ export const api = {
         body: { code: "demo" },
         noAuth: true,
       }),
+    googleStartUrl: (returnTo: string, intent: "login" | "signup") =>
+      apiUrl("/auth/google/start", { return_to: returnTo, intent }),
+    refresh: () =>
+      request<AuthTokens>("/auth/refresh", { method: "POST", noAuth: true }),
     logout: () => request<null>("/auth/logout", { method: "POST" }),
   },
   me: {
@@ -50,6 +56,8 @@ export const api = {
         method: "PUT",
         body: { interest_ids },
       }),
+    completeOnboarding: (body: CompleteOnboardingRequest) =>
+      request<User>("/me/onboarding", { method: "PUT", body }),
     dashboard: () => request<DashboardResponse>("/me/dashboard"),
     achievements: () => request<Achievement[]>("/me/achievements"),
     notifications: () => request<Page<Notification>>("/me/notifications"),

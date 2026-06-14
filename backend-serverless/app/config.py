@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="change-me-in-prod-please-use-a-long-random-string")
     jwt_algorithm: str = "HS256"
     jwt_access_ttl_seconds: int = 60 * 15
+    jwt_refresh_ttl_seconds: int = 60 * 60 * 24 * 30
+    auth_cookie_secure: bool | None = None
+
+    frontend_base_url: str = "http://localhost:5174"
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_redirect_uri: str = "http://localhost:7071/api/v1/auth/google/callback"
 
     anthropic_api_key: str = Field(default="")
     claude_model: str = Field(default="claude-sonnet-4-5-20250929")
@@ -39,7 +46,13 @@ class Settings(BaseSettings):
     create_evaluation_queue_on_enqueue: bool = Field(default=True)
 
     cors_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "https://storyteller.reubinoff.com",
+        ]
     )
 
     seed_on_startup: bool = True

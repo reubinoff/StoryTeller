@@ -18,7 +18,19 @@
       "value": "/subscriptions/<subscription-id>/resourceGroups/guide-me-infra/providers/Microsoft.Network/virtualNetworks/guide-me-infra-vnet/subnets/storyteller-functions"
     },
     "corsOrigins": {
-      "value": "[\"https://your-frontend.example.com\"]"
+      "value": "[\"https://storyteller.reubinoff.com\"]"
+    },
+    "frontendBaseUrl": {
+      "value": "https://storyteller.reubinoff.com"
+    },
+    "googleOauthClientId": {
+      "value": "replace-with-google-oauth-web-client-id"
+    },
+    "googleOauthClientSecret": {
+      "value": "replace-with-google-oauth-web-client-secret"
+    },
+    "googleOauthRedirectUri": {
+      "value": "https://<your-function-host>/api/v1/auth/google/callback"
     }
   }
 }

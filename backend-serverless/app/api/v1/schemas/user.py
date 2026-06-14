@@ -36,6 +36,7 @@ class UserOut(ApiModel):
     role: UserRole
     status: UserStatus
     created_at: datetime
+    onboarding_completed: bool
 
 
 class UpdateUserRequest(ApiModel):
@@ -64,6 +65,30 @@ class UpdateInterestsRequest(ApiModel):
 
 class UpdateInterestsResponse(ApiModel):
     interests: list[str]
+
+
+class CompleteOnboardingRequest(ApiModel):
+    year_of_birth: int
+    grade_level: int = Field(ge=1, le=12)
+    interest_ids: list[str] = Field(min_length=1, max_length=6)
+
+    @field_validator("year_of_birth")
+    @classmethod
+    def _year_range(cls, v: int) -> int:
+        current = datetime.now().year
+        if v < current - 100 or v > current - 5:
+            msg = f"Must be between {current - 100} and {current - 5}."
+            raise ValueError(msg)
+        return v
+
+    @field_validator("interest_ids")
+    @classmethod
+    def _unique_interests(cls, v: list[str]) -> list[str]:
+        seen: list[str] = []
+        for slug in v:
+            if slug not in seen:
+                seen.append(slug)
+        return seen
 
 
 class DeleteAccountRequest(ApiModel):

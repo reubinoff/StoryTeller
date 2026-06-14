@@ -33,6 +33,12 @@ export interface AuthResponse extends AuthTokens {
   user: User;
 }
 
+export interface CompleteOnboardingRequest {
+  year_of_birth: number;
+  grade_level: number;
+  interest_ids: InterestId[];
+}
+
 // ----- User -----
 
 export type ThemePreference = "auto" | "light" | "dark";
@@ -60,6 +66,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   created_at: ISO8601;
+  onboarding_completed: boolean;
 }
 
 export interface UpdateUserRequest {

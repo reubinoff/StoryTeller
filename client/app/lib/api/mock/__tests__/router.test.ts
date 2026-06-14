@@ -31,18 +31,21 @@ describe("ok", () => {
   it("wraps primitive data", () => {
     const res = ok(42);
     expect(res.kind).toBe("ok");
+    if (res.kind !== "ok") throw new Error("Expected ok response");
     expect(res.data).toBe(42);
   });
 
   it("wraps object data", () => {
     const res = ok({ id: "abc", email: "test@test.com" });
     expect(res.kind).toBe("ok");
+    if (res.kind !== "ok") throw new Error("Expected ok response");
     expect(res.data).toEqual({ id: "abc", email: "test@test.com" });
   });
 
   it("wraps null", () => {
     const res = ok(null);
     expect(res.kind).toBe("ok");
+    if (res.kind !== "ok") throw new Error("Expected ok response");
     expect(res.data).toBeNull();
   });
 });
@@ -51,6 +54,7 @@ describe("err", () => {
   it("builds a correctly shaped error response", () => {
     const res = err(401, "unauthenticated", "Not authenticated", "Token expired");
     expect(res.kind).toBe("error");
+    if (res.kind !== "error") throw new Error("Expected error response");
     expect(res.problem.status).toBe(401);
     expect(res.problem.code).toBe("unauthenticated");
     expect(res.problem.title).toBe("Not authenticated");
@@ -59,6 +63,7 @@ describe("err", () => {
 
   it("omits detail when not provided", () => {
     const res = err(404, "not_found", "Not Found");
+    if (res.kind !== "error") throw new Error("Expected error response");
     expect(res.problem.detail).toBeUndefined();
   });
 
@@ -68,6 +73,7 @@ describe("err", () => {
       { field: "password", message: "Too short" },
     ];
     const res = err(422, "validation_error", "Validation Failed", undefined, fieldErrors);
+    if (res.kind !== "error") throw new Error("Expected error response");
     expect(res.problem.errors).toHaveLength(2);
     expect(res.problem.errors![0].field).toBe("email");
     expect(res.problem.errors![1].field).toBe("password");
@@ -75,6 +81,7 @@ describe("err", () => {
 
   it("generates a typed error URL", () => {
     const res = err(409, "email_taken", "Email taken");
+    if (res.kind !== "error") throw new Error("Expected error response");
     expect(res.problem.type).toContain("email_taken");
   });
 });

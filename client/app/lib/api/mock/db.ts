@@ -129,7 +129,14 @@ function load(): void {
   if (typeof window === "undefined") return;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw) as MockState;
+    if (raw) {
+      state = JSON.parse(raw) as MockState;
+      Object.values(state.users).forEach((user) => {
+        if (typeof user.onboarding_completed !== "boolean") {
+          user.onboarding_completed = user.interests.length > 0;
+        }
+      });
+    }
   } catch {
     state = initialState();
   }

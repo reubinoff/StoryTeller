@@ -13,7 +13,7 @@ import { mockHandle } from "./mock/router";
 
 const ACCESS_TOKEN_KEY = "storyteller.auth.accessToken";
 
-const useMock =
+export const isUsingMock =
   typeof import.meta !== "undefined" &&
   (import.meta.env.VITE_USE_MOCK ?? "true") !== "false";
 const apiBase =
@@ -54,7 +54,7 @@ export interface RequestOptions<TBody = unknown> {
   throwOnError?: boolean;
 }
 
-function buildUrl(
+export function buildUrl(
   path: string,
   query?: RequestOptions["query"]
 ): string {
@@ -68,6 +68,10 @@ function buildUrl(
     if (qs) p += `?${qs}`;
   }
   return p;
+}
+
+export function apiUrl(path: string, query?: RequestOptions["query"]): string {
+  return `${apiBase}${buildUrl(path, query)}`;
 }
 
 export async function request<TResponse, TBody = unknown>(
@@ -85,7 +89,7 @@ export async function request<TResponse, TBody = unknown>(
 
   const token = noAuth ? null : getAccessToken();
 
-  if (useMock) {
+  if (isUsingMock) {
     const result = await mockHandle<TResponse, TBody>({
       method,
       url,

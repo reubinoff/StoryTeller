@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   IconArrowRight,
@@ -9,6 +10,7 @@ import {
 } from "~/components/Icons";
 import { BrandMark, Mascot } from "~/components/Mascot";
 import { useAuth } from "~/lib/auth";
+import { postAuthDestination } from "~/lib/auth-routing";
 
 export function meta() {
   return [
@@ -23,12 +25,13 @@ export function meta() {
 
 export default function Landing() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
 
-  if (typeof window !== "undefined" && user) {
-    // Already signed in: bounce straight to the dashboard.
-    navigate("/dashboard", { replace: true });
-  }
+  useEffect(() => {
+    if (ready && user) {
+      navigate(postAuthDestination(user), { replace: true });
+    }
+  }, [ready, user, navigate]);
 
   return (
     <div
@@ -63,8 +66,6 @@ export default function Landing() {
             flexWrap: "wrap",
           }}
         >
-          <span style={{ cursor: "pointer" }}>Courses</span>
-          <span style={{ cursor: "pointer" }}>For parents</span>
           <Link to="/login" style={{ cursor: "pointer" }}>
             Log in
           </Link>
@@ -342,6 +343,18 @@ export default function Landing() {
           ))}
         </div>
       </div>
+
+      <footer
+        style={{
+          borderTop: "1px solid var(--line)",
+          padding: "24px 48px",
+          textAlign: "center",
+          fontSize: 13,
+          color: "var(--ink-3)",
+        }}
+      >
+        Made with <span aria-label="love">❤️</span> by Moshe Reubinoff
+      </footer>
     </div>
   );
 }

@@ -78,6 +78,7 @@ export function handleAuth(
       role: "user",
       status: "active",
       created_at: new Date().toISOString(),
+      onboarding_completed: false,
     };
     state.users[user.id] = user;
     state.user_tasks[user.id] = [];
@@ -125,6 +126,7 @@ export function handleAuth(
         role: "user",
         status: "active",
         created_at: new Date().toISOString(),
+        onboarding_completed: false,
       };
       state.users[user.id] = user;
       state.user_tasks[user.id] = [];

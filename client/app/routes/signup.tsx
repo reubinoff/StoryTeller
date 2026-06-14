@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { IconEye, IconGoogle } from "~/components/Icons";
 import { useToast } from "~/components/Toast";
 import { useAuth } from "~/lib/auth";
 import { ApiError } from "~/lib/api/client";
+import { postAuthDestination, safeReturnTo } from "~/lib/auth-routing";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -51,7 +52,7 @@ export function meta() {
 export default function SignupRoute() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { signup, signinGoogle } = useAuth();
+  const { user, ready, signup, signinGoogle } = useAuth();
   const { push } = useToast();
   const [showPw, setShowPw] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -83,7 +84,13 @@ export default function SignupRoute() {
   })();
   const pwLabel = ["Weak", "Weak", "Okay", "Good", "Strong"][pwStrength];
 
-  const returnTo = params.get("returnTo") || "/onboarding";
+  const returnTo = safeReturnTo(params.get("returnTo"));
+
+  useEffect(() => {
+    if (ready && user) {
+      navigate(postAuthDestination(user, returnTo), { replace: true });
+    }
+  }, [ready, user, returnTo, navigate]);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -99,9 +106,9 @@ export default function SignupRoute() {
 
   const onGoogle = async () => {
     try {
-      await signinGoogle();
+      const signedIn = await signinGoogle(returnTo, "signup");
       push({ icon: "🎉", title: "Welcome!" });
-      navigate(returnTo);
+      navigate(postAuthDestination(signedIn, returnTo));
     } catch {
       setSubmitError("Couldn't sign in with Google");
     }

@@ -72,7 +72,13 @@ Edit `local.settings.json`:
 - `ANTHROPIC_API_KEY`: required for real Claude calls. Tests stub Claude and do
   not need a real key.
 - `CORS_ORIGINS`: include your frontend dev origin.
+- `FRONTEND_BASE_URL`, `GOOGLE_OAUTH_CLIENT_ID`,
+  `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`: required for
+  Google sign-in.
 - `EVALUATION_QUEUE_NAME`: defaults to `writing-evaluations`.
+
+For production, use `https://storyteller.reubinoff.com` as
+`FRONTEND_BASE_URL` and include it in `CORS_ORIGINS`.
 
 Do not commit `local.settings.json`; it can contain secrets and is ignored.
 
@@ -165,6 +171,9 @@ Azurite or an Azure Storage account and open the `writing-evaluations` queue.
 - Claude calls fail: set `ANTHROPIC_API_KEY`, or run tests where Claude is
   stubbed.
 - CORS errors: add the frontend origin to `CORS_ORIGINS`.
+- Google redirects to the wrong host: set `FRONTEND_BASE_URL` to
+  `https://storyteller.reubinoff.com` and register the deployed
+  `/api/v1/auth/google/callback` backend URL in Google Cloud.
 
 ## Tests
 

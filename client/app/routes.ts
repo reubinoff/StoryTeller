@@ -4,6 +4,7 @@ export default [
   index("routes/landing.tsx"),
   route("signup", "routes/signup.tsx"),
   route("login", "routes/login.tsx"),
+  route("auth/callback", "routes/auth-callback.tsx"),
   route("onboarding", "routes/onboarding.tsx"),
   route("help", "routes/help.tsx"),
   layout("routes/_authed.tsx", [
