@@ -20,6 +20,7 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
+    environment: production
     steps:
       - uses: actions/checkout@v6
         with:
@@ -40,6 +41,7 @@ jobs:
             fi
             base_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net"
           fi
+          base_url="${base_url%/}"
           base_url="${base_url%/api/v1}"
           base_url="${base_url%/}"
           {
