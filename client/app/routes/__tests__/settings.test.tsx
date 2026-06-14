@@ -4,6 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsRoute from "../settings";
 import type { User } from "~/lib/api/types";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const mockPush = vi.fn();
 
 vi.mock("~/components/Toast", async (importOriginal) => {
@@ -112,5 +119,6 @@ describe("SettingsRoute", () => {
         interests: ["animals"],
       })
     );
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
   });
 });

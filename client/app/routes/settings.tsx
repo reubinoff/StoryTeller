@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { IconCheck } from "~/components/Icons";
 import { SettingsRow, SettingsSection } from "~/components/Settings";
 import { Toggle } from "~/components/Toggle";
@@ -22,6 +23,7 @@ export function meta() {
 }
 
 export default function SettingsRoute() {
+  const navigate = useNavigate();
   const { user, setUser, setInterests } = useAuth();
   const update = useUpdateProfile();
   const { push } = useToast();
@@ -90,6 +92,7 @@ export default function SettingsRoute() {
       await setInterests(interests);
       setUser({ ...updated, interests });
       push({ icon: "✓", title: "Saved" });
+      navigate("/dashboard");
     } catch {
       push({ icon: "⚠️", title: "Couldn't save settings" });
     }
