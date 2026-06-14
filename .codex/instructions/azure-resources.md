@@ -37,6 +37,9 @@ This is the production StoryTeller app resource group.
 - Location: `Israel Central`
 - State: `Running`
 - Default host: `storyteller-func-prod-4dghcj4shzqwa.azurewebsites.net`
+- Custom API host: `api.storyteller.reubinoff.com`
+- Custom API health check: `https://api.storyteller.reubinoff.com/healthz`
+- Custom API Google OAuth start URL: `https://api.storyteller.reubinoff.com/api/v1/auth/google/start`
 - HTTPS only: `true`
 - App Service plan: `storyteller-plan-prod-4dghcj4shzqwa`
 - Runtime: Python `3.13`
@@ -75,7 +78,24 @@ GOOGLE_OAUTH_CLIENT_SECRET
 GOOGLE_OAUTH_REDIRECT_URI
 ```
 
+Function App hostnames observed:
+
+```text
+storyteller-func-prod-4dghcj4shzqwa.azurewebsites.net
+api.storyteller.reubinoff.com
+```
+
+`api.storyteller.reubinoff.com` is verified with SNI SSL and returned `{"status":"ok"}` from `/healthz` on 2026-06-14.
+
 Google OAuth was configured on 2026-06-14 for client ID `525009119858-87fp032hjjuneqlcislnluprhp0l6150.apps.googleusercontent.com`. The signed-in Azure CLI user could not set `google-oauth-client-secret` in Key Vault, so `GOOGLE_OAUTH_CLIENT_SECRET` was set directly as a Function App app setting from the downloaded Google OAuth client JSON. Do not print or retrieve the setting value.
+
+`GOOGLE_OAUTH_REDIRECT_URI` is set to:
+
+```text
+https://api.storyteller.reubinoff.com/api/v1/auth/google/callback
+```
+
+The Google Cloud OAuth client must include this exact backend callback URL as an authorized redirect URI. The downloaded client JSON observed on 2026-06-14 only listed `https://storyteller.reubinoff.com/auth/callback`, so update Google Cloud if browser login reports `redirect_uri_mismatch`.
 
 ### App Service Plan
 
