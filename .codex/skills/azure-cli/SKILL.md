@@ -13,22 +13,23 @@ Use this skill to operate Azure through the `az` CLI with explicit account conte
 
 1. Establish local tool state:
    ```bash
-   command -v az
-   az version --output json
+   command -v az || test -x /opt/homebrew/bin/az
+   AZ="/opt/homebrew/bin/az"; command -v az >/dev/null 2>&1 && AZ="$(command -v az)"
+   "$AZ" version --output json
    ```
-   If `az` is missing, tell the user and provide install steps for their OS instead of inventing a fallback.
+   In this StoryTeller project on macOS, Azure CLI may be available at `/opt/homebrew/bin/az` even when non-interactive shells cannot find plain `az`. If neither plain `az` nor `/opt/homebrew/bin/az` exists, tell the user and provide install steps for their OS instead of inventing a fallback.
 
 2. Confirm authentication and account context before any Azure operation:
    ```bash
-   az account show --output json
-   az account list --output table
+   "$AZ" account show --output json
+   "$AZ" account list --output table
    ```
    If unauthenticated, ask the user to complete `az login` interactively or use an already-configured environment. Do not request secrets in chat.
 
 3. Pin the intended subscription explicitly when more than one subscription exists or when the request names one:
    ```bash
-   az account set --subscription "<subscription-id-or-name>"
-   az account show --query "{name:name,id:id,tenantId:tenantId,user:user.name}" --output table
+   "$AZ" account set --subscription "<subscription-id-or-name>"
+   "$AZ" account show --query "{name:name,id:id,tenantId:tenantId,user:user.name}" --output table
    ```
    Treat ambiguous subscription, tenant, or environment names as blockers for write operations.
 

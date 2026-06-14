@@ -54,8 +54,10 @@ CLI-visible app setting names at verification time:
 ```text
 AzureWebJobsStorage
 APPLICATIONINSIGHTS_CONNECTION_STRING
+AUTH_COOKIE_SECURE
 JWT_ALGORITHM
 JWT_ACCESS_TTL_SECONDS
+JWT_REFRESH_TTL_SECONDS
 CLAUDE_MODEL
 CLAUDE_MAX_TOKENS
 CORS_ORIGINS
@@ -67,9 +69,13 @@ ENVIRONMENT
 DATABASE_URL
 JWT_SECRET
 ANTHROPIC_API_KEY
+FRONTEND_BASE_URL
+GOOGLE_OAUTH_CLIENT_ID
+GOOGLE_OAUTH_CLIENT_SECRET
+GOOGLE_OAUTH_REDIRECT_URI
 ```
 
-The Bicep template at `backend-serverless/infra/main.bicep` also declares Google OAuth and frontend URL settings. Re-check current app settings before assuming every declared setting is deployed.
+Google OAuth was configured on 2026-06-14 for client ID `525009119858-87fp032hjjuneqlcislnluprhp0l6150.apps.googleusercontent.com`. The signed-in Azure CLI user could not set `google-oauth-client-secret` in Key Vault, so `GOOGLE_OAUTH_CLIENT_SECRET` was set directly as a Function App app setting from the downloaded Google OAuth client JSON. Do not print or retrieve the setting value.
 
 ### App Service Plan
 

@@ -140,7 +140,7 @@ function llmsTxt(baseUrl) {
 - Tasks adapt to age, grade level, and selected interests.
 - Reading tasks include short passages and focused comprehension questions.
 - Writing tasks provide prompts and feedback on grammar, vocabulary, structure, and topic.
-- The app is designed for learners ages 6 to 40 and works on desktop and mobile.
+- The app is designed for learners ages 6 to 99 and works on desktop and mobile.
 
 ## AI Agent Guidance
 

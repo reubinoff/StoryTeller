@@ -124,7 +124,7 @@ export default function Landing() {
           >
             Bite-sized reading and writing tasks tuned to your age and
             interests. Roll a fresh story whenever you want, get practical
-            feedback, and watch your streak grow. Built for ages 6 to 40.
+            feedback, and watch your streak grow. Built for ages 6 to 99.
           </p>
           <div className="row gap-12" style={{ flexWrap: "wrap" }}>
             <Link to="/signup" className="btn btn-accent btn-lg">
