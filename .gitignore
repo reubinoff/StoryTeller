@@ -7,6 +7,9 @@
 client/node_modules/
 client/.react-router/
 client/build/
+client/public/robots.txt
+client/public/sitemap.xml
+client/public/llms.txt
 
 # Azure Functions backend
 backend-serverless/.venv/

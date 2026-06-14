@@ -8,16 +8,20 @@ import {
 import { BrandLogo, FeatureIcon, Mascot } from "~/components/Mascot";
 import { useAuth } from "~/lib/auth";
 import { postAuthDestination } from "~/lib/auth-routing";
+import {
+  HOME_DESCRIPTION,
+  HOME_TITLE,
+  homeJsonLd,
+  pageMeta,
+} from "~/lib/seo";
 
 export function meta() {
-  return [
-    { title: "Storyteller — English learning through stories" },
-    {
-      name: "description",
-      content:
-        "Bite-sized reading and writing practice tuned to your age and interests. Read fresh stories, get feedback, and watch your streak climb.",
-    },
-  ];
+  return pageMeta({
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    path: "/",
+    jsonLd: homeJsonLd(),
+  });
 }
 
 export default function Landing() {

@@ -1,9 +1,6 @@
 import { Link } from "react-router";
 import { BrandLogo } from "~/components/Mascot";
-
-export function meta() {
-  return [{ title: "Help & FAQ · Storyteller" }];
-}
+import { HELP_DESCRIPTION, HELP_TITLE, faqJsonLd, pageMeta } from "~/lib/seo";
 
 const FAQS: Array<[string, string]> = [
   [
@@ -23,6 +20,15 @@ const FAQS: Array<[string, string]> = [
     "Yes — go to Settings → Interests and pick up to 6 new topics any time.",
   ],
 ];
+
+export function meta() {
+  return pageMeta({
+    title: HELP_TITLE,
+    description: HELP_DESCRIPTION,
+    path: "/help",
+    jsonLd: faqJsonLd(FAQS),
+  });
+}
 
 export default function HelpRoute() {
   return (

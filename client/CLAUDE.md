@@ -22,6 +22,7 @@ No lint command is configured.
 Create `.env.local` to toggle the backend:
 
 ```
+VITE_PUBLIC_SITE_URL=http://localhost:5174 # canonical URL for SEO assets
 VITE_USE_MOCK=true           # default; uses localStorage mock backend
 VITE_USE_MOCK=false
 VITE_API_BASE_URL=http://...  # required when mock is off
@@ -31,7 +32,7 @@ The mock backend simulates network delay (~300ms) and persists state to `localSt
 
 ## Architecture
 
-**React Router 7 SPA with SSR** (`ssr: true` in `react-router.config.ts`). TypeScript strict mode. Path alias `~` → `app/`.
+**React Router 7 SPA with prerendered public pages** (`ssr: false` with `/` and `/help` in `react-router.config.ts`). TypeScript strict mode. Path alias `~` → `app/`.
 
 ### Layers
 

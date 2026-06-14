@@ -7,7 +7,7 @@ Gamified English-learning web app with reading and writing tasks, progress track
 
 ```
 Storyteller/
-├── client/          # React Router 7 SPA (SSR)
+├── client/          # React Router 7 SPA with prerendered public pages
 ├── backend-serverless/ # Azure Functions + FastAPI ASGI + queue worker
 └── client/API_CONTRACT.md   # Shared API contract
 ```
@@ -51,6 +51,7 @@ func start
 Create `client/.env.local`:
 
 ```
+VITE_PUBLIC_SITE_URL=http://localhost:5174
 VITE_USE_MOCK=false
 VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```

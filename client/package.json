@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/generate-seo-files.mjs --strict",
     "build": "react-router build",
     "dev": "react-router dev --port 5174",
-    "start": "react-router-serve ./build/server/index.js",
+    "seo:generate": "node scripts/generate-seo-files.mjs",
+    "start": "node scripts/serve-static-build.mjs",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest",
     "test:run": "vitest run",

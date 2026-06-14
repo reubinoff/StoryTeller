@@ -1,0 +1,59 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storyteller English learning through stories preview">
+  <defs>
+    <linearGradient id="preview-ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#322C5C"/>
+      <stop offset="100%" stop-color="#201D38"/>
+    </linearGradient>
+    <radialGradient id="preview-glow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#F2A33C" stop-opacity="0.38"/>
+      <stop offset="70%" stop-color="#F2A33C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#FBF5E9"/>
+  <rect x="42" y="42" width="1116" height="546" rx="36" fill="#FFFDF8" stroke="#E4D8BE" stroke-width="4"/>
+  <circle cx="1038" cy="126" r="84" fill="#2F9C8B" opacity="0.12"/>
+  <circle cx="106" cy="526" r="70" fill="#F27457" opacity="0.12"/>
+
+  <g transform="translate(80 86) scale(0.2578125)">
+    <rect width="512" height="512" rx="116" fill="url(#preview-ink)"/>
+    <circle cx="256" cy="256" r="240" fill="url(#preview-glow)"/>
+    <circle cx="150" cy="150" r="46" fill="#6B4A36"/>
+    <circle cx="362" cy="150" r="46" fill="#6B4A36"/>
+    <circle cx="150" cy="153" r="23" fill="#A87C5E"/>
+    <circle cx="362" cy="153" r="23" fill="#A87C5E"/>
+    <path d="M256 96 C 165 96 106 164 106 244 C 106 308 146 354 200 380 C 218 410 238 432 256 432 C 274 432 294 410 312 380 C 366 354 406 308 406 244 C 406 164 347 96 256 96 Z" fill="#F7E7C9"/>
+    <path d="M256 96 C 188 96 138 142 120 204 C 168 178 214 168 256 168 C 298 168 344 178 392 204 C 374 142 324 96 256 96 Z" fill="#6B4A36"/>
+    <path d="M126 232 C 158 208 204 206 230 230 C 246 244 246 268 234 282 C 216 268 184 268 162 282 C 142 292 124 284 116 266 C 113 252 116 240 126 232 Z" fill="#6B4A36"/>
+    <path d="M386 232 C 354 208 308 206 282 230 C 266 244 266 268 278 282 C 296 268 328 268 350 282 C 370 292 388 284 396 266 C 399 252 396 240 386 232 Z" fill="#6B4A36"/>
+    <path d="M256 300 C 222 300 202 330 202 360 C 202 398 230 424 256 432 C 282 424 310 398 310 360 C 310 330 290 300 256 300 Z" fill="#FBF1DD"/>
+    <circle cx="190" cy="252" r="30" fill="#FFFFFF"/>
+    <circle cx="322" cy="252" r="30" fill="#FFFFFF"/>
+    <circle cx="197" cy="256" r="19" fill="#26233F"/>
+    <circle cx="315" cy="256" r="19" fill="#26233F"/>
+    <circle cx="205" cy="249" r="7" fill="#FFFFFF"/>
+    <circle cx="323" cy="249" r="7" fill="#FFFFFF"/>
+    <circle cx="168" cy="340" r="18" fill="#F2A7A0" opacity="0.5"/>
+    <circle cx="344" cy="340" r="18" fill="#F2A7A0" opacity="0.5"/>
+    <path d="M242 350 C 242 342 270 342 270 350 C 270 362 256 372 256 372 C 256 372 242 362 242 350 Z" fill="#D9736E"/>
+    <path d="M256 372 C 256 388 240 394 228 388 M256 372 C 256 388 272 394 284 388" fill="none" stroke="#7A4A47" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text x="238" y="150" fill="#26233F" font-family="Nunito, Arial, sans-serif" font-size="58" font-weight="800">Storyteller</text>
+  <text x="240" y="194" fill="#776B58" font-family="Nunito, Arial, sans-serif" font-size="26" font-weight="700">English learning through stories</text>
+
+  <text x="80" y="322" fill="#26233F" font-family="Fraunces, Georgia, serif" font-size="74" font-weight="700">Learn English</text>
+  <text x="80" y="402" fill="#B8543E" font-family="Fraunces, Georgia, serif" font-size="74" font-weight="700">through stories.</text>
+  <text x="84" y="462" fill="#514A43" font-family="Nunito, Arial, sans-serif" font-size="25" font-weight="600">Adaptive reading and writing practice</text>
+  <text x="84" y="498" fill="#514A43" font-family="Nunito, Arial, sans-serif" font-size="25" font-weight="600">for curious learners.</text>
+
+  <g transform="translate(760 190)">
+    <rect x="0" y="0" width="344" height="280" rx="26" fill="#F6EFE2" stroke="#E4D8BE" stroke-width="3"/>
+    <rect x="34" y="36" width="124" height="38" rx="19" fill="#E5F3EF" stroke="#2F9C8B" stroke-width="2"/>
+    <text x="56" y="62" fill="#2F7267" font-family="Nunito, Arial, sans-serif" font-size="18" font-weight="800">Grade 4</text>
+    <text x="34" y="122" fill="#26233F" font-family="Fraunces, Georgia, serif" font-size="30" font-weight="700">Fresh story</text>
+    <text x="34" y="166" fill="#514A43" font-family="Nunito, Arial, sans-serif" font-size="22" font-weight="600">Read, answer, and get</text>
+    <text x="34" y="198" fill="#514A43" font-family="Nunito, Arial, sans-serif" font-size="22" font-weight="600">useful feedback.</text>
+    <rect x="34" y="230" width="78" height="12" rx="6" fill="#2F9C8B"/>
+    <rect x="124" y="230" width="78" height="12" rx="6" fill="#F2A33C"/>
+    <rect x="214" y="230" width="78" height="12" rx="6" fill="#F27457"/>
+  </g>
+</svg>

@@ -9,7 +9,7 @@ typed `fetch` API client backed by a localStorage-driven mock layer, so the
 
 ## Stack
 
-- **React Router 7** (SSR on, with client-only hydration for authed pages)
+- **React Router 7** (SPA mode with prerendered `/` and `/help` pages)
 - **React 19** + **TypeScript 5.9**
 - **Tailwind CSS 4** — utility resets only; the design's full token system /
   atoms (`btn-*`, `card`, `chip-*`, `field-*`, `app-shell`, …) lives verbatim
@@ -28,8 +28,15 @@ Other scripts:
 
 ```bash
 npm run typecheck    # react-router typegen + tsc
-npm run build        # production SSR + client bundles
+npm run build        # prerender public pages + client bundles
 npm run start        # serve the production build
+```
+
+Production builds require a canonical public URL so prerendered metadata,
+`robots.txt`, `sitemap.xml`, and `llms.txt` all agree:
+
+```bash
+VITE_PUBLIC_SITE_URL=https://www.example.com npm run build
 ```
 
 ## Mock backend
@@ -39,6 +46,7 @@ is fully clickable without a server. To point at a real `/api/v1` instead:
 
 ```bash
 # .env.local
+VITE_PUBLIC_SITE_URL=https://www.example.com
 VITE_USE_MOCK=false
 VITE_API_BASE_URL=https://api.storyteller.app/api/v1
 ```
@@ -67,7 +75,7 @@ location.reload();
 ```
 app/
 ├── app.css                       # Storyteller tokens + atoms + responsive
-├── root.tsx                      # SSR layout, Nunito / Fraunces
+├── root.tsx                      # Document layout, Nunito / Fraunces
 ├── routes.ts                     # Route map (public + _authed layout)
 ├── routes/
 │   ├── landing.tsx               # /
@@ -138,6 +146,6 @@ that conforms to it.
 
 ## Deployment
 
-This app is a standard React Router v7 project. The `Dockerfile` already in
-the repo builds and runs the production server (`npm run start`), which
-serves both the SSR HTML and the static assets from `build/`.
+This app deploys to Azure Static Web Apps from `build/client`. React Router
+prerenders the public search pages and emits `__spa-fallback.html` for private
+app routes.

@@ -1,6 +1,76 @@
 {
+  "routes": [
+    {
+      "route": "/login",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/signup",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/auth/*",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/onboarding",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/dashboard",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/courses",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/courses/*",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/tasks/*",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/achievements",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    },
+    {
+      "route": "/settings",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow"
+      }
+    }
+  ],
   "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.{css,js,ico,png,jpg,gif,svg,webp,woff,woff2}"]
+    "rewrite": "/__spa-fallback.html",
+    "exclude": [
+      "/assets/*",
+      "/brand/*",
+      "/og/*",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/llms.txt",
+      "/*.{css,js,ico,png,jpg,gif,svg,webp,woff,woff2}"
+    ]
   }
 }
