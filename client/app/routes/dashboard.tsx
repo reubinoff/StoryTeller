@@ -20,7 +20,7 @@ import type { CourseId, RecentTask, TaskStatus } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
 
 export function meta() {
-  return [{ title: "Dashboard · StoryTeller" }];
+  return [{ title: "Dashboard · Storyteller" }];
 }
 
 const formatDate = () => {
@@ -94,7 +94,7 @@ export default function DashboardRoute() {
             <span
               className="chip chip-rust"
               style={{
-                background: "rgba(216,83,39,0.2)",
+                background: "rgba(242,116,87,0.2)",
                 color: "var(--rust-2)",
               }}
             >
@@ -107,18 +107,19 @@ export default function DashboardRoute() {
                 margin: "14px 0 10px",
               }}
             >
-              Hi {user.first_name}! Ready for today's quest?
+              Hi {user.first_name}! Ready for today's story practice?
             </h1>
             <p
               style={{
-                color: "rgba(251,246,236,0.72)",
+                color: "rgba(251,245,233,0.72)",
                 fontSize: 16,
                 maxWidth: 520,
                 marginBottom: 22,
               }}
             >
               You're on a {metrics.current_streak}-day streak. Keep it going
-              with a fresh task — should take about 5 minutes.
+              with a fresh reading or writing task. It should take about 5
+              minutes.
             </p>
             <div className="row gap-12" style={{ flexWrap: "wrap" }}>
               <button
@@ -132,7 +133,7 @@ export default function DashboardRoute() {
                 className="btn btn-ghost btn-lg"
                 style={{
                   color: "var(--paper)",
-                  borderColor: "rgba(251,246,236,0.25)",
+                  borderColor: "rgba(251,245,233,0.25)",
                 }}
                 onClick={() => onRoll("writing")}
                 disabled={rollTask.isPending}
@@ -362,8 +363,8 @@ export default function DashboardRoute() {
           <SectionHeader title="Recommended" />
           <div className="col gap-12">
             <CourseCard
-              title="Reading Adventure"
-              description="A short passage and a few questions. Great for warm-ups."
+              title="Story Reading"
+              description="A short story and a few questions. Great for warm-ups."
               accent="var(--teal)"
               accentSoft="var(--teal-soft)"
               icon={<IconBook size={20} />}
@@ -371,7 +372,7 @@ export default function DashboardRoute() {
               onClick={() => navigate("/courses/reading")}
             />
             <CourseCard
-              title="Writing Studio"
+              title="Writing Practice"
               description="Get a topic, write 60–120 words, and we'll give you feedback."
               accent="var(--rust)"
               accentSoft="var(--rust-soft)"

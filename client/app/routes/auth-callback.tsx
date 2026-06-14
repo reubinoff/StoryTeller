@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { BrandMark } from "~/components/Mascot";
+import { BrandLogo } from "~/components/Mascot";
 import { useAuth } from "~/lib/auth";
 import { postAuthDestination, safeReturnTo } from "~/lib/auth-routing";
 
 export function meta() {
-  return [{ title: "Signing in · StoryTeller" }];
+  return [{ title: "Signing in · Storyteller" }];
 }
 
 export default function AuthCallbackRoute() {
@@ -50,9 +50,9 @@ export default function AuthCallbackRoute() {
     >
       <div className="card" style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-          <BrandMark size={42} color="var(--ink)" />
+          <BrandLogo width={180} />
         </div>
-        <h1 style={{ fontSize: 32, marginBottom: 8 }}>StoryTeller</h1>
+        <h1 style={{ fontSize: 32, marginBottom: 8 }}>Storyteller</h1>
         <p style={{ color: "var(--ink-3)", marginBottom: error ? 18 : 0 }}>
           {message}
         </p>

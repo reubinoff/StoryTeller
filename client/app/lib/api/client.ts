@@ -1,5 +1,5 @@
 /**
- * Typed API client for StoryTeller.
+ * Typed API client for Storyteller.
  *
  * Sits in front of two transports:
  *   - the localStorage-backed mock router (default in dev)

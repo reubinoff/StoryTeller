@@ -1,38 +1,43 @@
 @import "tailwindcss";
 
-/* ===== StoryTeller — global styles =====
- * Verbatim port of the Claude Design "DailyEnglish" prototype styles.css,
+/* ===== Storyteller — global styles =====
+ * Adapted from the original prototype styles.css,
  * with the Tailwind 4 base import on top so resets/utilities are still available
  * to ad-hoc layout classes inside individual components.
  */
 
 :root {
-  /* Warm, learning-app palette inspired by the brand mark's organic swirl */
-  --ink: #1a1814;
-  --ink-2: #3a342c;
-  --ink-3: #6b6358;
-  --ink-4: #a39a8c;
-  --paper: #fbf6ec; /* warm cream — primary canvas */
-  --paper-2: #f5ecdb;
-  --paper-3: #ebe0c9;
-  --line: #e4d8bf;
-  --line-strong: #c8b896;
+  /* Storyteller brand guide palette */
+  --paper: #fbf5e9;
+  --ink: #26233f;
+  --honey: #f2a33c;
+  --spruce: #2f9c8b;
+  --coral: #f27457;
+  --sable: #6b4a36;
+
+  --ink-2: #3f3b5f;
+  --ink-3: #6f6a82;
+  --ink-4: #9b95ad;
+  --paper-2: #fffdf7;
+  --paper-3: #efe6d2;
+  --line: #e7dcc4;
+  --line-strong: #c9bc9e;
 
   /* Brand */
-  --teal: #1b6f6a; /* primary */
-  --teal-2: #2a8a83;
-  --teal-soft: #cfe8e4;
-  --rust: #d35327; /* accent */
-  --rust-2: #e87149;
-  --rust-soft: #f8d9c6;
-  --amber: #e8a93a;
-  --amber-soft: #f6e2af;
-  --berry: #8e3a5b;
-  --berry-soft: #efcfd9;
-  --moss: #5b7a3a;
-  --moss-soft: #d6e3b8;
-  --sky: #4671a6;
-  --sky-soft: #cfdcec;
+  --teal: var(--spruce);
+  --teal-2: #3fb3a1;
+  --teal-soft: #d9f0ec;
+  --rust: var(--coral);
+  --rust-2: #d9736e;
+  --rust-soft: #fde0d8;
+  --amber: var(--honey);
+  --amber-soft: #f8e8be;
+  --berry: #7a4a47;
+  --berry-soft: #f2d6d2;
+  --moss: #638b62;
+  --moss-soft: #dfead6;
+  --sky: #4d739c;
+  --sky-soft: #d8e3ed;
 
   /* Status */
   --good: #2f7a4d;
@@ -47,55 +52,55 @@
   --radius-lg: 22px;
   --radius-xl: 32px;
 
-  --shadow-sm: 0 1px 0 rgba(26, 24, 20, 0.06), 0 2px 6px rgba(26, 24, 20, 0.04);
-  --shadow: 0 1px 0 rgba(26, 24, 20, 0.08), 0 8px 24px -6px rgba(26, 24, 20, 0.1);
-  --shadow-lg: 0 2px 0 rgba(26, 24, 20, 0.08),
-    0 24px 56px -12px rgba(26, 24, 20, 0.18);
+  --shadow-sm: 0 1px 0 rgba(38, 35, 63, 0.06), 0 2px 6px rgba(38, 35, 63, 0.04);
+  --shadow: 0 1px 0 rgba(38, 35, 63, 0.08), 0 8px 24px -6px rgba(38, 35, 63, 0.1);
+  --shadow-lg: 0 2px 0 rgba(38, 35, 63, 0.08),
+    0 24px 56px -12px rgba(38, 35, 63, 0.18);
 
   --font-display: "Fraunces", "Times New Roman", serif;
-  --font-body: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
 /* Theme variants exposed via Tweaks */
 [data-theme="playful"] {
-  --paper: #fff7e8;
-  --paper-2: #ffeec9;
-  --paper-3: #ffe1a3;
-  --line: #f4d99c;
-  --teal: #1b6f6a;
-  --rust: #ec5a23;
+  --paper: #fff8ec;
+  --paper-2: #fffdf7;
+  --paper-3: #f8e8be;
+  --line: #ecd7a8;
+  --teal: var(--spruce);
+  --rust: var(--coral);
 }
 [data-theme="clean"] {
   --paper: #ffffff;
-  --paper-2: #f6f6f4;
-  --paper-3: #ececea;
-  --line: #e4e2dd;
-  --line-strong: #c8c5bc;
-  --ink: #16181a;
-  --ink-2: #2c2f33;
-  --teal: #0f5e5a;
-  --rust: #b4421d;
+  --paper-2: #fffdf7;
+  --paper-3: #f1eee8;
+  --line: #e4dfd5;
+  --line-strong: #c9bc9e;
+  --ink: #26233f;
+  --ink-2: #3f3b5f;
+  --teal: var(--spruce);
+  --rust: var(--coral);
 }
 
 /* Color palette swap */
 [data-palette="berry"] {
-  --teal: #8e3a5b;
-  --teal-2: #a8506f;
-  --teal-soft: #efcfd9;
-  --rust: #e8a93a;
+  --teal: var(--sable);
+  --teal-2: #8a6347;
+  --teal-soft: #eadccd;
+  --rust: var(--honey);
 }
 [data-palette="forest"] {
-  --teal: #355b3a;
-  --teal-2: #4d7e51;
-  --teal-soft: #d6e3b8;
-  --rust: #c2541f;
+  --teal: var(--spruce);
+  --teal-2: #3fb3a1;
+  --teal-soft: #d9f0ec;
+  --rust: var(--coral);
 }
 [data-palette="indigo"] {
-  --teal: #364b8a;
-  --teal-2: #4a619e;
-  --teal-soft: #cfd6ec;
-  --rust: #d68a2a;
+  --teal: #322c5c;
+  --teal-2: #4c4680;
+  --teal-soft: #dedaf2;
+  --rust: var(--honey);
 }
 
 * {
@@ -123,14 +128,14 @@ h3,
 h4 {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   margin: 0;
   color: var(--ink);
 }
 h1 {
   font-size: 48px;
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 h2 {
   font-size: 32px;
@@ -190,7 +195,7 @@ select:focus-visible {
   border-radius: 999px;
   font-weight: 600;
   font-size: 14.5px;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
   transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease,
     color 0.15s ease;
   white-space: nowrap;
@@ -429,12 +434,38 @@ select:focus-visible {
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.brand-logo-link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.brand-logo-on-dark {
+  background: var(--paper-2);
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-sm);
+}
+.brand-mark-img,
+.mascot-img,
+.feature-brand-icon {
+  display: block;
+  user-select: none;
 }
 .brand-name {
   font-family: var(--font-display);
   font-size: 19px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 .nav-item {
   display: flex;
@@ -756,7 +787,7 @@ select:focus-visible {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(26, 24, 20, 0.55);
+  background: rgba(38, 35, 63, 0.55);
   z-index: 50;
   display: flex;
   align-items: center;

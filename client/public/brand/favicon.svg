@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storyteller favicon">
+  <rect width="64" height="64" rx="15" fill="#2B2750"/>
+  <!-- ears -->
+  <circle cx="18" cy="19" r="8" fill="#6B4A36"/>
+  <circle cx="46" cy="19" r="8" fill="#6B4A36"/>
+  <!-- head -->
+  <path d="M32 11 C 19 11 11 21 11 33 C 11 45 21 55 32 55 C 43 55 53 45 53 33 C 53 21 45 11 32 11 Z" fill="#F7E7C9"/>
+  <!-- dark cap + mask (bold for small sizes) -->
+  <path d="M32 11 C 21 11 13 19 11 31 C 18 26 25 24 32 24 C 39 24 46 26 53 31 C 51 19 43 11 32 11 Z" fill="#6B4A36"/>
+  <path d="M12 30 C 18 25 26 25 30 31 C 26 37 16 37 12 33 Z" fill="#6B4A36"/>
+  <path d="M52 30 C 46 25 38 25 34 31 C 38 37 48 37 52 33 Z" fill="#6B4A36"/>
+  <!-- eyes -->
+  <circle cx="23" cy="31" r="6" fill="#FFFFFF"/>
+  <circle cx="41" cy="31" r="6" fill="#FFFFFF"/>
+  <circle cx="24" cy="32" r="3.4" fill="#26233F"/>
+  <circle cx="40" cy="32" r="3.4" fill="#26233F"/>
+  <!-- nose -->
+  <path d="M28 41 C 28 38 36 38 36 41 C 36 45 32 48 32 48 C 32 48 28 45 28 41 Z" fill="#D9736E"/>
+</svg>

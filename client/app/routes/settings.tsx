@@ -13,7 +13,7 @@ import { useAuth } from "~/lib/auth";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
-  return [{ title: "Settings · StoryTeller" }];
+  return [{ title: "Settings · Storyteller" }];
 }
 
 export default function SettingsRoute() {

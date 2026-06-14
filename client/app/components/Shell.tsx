@@ -15,7 +15,7 @@ import {
   IconFlame,
   IconTrophy,
 } from "./Icons";
-import { BrandMark } from "./Mascot";
+import { BrandLogo } from "./Mascot";
 import { useAuth } from "~/lib/auth";
 
 interface NavItem {
@@ -95,11 +95,12 @@ export const Shell = ({ children }: ShellProps) => {
     <>
       <div className="app-shell">
         <aside className="sidebar">
-          <Link to="/dashboard" className="brand-row" style={{ color: "inherit" }}>
-            <div className="brand-mark">
-              <BrandMark size={32} color="var(--ink)" />
-            </div>
-            <div className="brand-name">StoryTeller</div>
+          <Link
+            to="/dashboard"
+            className="brand-row brand-logo-link"
+            style={{ color: "inherit" }}
+          >
+            <BrandLogo width={154} />
           </Link>
           <div className="col gap-4">
             {NAV_ITEMS.map(({ id, label, to, Icon, match }) => {

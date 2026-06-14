@@ -79,6 +79,10 @@ Edit `local.settings.json`:
 
 For production, use `https://storyteller.reubinoff.com` as
 `FRONTEND_BASE_URL` and include it in `CORS_ORIGINS`.
+Set `GOOGLE_OAUTH_REDIRECT_URI` to the public backend callback URL, for
+example `https://<function-app>.azurewebsites.net/api/v1/auth/google/callback`.
+Only use `https://storyteller.reubinoff.com/api/v1/auth/google/callback` if the
+Azure Function API itself is routed through that custom domain.
 
 Do not commit `local.settings.json`; it can contain secrets and is ignored.
 
@@ -173,7 +177,8 @@ Azurite or an Azure Storage account and open the `writing-evaluations` queue.
 - CORS errors: add the frontend origin to `CORS_ORIGINS`.
 - Google redirects to the wrong host: set `FRONTEND_BASE_URL` to
   `https://storyteller.reubinoff.com` and register the deployed
-  `/api/v1/auth/google/callback` backend URL in Google Cloud.
+  `/api/v1/auth/google/callback` backend URL in Google Cloud. The frontend
+  `/auth/callback` route is not the Google redirect URI.
 
 ## Tests
 
@@ -298,17 +303,18 @@ AZURE_KEYVAULT_NAME
 
 `AZURE_FUNCTIONAPP_BASE_URL` can be omitted if the app is reachable at
 `https://<AZURE_FUNCTIONAPP_NAME>.azurewebsites.net`.
+The frontend deployment uses these same variables to build with
+`VITE_USE_MOCK=false` and `VITE_API_BASE_URL=<function-app-base-url>/api/v1`.
 
 ## Deploy Code
 
 Push to `main`. The workflow:
 
-1. Runs existing backend tests.
-2. Runs serverless backend tests.
-3. Runs client Vitest with a Node localStorage file.
-4. Logs in to Azure with OIDC.
-5. Deploys `backend-serverless/` with the Azure Functions action.
-6. Smoke-tests `/healthz`.
+1. Runs serverless backend tests.
+2. Runs client Vitest with a Node localStorage file.
+3. Logs in to Azure with OIDC.
+4. Deploys `backend-serverless/` with the Azure Functions action.
+5. Smoke-tests `/healthz`.
 
 You can also deploy manually:
 

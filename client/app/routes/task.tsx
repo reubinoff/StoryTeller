@@ -24,7 +24,7 @@ import {
 import type { Task, TaskQuestion } from "~/lib/api/types";
 
 export function meta() {
-  return [{ title: "Task · StoryTeller" }];
+  return [{ title: "Task · Storyteller" }];
 }
 
 export default function TaskRoute() {
@@ -139,7 +139,7 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
       <div>
         <BackBar
           onBack={() => navigate("/courses/reading")}
-          label="Reading Adventure"
+          label="Story Reading"
           exitGuard
         />
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
@@ -241,7 +241,7 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
     <div>
       <BackBar
         onBack={() => navigate("/courses/reading")}
-        label="Reading Adventure"
+        label="Story Reading"
         exitGuard
       />
       <div
@@ -537,7 +537,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     <div>
       <BackBar
         onBack={() => navigate("/courses/writing")}
-        label="Writing Studio"
+        label="Writing Practice"
         exitGuard
       />
       <div
@@ -660,7 +660,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
 
         <div className="writing-side">
           <div className="card" style={{ marginBottom: 16 }}>
-            <h4 style={{ marginBottom: 10 }}>Hints from Quill</h4>
+            <h4 style={{ marginBottom: 10 }}>Hints from hafuyfay</h4>
             <div className="col gap-10">
               {writing.hints.map((h, i) => (
                 <div
@@ -705,7 +705,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
       >
         <div style={{ textAlign: "center" }}>
           <Mascot size={84} pose="wave" kind="ferret" />
-          <h3 style={{ marginTop: 8, marginBottom: 6 }}>Send it to Quill?</h3>
+          <h3 style={{ marginTop: 8, marginBottom: 6 }}>Send it to hafuyfay?</h3>
           <p style={{ color: "var(--ink-3)", fontSize: 14, marginBottom: 20 }}>
             Once submitted, you can't change your answer. We'll send a
             notification when feedback is ready (usually under a minute).
@@ -757,7 +757,7 @@ const WritingProcessing = ({ task }: { task: Task }) => {
 
   return (
     <div style={{ maxWidth: 560, margin: "40px auto 0", textAlign: "center" }}>
-      <BackBar onBack={() => navigate("/dashboard")} label="Writing Studio" />
+      <BackBar onBack={() => navigate("/dashboard")} label="Writing Practice" />
       <div className="card" style={{ padding: 48 }}>
         <div
           style={{
@@ -776,7 +776,7 @@ const WritingProcessing = ({ task }: { task: Task }) => {
           Processing
         </span>
         <h2 style={{ fontSize: 30, margin: "14px 0 8px" }}>
-          Quill is reading your answer…
+          hafuyfay is reading your answer…
         </h2>
         <p style={{ color: "var(--ink-3)", fontSize: 15, marginBottom: 24 }}>
           We're looking at grammar, vocabulary, structure, and topic relevance.

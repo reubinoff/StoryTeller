@@ -117,7 +117,7 @@ function recentTasks(userId: string): RecentTask[] {
     );
   return tasks.map((t) => ({
     id: t.id,
-    course: t.course_type === "unseen_text" ? "Reading Adventure" : "Writing Studio",
+    course: t.course_type === "unseen_text" ? "Story Reading" : "Writing Practice",
     course_type: t.course_type,
     topic: t.title,
     status: t.status,
@@ -130,7 +130,7 @@ function recentTasks(userId: string): RecentTask[] {
 const DEMO_RECENT: RecentTask[] = [
   {
     id: "demo-9921",
-    course: "Reading Adventure",
+    course: "Story Reading",
     course_type: "unseen_text",
     topic: "Animals & Pets — Octopus minds",
     status: "completed",
@@ -140,7 +140,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9920",
-    course: "Writing Studio",
+    course: "Writing Practice",
     course_type: "short_writing",
     topic: "My favorite meal",
     status: "processing",
@@ -150,7 +150,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9918",
-    course: "Reading Adventure",
+    course: "Story Reading",
     course_type: "unseen_text",
     topic: "Space — How rockets land",
     status: "completed",
@@ -160,7 +160,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9917",
-    course: "Reading Adventure",
+    course: "Story Reading",
     course_type: "unseen_text",
     topic: "Tech — A brief history of the keyboard",
     status: "in_progress",
@@ -175,7 +175,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9914",
-    course: "Writing Studio",
+    course: "Writing Practice",
     course_type: "short_writing",
     topic: "Why I like rainy days",
     status: "completed",
@@ -185,7 +185,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9911",
-    course: "Reading Adventure",
+    course: "Story Reading",
     course_type: "unseen_text",
     topic: "Sports — The longest match",
     status: "completed",
@@ -195,7 +195,7 @@ const DEMO_RECENT: RecentTask[] = [
   },
   {
     id: "demo-9908",
-    course: "Writing Studio",
+    course: "Writing Practice",
     course_type: "short_writing",
     topic: "My weekend plan",
     status: "failed",
@@ -269,7 +269,7 @@ export function handleMe(req: MockRequest): MockResponse<unknown> | null {
     );
     const ach = ensureAchievements(user.id);
     const resp: DashboardResponse = {
-      greeting: `Hi ${user.first_name}! Ready for today's quest?`,
+      greeting: `Hi ${user.first_name}! Ready for today's story practice?`,
       metrics: m,
       in_progress: inProgress,
       recent,

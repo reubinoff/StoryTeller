@@ -2,23 +2,20 @@ import { useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   IconArrowRight,
-  IconBook,
   IconCheck,
-  IconPen,
-  IconRefresh,
   IconSparkle,
 } from "~/components/Icons";
-import { BrandMark, Mascot } from "~/components/Mascot";
+import { BrandLogo, FeatureIcon, Mascot } from "~/components/Mascot";
 import { useAuth } from "~/lib/auth";
 import { postAuthDestination } from "~/lib/auth-routing";
 
 export function meta() {
   return [
-    { title: "StoryTeller — English that feels like a quest" },
+    { title: "Storyteller — English learning through stories" },
     {
       name: "description",
       content:
-        "Bite-sized reading & writing tasks tuned to your age and interests. Roll a fresh task whenever you want, get instant feedback, and watch your streak climb.",
+        "Bite-sized reading and writing practice tuned to your age and interests. Read fresh stories, get feedback, and watch your streak climb.",
     },
   ];
 }
@@ -51,11 +48,10 @@ export default function Landing() {
       >
         <Link
           to="/"
-          className="row gap-12"
+          className="brand-logo-link"
           style={{ color: "inherit", flex: "0 0 auto" }}
         >
-          <BrandMark size={32} color="var(--ink)" />
-          <div className="brand-name">StoryTeller</div>
+          <BrandLogo width={168} />
         </Link>
         <div
           className="row gap-24"
@@ -90,17 +86,17 @@ export default function Landing() {
       >
         <div>
           <span className="chip chip-rust" style={{ marginBottom: 18 }}>
-            <IconSparkle size={12} /> A friendly way to learn English
+            <IconSparkle size={12} /> English learning through stories
           </span>
           <h1
             style={{
               fontSize: 68,
               lineHeight: 1.02,
               marginBottom: 18,
-              letterSpacing: "-0.025em",
+              letterSpacing: 0,
             }}
           >
-            English that feels like a{" "}
+            Learn English through{" "}
             <em
               style={{
                 color: "var(--rust)",
@@ -109,9 +105,9 @@ export default function Landing() {
                 fontWeight: 700,
               }}
             >
-              quest
+              stories
             </em>
-            , not a chore.
+            .
           </h1>
           <p
             style={{
@@ -122,9 +118,9 @@ export default function Landing() {
               marginBottom: 28,
             }}
           >
-            Bite-sized reading & writing tasks tuned to your age and interests.
-            Roll a fresh task whenever you want, get instant feedback, and watch
-            your streak climb. Built for ages 6 to 40.
+            Bite-sized reading and writing tasks tuned to your age and
+            interests. Roll a fresh story whenever you want, get practical
+            feedback, and watch your streak grow. Built for ages 6 to 40.
           </p>
           <div className="row gap-12" style={{ flexWrap: "wrap" }}>
             <Link to="/signup" className="btn btn-accent btn-lg">
@@ -303,35 +299,35 @@ export default function Landing() {
         >
           {[
             {
-              t: "Roll a fresh task",
-              d: "Every task is generated for your level and chosen interests. No two are alike.",
-              i: <IconRefresh size={20} />,
+              t: "Fresh stories",
+              d: "Every reading task is generated for your level and chosen interests.",
+              i: <FeatureIcon name="stories" size={50} alt="" />,
               c: "var(--rust)",
             },
             {
-              t: "Read & answer",
-              d: "Short passages with multiple-choice, true/false, and fill-in-the-blank questions.",
-              i: <IconBook size={20} />,
+              t: "Practice words",
+              d: "Answer focused questions and build vocabulary one short session at a time.",
+              i: <FeatureIcon name="words" size={50} alt="" />,
               c: "var(--teal)",
             },
             {
-              t: "Write & get feedback",
-              d: "Submit a short answer, get scored on grammar, vocabulary, structure, and topic.",
-              i: <IconPen size={20} />,
+              t: "Useful feedback",
+              d: "Submit a short answer and get notes on grammar, vocabulary, structure, and topic.",
+              i: <FeatureIcon name="practice" size={50} alt="" />,
               c: "var(--berry)",
             },
           ].map((f) => (
             <div key={f.t} className="card" style={{ background: "var(--paper)" }}>
               <div
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 56,
+                  height: 56,
                   borderRadius: 12,
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: f.c,
-                  color: "#fff",
+                  background: "transparent",
+                  color: f.c,
                   marginBottom: 14,
                 }}
               >

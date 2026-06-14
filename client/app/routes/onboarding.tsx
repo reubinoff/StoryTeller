@@ -6,14 +6,14 @@ import {
   IconCheck,
   IconSparkle,
 } from "~/components/Icons";
-import { BrandMark, Mascot } from "~/components/Mascot";
+import { BrandLogo, Mascot } from "~/components/Mascot";
 import { useToast } from "~/components/Toast";
 import { useAuth } from "~/lib/auth";
 import type { InterestId } from "~/lib/api/types";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
-  return [{ title: "Welcome · StoryTeller" }];
+  return [{ title: "Welcome · Storyteller" }];
 }
 
 export default function OnboardingRoute() {
@@ -76,10 +76,7 @@ export default function OnboardingRoute() {
           gap: 16,
         }}
       >
-        <BrandMark size={28} color="var(--ink)" />
-        <div className="brand-name" style={{ fontSize: 18 }}>
-          StoryTeller
-        </div>
+        <BrandLogo width={150} />
         <div
           style={{
             marginLeft: "auto",
@@ -139,10 +136,10 @@ export default function OnboardingRoute() {
                 style={{
                   fontSize: 52,
                   margin: "14px 0 10px",
-                  letterSpacing: "-0.02em",
+                  letterSpacing: 0,
                 }}
               >
-                Hi {user.first_name}! I'm Quill.
+                Hi {user.first_name}! I'm hafuyfay.
               </h1>
               <p
                 style={{
@@ -152,8 +149,8 @@ export default function OnboardingRoute() {
                   margin: "0 auto 28px",
                 }}
               >
-                I'll be your guide here. Let's set up your quest in three quick
-                steps so every task fits you just right.
+                I'll be your guide here. Let's set up your story practice in
+                three quick steps so every task fits you just right.
               </p>
               <button
                 className="btn btn-accent btn-lg"

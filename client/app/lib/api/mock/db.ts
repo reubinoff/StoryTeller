@@ -29,10 +29,10 @@ export const COURSES: Course[] = [
     id: "reading",
     slug: "reading_adventure",
     type: "unseen_text",
-    title: "Reading Adventure",
+    title: "Story Reading",
     subtitle: "Unseen Text",
     description:
-      "Read a short passage on a topic you love, then answer questions to lock in what you learned. Instant score, full breakdown.",
+      "Read a short story on a topic you love, then answer questions to lock in what you learned. Instant score, full breakdown.",
     min_grade: 1,
     max_grade: 12,
     estimated_minutes: 5,
@@ -42,7 +42,7 @@ export const COURSES: Course[] = [
     id: "writing",
     slug: "writing_studio",
     type: "short_writing",
-    title: "Writing Studio",
+    title: "Writing Practice",
     subtitle: "Short-Answer Writing",
     description:
       "Get a thoughtful prompt, write 60–120 words, and we'll send back a detailed breakdown of grammar, vocabulary, structure, and topic relevance.",
@@ -57,7 +57,7 @@ export const ACHIEVEMENTS_TEMPLATE: Achievement[] = [
   {
     id: "first",
     slug: "first_quest",
-    name: "First Quest",
+    name: "First Story",
     description: "Completed your first task",
     icon: "🎯",
     earned: true,

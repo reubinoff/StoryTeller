@@ -1,6 +1,6 @@
-# StoryTeller — Frontend
+# Storyteller — Frontend
 
-A fully-clickable single-page implementation of **StoryTeller**, the gamified
+A fully-clickable single-page implementation of **Storyteller**, the gamified
 English-learning web app described in `English for fun PRD.pdf`. Every screen
 from the design hand-off (Landing, Auth, Onboarding, Dashboard, Courses,
 Course detail, Reading task, Writing task, Writing processing, Reading result,
@@ -66,8 +66,8 @@ location.reload();
 
 ```
 app/
-├── app.css                       # Verbatim design tokens + atoms + responsive
-├── root.tsx                      # SSR layout, Plus Jakarta Sans / Fraunces
+├── app.css                       # Storyteller tokens + atoms + responsive
+├── root.tsx                      # SSR layout, Nunito / Fraunces
 ├── routes.ts                     # Route map (public + _authed layout)
 ├── routes/
 │   ├── landing.tsx               # /
@@ -81,7 +81,7 @@ app/
 │   ├── achievements.tsx · settings.tsx · help.tsx
 ├── components/
 │   ├── Shell.tsx                 # Sidebar + Topbar + Mobile tabbar
-│   ├── Mascot.tsx                # Quill the ferret (+ Owl, BrandMark)
+│   ├── Mascot.tsx                # Brand assets, hafuyfay mascot, feature icons
 │   ├── Icons.tsx                 # 30+ stroke icons (port of icons.jsx)
 │   ├── AuthFrame.tsx · CourseCards.tsx · Settings.tsx
 │   ├── BackBar.tsx · Modal.tsx · Toast.tsx · Toggle.tsx · Skeleton.tsx

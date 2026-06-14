@@ -19,7 +19,7 @@ import type {
 import { useAuth } from "~/lib/auth";
 
 export function meta() {
-  return [{ title: "Result · StoryTeller" }];
+  return [{ title: "Result · Storyteller" }];
 }
 
 export default function TaskResultRoute() {
@@ -100,7 +100,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
                 fontSize: 64,
                 color: great ? "#fff" : "var(--ink)",
                 margin: "14px 0 8px",
-                letterSpacing: "-0.025em",
+                letterSpacing: 0,
               }}
             >
               <span className="tabnum">{result.score}</span>
@@ -377,7 +377,7 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
   if (!evalData) {
     return (
       <div style={{ maxWidth: 720, margin: "40px auto", textAlign: "center" }}>
-        <BackBar onBack={() => navigate("/dashboard")} label="Writing Studio" />
+        <BackBar onBack={() => navigate("/dashboard")} label="Writing Practice" />
         <div className="card" style={{ padding: 40 }}>
           <Mascot size={120} pose="thinking" kind="ferret" />
           <h2 style={{ marginTop: 12 }}>Still cooking…</h2>
@@ -639,7 +639,7 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
 
         <div className="col gap-12">
           <div className="card">
-            <h4 style={{ marginBottom: 12 }}>Quill's summary</h4>
+            <h4 style={{ marginBottom: 12 }}>hafuyfay's summary</h4>
             {evalData.feedback_detail.map((para, i) => (
               <p
                 key={i}

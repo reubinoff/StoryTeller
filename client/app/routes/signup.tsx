@@ -46,7 +46,7 @@ type SignupInput = z.input<typeof SignupSchema>;
 type SignupOutput = z.output<typeof SignupSchema>;
 
 export function meta() {
-  return [{ title: "Sign up · StoryTeller" }];
+  return [{ title: "Sign up · Storyteller" }];
 }
 
 export default function SignupRoute() {
@@ -118,7 +118,7 @@ export default function SignupRoute() {
     <AuthFrame
       side={
         <AuthSide
-          title="Begin your quest."
+          title="Start with a story."
           subtitle="Free forever for individual learners. No credit card needed."
           pose="wave"
         />

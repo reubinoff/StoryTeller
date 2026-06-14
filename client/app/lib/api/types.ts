@@ -1,5 +1,5 @@
 /**
- * Frontend type contract for the StoryTeller API.
+ * Frontend type contract for the Storyteller API.
  *
  * These types mirror the data models documented in API_CONTRACT.md
  * and PRD §13.2 / Backend §3 (data model). The backend MUST emit JSON

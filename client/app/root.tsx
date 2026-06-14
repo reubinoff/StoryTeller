@@ -12,6 +12,8 @@ import "./app.css";
 import { AppProviders } from "./lib/providers";
 
 export const links: Route.LinksFunction = () => [
+  { rel: "icon", type: "image/svg+xml", href: "/brand/favicon.svg" },
+  { rel: "apple-touch-icon", href: "/brand/app-icon.svg" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -20,7 +22,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
   },
 ];
 
@@ -30,6 +32,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="application-name" content="Storyteller" />
+        <meta name="theme-color" content="#FBF5E9" />
         <Meta />
         <Links />
       </head>

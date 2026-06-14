@@ -17,7 +17,7 @@ const LoginSchema = z.object({
 type LoginValues = z.infer<typeof LoginSchema>;
 
 export function meta() {
-  return [{ title: "Log in · StoryTeller" }];
+  return [{ title: "Log in · Storyteller" }];
 }
 
 export default function LoginRoute() {
@@ -70,7 +70,7 @@ export default function LoginRoute() {
       side={
         <AuthSide
           title="Welcome back."
-          subtitle="Pick up where you left off — your streak is waiting."
+          subtitle="Pick up your latest story practice and keep your streak moving."
           pose="read"
         />
       }

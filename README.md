@@ -1,4 +1,4 @@
-# StoryTeller
+# Storyteller
 
 Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and an Azure Functions-hosted FastAPI backend.
 
@@ -6,7 +6,7 @@ Gamified English-learning web app with reading and writing tasks, progress track
 ## Repository layout
 
 ```
-StoryTeller/
+Storyteller/
 ├── client/          # React Router 7 SPA (SSR)
 ├── backend-serverless/ # Azure Functions + FastAPI ASGI + queue worker
 └── client/API_CONTRACT.md   # Shared API contract

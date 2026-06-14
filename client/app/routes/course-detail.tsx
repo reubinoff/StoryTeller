@@ -13,7 +13,7 @@ import { useCourse, useDashboard, useRollTask } from "~/lib/api/queries";
 import type { CourseId } from "~/lib/api/types";
 
 export function meta() {
-  return [{ title: "Course · StoryTeller" }];
+  return [{ title: "Course · Storyteller" }];
 }
 
 export default function CourseDetailRoute() {

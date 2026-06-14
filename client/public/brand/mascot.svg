@@ -1,0 +1,78 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storyteller ferret mascot peeking over an open book">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="64%">
+      <stop offset="0%" stop-color="#FFFDF7"/>
+      <stop offset="100%" stop-color="#FBF5E9"/>
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="248" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="248" fill="none" stroke="#26233F" stroke-width="8" opacity="0.08"/>
+
+
+  <path d="M64 360 L256 392 448 360 448 392 256 432 64 392 Z" fill="#2F9C8B"/>
+  <path d="M64 360 L256 392 448 360 448 380 256 416 64 380 Z" fill="#3FB3A1"/>
+  <path d="M256 360 L448 326 448 360 256 392 Z" fill="#EFE6D2"/>
+  <path d="M256 352 C 330 340 400 332 448 326 L448 314 C 396 320 326 330 256 344 Z" fill="#FBF5E9"/>
+  <path d="M256 360 L64 326 64 360 256 392 Z" fill="#E7DCC4"/>
+  <path d="M256 352 C 182 340 112 332 64 326 L64 314 C 116 320 186 330 256 344 Z" fill="#F4ECDB"/>
+  <g stroke="#C9BC9E" stroke-width="3" stroke-linecap="round" opacity="0.85">
+    <line x1="96" y1="333" x2="206" y2="345"/>
+    <line x1="100" y1="345" x2="200" y2="355"/>
+    <line x1="306" y1="345" x2="416" y2="333"/>
+    <line x1="312" y1="355" x2="412" y2="345"/>
+  </g>
+  <path d="M250 344 L262 344 262 394 256 396 250 394 Z" fill="#C9BC9E"/>
+  <!-- bookmark ribbon draped over the right page -->
+  <path d="M352 300 L390 300 390 426 371 408 352 426 Z" fill="#6B4A36"/>
+  <path d="M359 302 L383 302 383 412 371 401 359 412 Z" fill="#8A6347"/>
+
+  <path d="M198 256 C 198 206 314 206 314 256 L 314 372 C 314 392 198 392 198 372 Z" fill="#EFCF9E"/>
+  <path d="M216 270 C 216 240 296 240 296 270 L 296 372 C 296 386 216 386 216 372 Z" fill="#F7E7C9"/>
+  <path d="M256 250 C 274 250 282 300 280 360 L232 360 C 230 300 238 250 256 250 Z" fill="#FBF1DD"/>
+
+  <g fill="#6B4A36">
+    <ellipse cx="216" cy="360" rx="26" ry="18"/>
+    <ellipse cx="296" cy="360" rx="26" ry="18"/>
+  </g>
+  <g stroke="#553A29" stroke-width="3" stroke-linecap="round">
+    <line x1="204" y1="356" x2="204" y2="372"/><line x1="216" y1="358" x2="216" y2="374"/><line x1="228" y1="356" x2="228" y2="372"/>
+    <line x1="284" y1="356" x2="284" y2="372"/><line x1="296" y1="358" x2="296" y2="374"/><line x1="308" y1="356" x2="308" y2="372"/>
+  </g>
+
+  <g>
+    <circle cx="192" cy="138" r="28" fill="#6B4A36"/>
+    <circle cx="320" cy="138" r="28" fill="#6B4A36"/>
+    <circle cx="192" cy="140" r="14" fill="#A87C5E"/>
+    <circle cx="320" cy="140" r="14" fill="#A87C5E"/>
+  </g>
+
+  <path d="M256 92 C 200 92 164 134 164 184 C 164 222 188 250 220 266 C 232 286 244 300 256 300 C 268 300 280 286 292 266 C 324 250 348 222 348 184 C 348 134 312 92 256 92 Z" fill="#F7E7C9"/>
+  <path d="M256 92 C 214 92 182 120 170 158 C 200 142 230 136 256 136 C 282 136 312 142 342 158 C 330 120 298 92 256 92 Z" fill="#6B4A36"/>
+
+  <path d="M176 176 C 196 162 224 160 240 174 C 250 182 250 196 244 204 C 234 196 214 196 200 204 C 188 210 178 206 172 196 C 170 188 171 180 176 176 Z" fill="#6B4A36"/>
+  <path d="M336 176 C 316 162 288 160 272 174 C 262 182 262 196 268 204 C 278 196 298 196 312 204 C 324 210 334 206 340 196 C 342 188 341 180 336 176 Z" fill="#6B4A36"/>
+
+  <path d="M256 214 C 234 214 222 232 222 250 C 222 274 240 290 256 296 C 272 290 290 274 290 250 C 290 232 278 214 256 214 Z" fill="#FBF1DD"/>
+
+  <g>
+    <circle cx="216" cy="188" r="19" fill="#FFFFFF"/>
+    <circle cx="296" cy="188" r="19" fill="#FFFFFF"/>
+    <circle cx="220" cy="190" r="12.5" fill="#26233F"/>
+    <circle cx="292" cy="190" r="12.5" fill="#26233F"/>
+    <circle cx="225" cy="185" r="4.5" fill="#FFFFFF"/>
+    <circle cx="297" cy="185" r="4.5" fill="#FFFFFF"/>
+    <circle cx="216" cy="195" r="2.4" fill="#FFFFFF" opacity="0.7"/>
+    <circle cx="288" cy="195" r="2.4" fill="#FFFFFF" opacity="0.7"/>
+  </g>
+
+  <circle cx="200" cy="240" r="12" fill="#F2A7A0" opacity="0.5"/>
+  <circle cx="312" cy="240" r="12" fill="#F2A7A0" opacity="0.5"/>
+
+  <path d="M247 250 C 247 244 265 244 265 250 C 265 258 256 264 256 264 C 256 264 247 258 247 250 Z" fill="#D9736E"/>
+  <path d="M256 264 C 256 274 246 278 238 274 M256 264 C 256 274 266 278 274 274" fill="none" stroke="#7A4A47" stroke-width="3.5" stroke-linecap="round"/>
+
+  <g stroke="#C9BC9E" stroke-width="2.5" stroke-linecap="round" opacity="0.85">
+    <line x1="226" y1="252" x2="188" y2="246"/><line x1="226" y1="260" x2="190" y2="266"/>
+    <line x1="286" y1="252" x2="324" y2="246"/><line x1="286" y1="260" x2="322" y2="266"/>
+  </g>
+</svg>

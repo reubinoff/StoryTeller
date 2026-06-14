@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BrandMark, Mascot, type MascotPose } from "./Mascot";
+import { BrandLogo, BrandMark, Mascot, type MascotPose } from "./Mascot";
 
 interface AuthFrameProps {
   side: ReactNode;
@@ -49,12 +49,7 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
     }}
     className="auth-side"
   >
-    <div className="row gap-12">
-      <BrandMark size={32} color="var(--paper)" />
-      <div className="brand-name" style={{ color: "var(--paper)" }}>
-        StoryTeller
-      </div>
-    </div>
+    <BrandLogo width={164} className="brand-logo brand-logo-on-dark" />
     <div style={{ marginTop: "auto", position: "relative", zIndex: 2 }}>
       <h1
         style={{
@@ -69,7 +64,7 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
       <p
         style={{
           fontSize: 17,
-          color: "rgba(251,246,236,0.7)",
+          color: "rgba(251,245,233,0.72)",
           maxWidth: 380,
           lineHeight: 1.5,
         }}

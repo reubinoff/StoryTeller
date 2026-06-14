@@ -32,7 +32,7 @@ export default function AuthedLayout() {
       push({
         icon: "✨",
         title: "Your writing task is ready!",
-        body: `${detail.title} — Quill scored it ${detail.score}.`,
+        body: `${detail.title} — hafuyfay scored it ${detail.score}.`,
         action: "View result",
         onAction: () => navigate(`/tasks/${detail.task_id}/result`),
       });

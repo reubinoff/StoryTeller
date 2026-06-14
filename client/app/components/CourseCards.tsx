@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconArrowRight } from "./Icons";
-import { Ferret } from "./Mascot";
+import { FeatureIcon } from "./Mascot";
 
 interface CourseCardProps {
   title: string;
@@ -181,112 +181,33 @@ export const BigCourseCard = ({
 );
 
 export const ReadingIllustration = () => (
-  <svg
-    viewBox="0 0 320 160"
-    width="100%"
-    height="100%"
-    style={{ position: "absolute", inset: 0 }}
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 18,
+    }}
   >
-    <rect
-      x={40}
-      y={40}
-      width={120}
-      height={100}
-      rx={6}
-      fill="var(--paper)"
-      stroke="var(--ink)"
-      strokeWidth={2}
-    />
-    <rect
-      x={160}
-      y={40}
-      width={120}
-      height={100}
-      rx={6}
-      fill="var(--paper-2)"
-      stroke="var(--ink)"
-      strokeWidth={2}
-    />
-    <line
-      x1={160}
-      y1={40}
-      x2={160}
-      y2={140}
-      stroke="var(--ink)"
-      strokeWidth={2}
-    />
-    {[55, 67, 79, 91, 103, 115].map((y) => (
-      <line
-        key={y}
-        x1={50}
-        y1={y}
-        x2={150}
-        y2={y}
-        stroke="var(--teal)"
-        strokeWidth={2}
-        strokeLinecap="round"
-        opacity={y > 110 ? 0.4 : 1}
-      />
-    ))}
-    {[55, 67, 79, 91, 103, 115].map((y) => (
-      <line
-        key={`b-${y}`}
-        x1={170}
-        y1={y}
-        x2={270}
-        y2={y}
-        stroke="var(--teal)"
-        strokeWidth={2}
-        strokeLinecap="round"
-        opacity={y > 110 ? 0.4 : 1}
-      />
-    ))}
-    <g transform="translate(238 90)">
-      <Ferret size={60} pose="read" />
-    </g>
-  </svg>
+    <FeatureIcon name="stories" size={112} alt="" />
+    <FeatureIcon name="words" size={92} alt="" style={{ marginTop: 36 }} />
+  </div>
 );
 
 export const WritingIllustration = () => (
-  <svg
-    viewBox="0 0 320 160"
-    width="100%"
-    height="100%"
-    style={{ position: "absolute", inset: 0 }}
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 18,
+    }}
   >
-    <rect
-      x={60}
-      y={30}
-      width={200}
-      height={120}
-      rx={6}
-      fill="var(--paper)"
-      stroke="var(--ink)"
-      strokeWidth={2}
-    />
-    {[50, 64, 78, 92, 106, 120, 134].map((y, i) => (
-      <line
-        key={y}
-        x1={74}
-        y1={y}
-        x2={74 + (i === 6 ? 80 : 170)}
-        y2={y}
-        stroke="var(--rust)"
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    ))}
-    <g transform="translate(220 14) rotate(35)">
-      <rect
-        x={0}
-        y={0}
-        width={6}
-        height={80}
-        fill="var(--rust)"
-        stroke="var(--ink)"
-        strokeWidth={2}
-      />
-      <polygon points="0,80 6,80 3,92" fill="var(--ink)" />
-    </g>
-  </svg>
+    <FeatureIcon name="practice" size={112} alt="" />
+    <FeatureIcon name="speak" size={92} alt="" style={{ marginTop: 36 }} />
+  </div>
 );

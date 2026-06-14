@@ -1,0 +1,53 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Storyteller app icon">
+  <defs>
+    <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#322C5C"/>
+      <stop offset="100%" stop-color="#201D38"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#F2A33C" stop-opacity="0.38"/>
+      <stop offset="70%" stop-color="#F2A33C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#ink)"/>
+  <!-- warm honey glow behind the face -->
+  <circle cx="256" cy="256" r="240" fill="url(#glow)"/>
+
+  <!-- ears -->
+  <g>
+    <circle cx="150" cy="150" r="46" fill="#6B4A36"/>
+    <circle cx="362" cy="150" r="46" fill="#6B4A36"/>
+    <circle cx="150" cy="153" r="23" fill="#A87C5E"/>
+    <circle cx="362" cy="153" r="23" fill="#A87C5E"/>
+  </g>
+
+  <!-- head -->
+  <path d="M256 96 C 165 96 106 164 106 244 C 106 308 146 354 200 380 C 218 410 238 432 256 432 C 274 432 294 410 312 380 C 366 354 406 308 406 244 C 406 164 347 96 256 96 Z" fill="#F7E7C9"/>
+  <!-- crown cap -->
+  <path d="M256 96 C 188 96 138 142 120 204 C 168 178 214 168 256 168 C 298 168 344 178 392 204 C 374 142 324 96 256 96 Z" fill="#6B4A36"/>
+
+  <!-- bandit mask -->
+  <path d="M126 232 C 158 208 204 206 230 230 C 246 244 246 268 234 282 C 216 268 184 268 162 282 C 142 292 124 284 116 266 C 113 252 116 240 126 232 Z" fill="#6B4A36"/>
+  <path d="M386 232 C 354 208 308 206 282 230 C 266 244 266 268 278 282 C 296 268 328 268 350 282 C 370 292 388 284 396 266 C 399 252 396 240 386 232 Z" fill="#6B4A36"/>
+
+  <!-- muzzle -->
+  <path d="M256 300 C 222 300 202 330 202 360 C 202 398 230 424 256 432 C 282 424 310 398 310 360 C 310 330 290 300 256 300 Z" fill="#FBF1DD"/>
+
+  <!-- eyes -->
+  <g>
+    <circle cx="190" cy="252" r="30" fill="#FFFFFF"/>
+    <circle cx="322" cy="252" r="30" fill="#FFFFFF"/>
+    <circle cx="197" cy="256" r="19" fill="#26233F"/>
+    <circle cx="315" cy="256" r="19" fill="#26233F"/>
+    <circle cx="205" cy="249" r="7" fill="#FFFFFF"/>
+    <circle cx="323" cy="249" r="7" fill="#FFFFFF"/>
+  </g>
+
+  <!-- cheeks -->
+  <circle cx="168" cy="340" r="18" fill="#F2A7A0" opacity="0.5"/>
+  <circle cx="344" cy="340" r="18" fill="#F2A7A0" opacity="0.5"/>
+
+  <!-- nose + mouth -->
+  <path d="M242 350 C 242 342 270 342 270 350 C 270 362 256 372 256 372 C 256 372 242 362 242 350 Z" fill="#D9736E"/>
+  <path d="M256 372 C 256 388 240 394 228 388 M256 372 C 256 388 272 394 284 388" fill="none" stroke="#7A4A47" stroke-width="6" stroke-linecap="round"/>
+</svg>

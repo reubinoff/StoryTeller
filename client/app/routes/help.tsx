@@ -1,8 +1,8 @@
 import { Link } from "react-router";
-import { BrandMark } from "~/components/Mascot";
+import { BrandLogo } from "~/components/Mascot";
 
 export function meta() {
-  return [{ title: "Help & FAQ · StoryTeller" }];
+  return [{ title: "Help & FAQ · Storyteller" }];
 }
 
 const FAQS: Array<[string, string]> = [
@@ -30,17 +30,14 @@ export default function HelpRoute() {
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <Link
           to="/"
-          className="row gap-12"
+          className="brand-logo-link"
           style={{ color: "inherit", marginBottom: 32 }}
         >
-          <BrandMark size={28} color="var(--ink)" />
-          <div className="brand-name" style={{ fontSize: 18 }}>
-            StoryTeller
-          </div>
+          <BrandLogo width={160} />
         </Link>
         <h1 style={{ fontSize: 42, marginBottom: 8 }}>Help & FAQ</h1>
         <p style={{ color: "var(--ink-3)", marginBottom: 24 }}>
-          Common questions about StoryTeller.
+          Common questions about Storyteller.
         </p>
         <div className="col gap-12">
           {FAQS.map(([q, a]) => (
