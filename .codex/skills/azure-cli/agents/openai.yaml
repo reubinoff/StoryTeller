@@ -1,0 +1,4 @@
+interface:
+  display_name: "Azure CLI"
+  short_description: "Operate Azure safely with az CLI"
+  default_prompt: "Use $azure-cli to inspect my Azure resources and make the requested CLI changes safely."
