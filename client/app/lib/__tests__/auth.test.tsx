@@ -133,7 +133,7 @@ describe("useAuth", () => {
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
-    expect(result.current.ready).toBe(true);
+    await waitFor(() => expect(result.current.ready).toBe(true));
   });
 
   it("ignores corrupted localStorage data", async () => {

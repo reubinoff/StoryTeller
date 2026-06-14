@@ -184,21 +184,17 @@ cd backend-serverless
 uv run --frozen pytest -q
 ```
 
-Run the full verification set from the migration plan:
+Run the full verification set:
 
 ```bash
-cd backend
-UV_PROJECT_ENVIRONMENT=/tmp/storyteller-backend-venv uv run --frozen pytest -q
-
-cd ../backend-serverless
+cd backend-serverless
 UV_PROJECT_ENVIRONMENT=/tmp/storyteller-serverless-venv uv run --frozen pytest -q
 
 cd ../client
 NODE_OPTIONS=--localstorage-file=/tmp/storyteller-vitest-localstorage npm run test:run
 ```
 
-The existing backend and client static checks currently have pre-existing
-non-test failures, so the provided CI gates on tests only.
+The provided CI gates on serverless backend tests and frontend tests.
 
 ## Provision Azure
 

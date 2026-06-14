@@ -8,15 +8,6 @@ client/node_modules/
 client/.react-router/
 client/build/
 
-# Backend
-backend/.venv/
-backend/__pycache__/
-backend/.coverage
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/.ruff_cache/
-backend/*.egg-info/
-
 # Azure Functions backend
 backend-serverless/.venv/
 backend-serverless/__pycache__/

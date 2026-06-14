@@ -4,14 +4,12 @@ on:
   pull_request:
     paths:
       - "backend-serverless/**"
-      - "backend/**"
       - "client/**"
       - ".github/workflows/backend-serverless-ci-cd.yml"
   push:
     branches: ["main"]
     paths:
       - "backend-serverless/**"
-      - "backend/**"
       - "client/**"
       - ".github/workflows/backend-serverless-ci-cd.yml"
   workflow_dispatch:
@@ -27,21 +25,6 @@ env:
   AZURE_FUNCTIONAPP_BASE_URL: ${{ vars.AZURE_FUNCTIONAPP_BASE_URL }}
 
 jobs:
-  existing-backend-tests:
-    name: Existing backend tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - uses: astral-sh/setup-uv@v5
-      - name: Run backend pytest
-        working-directory: backend
-        env:
-          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/backend-venv
-        run: uv run --frozen pytest -q
-
   serverless-tests:
     name: Serverless backend tests
     runs-on: ubuntu-latest
@@ -80,7 +63,6 @@ jobs:
     name: Deploy production Function App
     runs-on: ubuntu-latest
     needs:
-      - existing-backend-tests
       - serverless-tests
       - client-tests
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

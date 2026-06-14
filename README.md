@@ -1,6 +1,6 @@
 # StoryTeller
 
-Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and a FastAPI backend. 
+Gamified English-learning web app with reading and writing tasks, progress tracking, and AI-generated content. The repo is a monorepo with a React Router 7 frontend and an Azure Functions-hosted FastAPI backend.
 
 
 ## Repository layout
@@ -8,7 +8,6 @@ Gamified English-learning web app with reading and writing tasks, progress track
 ```
 StoryTeller/
 ├── client/          # React Router 7 SPA (SSR)
-├── backend/         # FastAPI + PostgreSQL + Anthropic Claude
 ├── backend-serverless/ # Azure Functions + FastAPI ASGI + queue worker
 └── client/API_CONTRACT.md   # Shared API contract
 ```
@@ -16,7 +15,6 @@ StoryTeller/
 | Package | Stack | Docs |
 |---------|-------|------|
 | [`client/`](client/) | React 19, React Router 7, Tailwind CSS 4, TanStack Query | [client/README.md](client/README.md) |
-| [`backend/`](backend/) | Python 3.13, FastAPI, SQLAlchemy 2 async, PostgreSQL 17, Claude | [backend/README.md](backend/README.md) |
 | [`backend-serverless/`](backend-serverless/) | Azure Functions, FastAPI ASGI, Storage Queue worker, PostgreSQL, Claude | [backend-serverless/README.md](backend-serverless/README.md) |
 
 ## Quick start (frontend only)
@@ -34,8 +32,9 @@ npm run dev          # http://localhost:5174
 **1. Backend**
 
 ```bash
-cd backend
+cd backend-serverless
 cp .env.example .env
+cp local.settings.json.example local.settings.json
 # Set ANTHROPIC_API_KEY, JWT_SECRET, DATABASE_URL in .env
 
 docker run -d --name storyteller-pg -p 5432:5432 \
@@ -44,7 +43,7 @@ docker run -d --name storyteller-pg -p 5432:5432 \
 
 uv sync
 uv run --no-sync alembic upgrade head
-uv run --no-sync uvicorn app.main:app --reload --port 8000
+func start
 ```
 
 **2. Frontend (point at the real API)**
@@ -53,7 +52,7 @@ Create `client/.env.local`:
 
 ```
 VITE_USE_MOCK=false
-VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```
 
 Then start the dev server:
@@ -80,7 +79,7 @@ The frontend and backend share a single contract: [`client/API_CONTRACT.md`](cli
 
 ```bash
 # Backend
-cd backend
+cd backend-serverless
 uv run --no-sync pytest -v tests/
 
 # Frontend
@@ -89,8 +88,6 @@ npm run test:run
 ```
 
 ## Deployment
-
-The client includes a `Dockerfile` for production SSR (`npm run build` → `npm run start`). The backend runs as a standard Uvicorn ASGI app.
 
 The serverless backend lives in `backend-serverless/` and deploys to Azure Functions
 with a Storage Queue worker for writing evaluations. See
