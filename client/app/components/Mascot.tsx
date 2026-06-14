@@ -67,14 +67,19 @@ export const BrandLogo = ({
   className?: string;
   style?: CSSProperties;
   alt?: string;
-}) => (
-  <BrandImage
-    name="logo"
-    alt={alt}
-    className={className}
-    style={{ width, height: "auto", ...style }}
-  />
-);
+}) => {
+  const height = Math.round(width * (260 / 860));
+  return (
+    <BrandImage
+      name="logo"
+      alt={alt}
+      className={className}
+      width={width}
+      height={height}
+      style={{ width, height, ...style }}
+    />
+  );
+};
 
 export const BrandMark = ({
   size = 32,

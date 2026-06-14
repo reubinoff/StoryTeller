@@ -922,6 +922,10 @@ select:focus-visible {
     min-height: 200px;
     padding: 28px !important;
   }
+  .auth-side-mascot,
+  .auth-side-watermark {
+    display: none;
+  }
   .auth-side h1 {
     font-size: 32px !important;
   }
@@ -937,6 +941,31 @@ select:focus-visible {
   }
   .writing-side {
     grid-template-columns: 1fr;
+  }
+  .dashboard-body,
+  .dashboard-body > *,
+  .dashboard-body .card {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .section-header {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+  .section-header-action {
+    margin-left: 0 !important;
+  }
+  .resume-row {
+    grid-template-columns: 1fr !important;
+  }
+  .resume-row > button {
+    justify-self: flex-start;
+  }
+  .recent-table-card {
+    overflow-x: auto !important;
+  }
+  .recent-table-card table {
+    min-width: 520px;
   }
   .onboarding-topics {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;

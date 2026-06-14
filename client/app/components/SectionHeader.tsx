@@ -12,7 +12,7 @@ export const SectionHeader = ({
   action,
 }: SectionHeaderProps) => (
   <div
-    className="row"
+    className="row section-header"
     style={{ alignItems: "flex-end", marginBottom: 16, gap: 16 }}
   >
     <div>
@@ -23,6 +23,8 @@ export const SectionHeader = ({
         </div>
       )}
     </div>
-    <div style={{ marginLeft: "auto" }}>{action}</div>
+    <div className="section-header-action" style={{ marginLeft: "auto" }}>
+      {action}
+    </div>
   </div>
 );

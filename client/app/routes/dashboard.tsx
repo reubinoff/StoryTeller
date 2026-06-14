@@ -233,7 +233,10 @@ export default function DashboardRoute() {
               </button>
             }
           />
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div
+            className="card recent-table-card"
+            style={{ padding: 0, overflow: "hidden" }}
+          >
             <table
               style={{
                 width: "100%",
@@ -536,7 +539,7 @@ const ResumeRow = ({
   const isReading = task.course_type === "unseen_text";
   return (
     <div
-      className="card"
+      className="card resume-row"
       style={{
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",

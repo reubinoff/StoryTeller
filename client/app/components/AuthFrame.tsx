@@ -72,10 +72,16 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
         {subtitle}
       </p>
     </div>
-    <div style={{ position: "absolute", right: -40, bottom: -20, opacity: 0.94 }}>
+    <div
+      className="auth-side-mascot"
+      style={{ position: "absolute", right: -40, bottom: -20, opacity: 0.94 }}
+    >
       <Mascot size={200} pose={pose} kind="ferret" />
     </div>
-    <div style={{ position: "absolute", right: 48, top: 48, opacity: 0.18 }}>
+    <div
+      className="auth-side-watermark"
+      style={{ position: "absolute", right: 48, top: 48, opacity: 0.18 }}
+    >
       <BrandMark size={280} color="var(--rust)" />
     </div>
   </div>
