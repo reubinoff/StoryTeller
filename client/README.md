@@ -5,7 +5,8 @@ English-learning web app described in `English for fun PRD.pdf`. Every screen
 from the design hand-off (Landing, Auth, Onboarding, Dashboard, Courses,
 Course detail, Reading task, Writing task, Writing processing, Reading result,
 Writing result, Settings, Achievements, Help & FAQ) is implemented with a
-typed `fetch` API client backed by a localStorage-driven mock layer, so the
+typed `fetch` API client that targets the StoryTeller backend contract under
+`/api/v1`.
 
 ## Stack
 
@@ -15,13 +16,21 @@ typed `fetch` API client backed by a localStorage-driven mock layer, so the
   atoms (`btn-*`, `card`, `chip-*`, `field-*`, `app-shell`, …) lives verbatim
   in [`app/app.css`](app/app.css)
 - **TanStack Query** for server state, **react-hook-form + zod** for forms
-- **No backend dependency in dev** — see "Mock backend" below
+- **Local backend required in dev** — see "Getting started" below
 
 ## Getting started
 
+Start the backend Function App first so the API is available at
+`http://localhost:7071/api/v1`. Then create `.env.local`:
+
+```bash
+VITE_PUBLIC_SITE_URL=http://localhost:5174
+VITE_API_BASE_URL=http://localhost:7071/api/v1
+```
+
 ```bash
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5174
 ```
 
 Other scripts:
@@ -43,19 +52,10 @@ The Azure Static Web Apps workflow uses the default Azure hostname when
 `VITE_PUBLIC_SITE_URL` is not set. Set the variable when switching to a custom
 domain.
 
-## Mock backend
+## Mock implementation
 
-The default dev experience runs a localStorage-backed mock backend so the app
-is fully clickable without a server. To point at a real `/api/v1` instead:
-
-```bash
-# .env.local
-VITE_PUBLIC_SITE_URL=https://www.example.com
-VITE_USE_MOCK=false
-VITE_API_BASE_URL=https://api.storyteller.app/api/v1
-```
-
-The mock is implemented in [`app/lib/api/mock/`](app/lib/api/mock/):
+A localStorage-backed mock implementation remains in
+[`app/lib/api/mock/`](app/lib/api/mock/):
 
 - `db.ts` — typed in-memory store, persisted to localStorage. Seed content
   (Saturn rings reading passage, Kyoto writing prompt, sample evaluation,
@@ -114,9 +114,9 @@ app/
 
 The full backend contract — every endpoint, request/response shape, error
 codes, state machine, and TypeScript data models — is documented in
-[`API_CONTRACT.md`](API_CONTRACT.md). The frontend ships against that
-contract; setting `VITE_USE_MOCK=false` is enough to swap to a real backend
-that conforms to it.
+[`API_CONTRACT.md`](API_CONTRACT.md). The frontend ships against the real
+backend contract and local development should use
+`VITE_API_BASE_URL=http://localhost:7071/api/v1`.
 
 ## Key flows implemented end-to-end
 

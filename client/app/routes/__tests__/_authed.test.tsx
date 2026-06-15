@@ -12,13 +12,6 @@ vi.mock("react-router", async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-const mockPush = vi.fn();
-
-vi.mock("~/components/Toast", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/components/Toast")>();
-  return { ...actual, useToast: () => ({ push: mockPush }) };
-});
-
 vi.mock("~/components/Shell", () => ({
   Shell: ({ children }: { children: ReactNode }) => (
     <div data-testid="mock-shell">{children}</div>
@@ -110,40 +103,5 @@ describe("AuthedLayout guards", () => {
 
     expect(screen.getByTestId("mock-shell")).toHaveTextContent("Dashboard content");
     expect(mockNavigate).not.toHaveBeenCalled();
-  });
-});
-
-describe("AuthedLayout writing completion toast", () => {
-  it("pushes an actionable toast and routes to the writing result", async () => {
-    renderAuthedLayout();
-
-    window.dispatchEvent(
-      new CustomEvent("storyteller:task-completed", {
-        detail: { task_id: "task-42", title: "Moon Journal", score: 88 },
-      })
-    );
-
-    await waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Your writing task is ready!",
-          body: expect.stringMatching(/Moon Journal.+88/),
-          action: "View result",
-        })
-      )
-    );
-
-    const toast = mockPush.mock.calls[0][0] as { onAction: () => void };
-    toast.onAction();
-
-    expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-42/result");
-  });
-
-  it("ignores completion events without details", () => {
-    renderAuthedLayout();
-
-    window.dispatchEvent(new CustomEvent("storyteller:task-completed"));
-
-    expect(mockPush).not.toHaveBeenCalled();
   });
 });

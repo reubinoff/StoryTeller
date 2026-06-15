@@ -55,6 +55,20 @@ export const IconPen = (p: IconProps) => (
     <circle cx="11" cy="11" r="2" />
   </Icon>
 );
+export const IconReadingTask = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 5.5c2.7 0 5 .7 8 2.3v12c-3-1.6-5.3-2.3-8-2.3v-12z" />
+    <path d="M20 5.5c-2.7 0-5 .7-8 2.3v12c3-1.6 5.3-2.3 8-2.3v-12z" />
+    <path d="M12 7.8v12" />
+  </Icon>
+);
+export const IconWritingTask = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m4 20 4.2-1 10.6-10.6-3.2-3.2L5 15.8 4 20z" />
+    <path d="m14.8 6 3.2 3.2" />
+    <path d="M4 20h5" />
+  </Icon>
+);
 export const IconSettings = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="3" />

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev          # Start dev server at http://localhost:5173 (mock backend on by default)
+npm run dev          # Start dev server at http://localhost:5174
 npm run build        # Production SSR + client bundles
 npm run start        # Serve production build
 npm run typecheck    # Regenerate React Router types + run tsc
@@ -19,16 +19,14 @@ No lint command is configured.
 
 ## Environment
 
-Create `.env.local` to toggle the backend:
+Create `.env.local` for the local backend:
 
 ```
 VITE_PUBLIC_SITE_URL=http://localhost:5174 # canonical URL for SEO assets
-VITE_USE_MOCK=true           # default; uses localStorage mock backend
-VITE_USE_MOCK=false
-VITE_API_BASE_URL=http://...  # required when mock is off
+VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```
 
-The mock backend simulates network delay (~300ms) and persists state to `localStorage`. Clear it via `localStorage.clear()` in DevTools.
+Start the backend Function App at `http://localhost:7071/api/v1` before running the frontend dev server.
 
 ## Architecture
 
@@ -46,13 +44,13 @@ The mock backend simulates network delay (~300ms) and persists state to `localSt
 
 ### API / Transport
 
-`app/lib/api/client.ts` routes all requests to either the mock backend or real fetch based on `VITE_USE_MOCK`. No code changes are needed to switch — only the env var. Real endpoints are documented in `API_CONTRACT.md`.
+`app/lib/api/client.ts` exposes the typed API transport used by the app. Real endpoints are documented in `API_CONTRACT.md`, and local development should set `VITE_API_BASE_URL=http://localhost:7071/api/v1`.
 
 - **`endpoints.ts`** — strongly-typed API methods (auth, me, catalog, tasks)
 - **`queries.ts`** — TanStack Query hooks (`useMe`, `useInterests`, `useTask`, etc.)
 - **`types.ts`** — wire types (snake_case) matching the API contract
 
-### Mock Backend
+### Mock Implementation
 
 `app/lib/api/mock/` is a complete in-memory backend:
 - `db.ts` — typed store + localStorage persistence

@@ -2,7 +2,8 @@ import { Link, useNavigate, useParams } from "react-router";
 import {
   IconArrowLeft,
   IconArrowRight,
-  IconSparkle,
+  IconReadingTask,
+  IconWritingTask,
 } from "~/components/Icons";
 import { Mascot } from "~/components/Mascot";
 import { RollTaskProgress } from "~/components/RollTaskProgress";
@@ -24,6 +25,7 @@ export default function CourseDetailRoute() {
   const { push } = useToast();
   const id = (courseId as CourseId) ?? "reading";
   const isReading = id === "reading";
+  const TaskIcon = isReading ? IconReadingTask : IconWritingTask;
   const accent = isReading ? "var(--teal)" : "var(--rust)";
   const accentSoft = isReading ? "var(--teal-soft)" : "var(--rust-soft)";
   const courseQ = useCourse(id);
@@ -126,7 +128,7 @@ export default function CourseDetailRoute() {
                     </>
                   ) : (
                     <>
-                      <IconSparkle size={16} /> Roll a new task
+                      <TaskIcon size={16} /> Roll a new task
                     </>
                   )}
                 </button>

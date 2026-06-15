@@ -2,10 +2,10 @@
 
 This document is the source of truth for every backend endpoint the
 StoryTeller web client expects, and the exact JSON shape of every entity it
-consumes. The frontend is implemented against these contracts and ships with a
-localStorage-backed mock backend (toggle with `VITE_USE_MOCK`) that mimics them
-1:1 — when the real backend lands, set `VITE_USE_MOCK=false` and the real
-service must respond with the shapes described here.
+consumes. The frontend targets the real FastAPI backend through `/api/v1`;
+local development should point `VITE_API_BASE_URL` at
+`http://localhost:7071/api/v1`. The backend must respond with the shapes
+described here.
 
 The TypeScript types in [`app/lib/api/types.ts`](app/lib/api/types.ts) are the
 machine-readable mirror of every model below.

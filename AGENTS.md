@@ -10,7 +10,7 @@ Durable guidance for Codex in this repository. Keep prompts focused on the task;
 
 ```
 StoryTeller/
-├── client/                 # React Router 7 SPA (mock backend by default)
+├── client/                 # React Router 7 SPA
 ├── backend-serverless/     # Azure Functions + FastAPI + queue worker
 ├── client/API_CONTRACT.md  # Shared API contract — source of truth for /api/v1
 └── .codex/
@@ -38,7 +38,7 @@ Skills live in `.codex/skills/` and are discoverable via `.agents/skills/`. Befo
 ```bash
 cd client
 npm install
-npm run dev              # http://localhost:5174, mock backend on by default
+npm run dev              # http://localhost:5174; requires backend API below
 npm run typecheck
 npm run test:run         # CI-style Vitest
 npx vitest run app/routes/__tests__/login.test.tsx   # single file
@@ -91,7 +91,7 @@ Partial pytest runs often fail coverage thresholds; that is expected until the f
 
 ### Frontend
 
-- Default dev uses the localStorage mock (`VITE_USE_MOCK=true`); no server required.
+- Local dev uses the real backend; set `VITE_API_BASE_URL=http://localhost:7071/api/v1`.
 - Design tokens and atoms live in `client/app/app.css` — reuse `btn-*`, `card`, `chip-*`, `field-*`, `app-shell`.
 - Path alias `~` maps to `client/app/`.
 - For UI work: consider mobile/responsive behavior and verify at mobile and desktop widths before finishing.

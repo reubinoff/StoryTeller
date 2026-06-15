@@ -813,7 +813,7 @@ const WritingProcessing = ({ task }: { task: Task }) => {
     return () => clearInterval(id);
   }, []);
 
-  // When the task transitions to completed (via mock event or polling), navigate to result.
+  // When polling observes a completed task, navigate to the result page.
   useEffect(() => {
     if (task.status === "completed") {
       navigate(`/tasks/${task.id}/result`);

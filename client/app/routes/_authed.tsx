@@ -1,14 +1,12 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { Shell } from "~/components/Shell";
-import { useToast } from "~/components/Toast";
 import { useAuth } from "~/lib/auth";
 
 export default function AuthedLayout() {
   const { user, ready } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { push } = useToast();
 
   useEffect(() => {
     if (!ready) return;
@@ -21,25 +19,6 @@ export default function AuthedLayout() {
       navigate("/onboarding", { replace: true });
     }
   }, [ready, user, location.pathname, location.search, navigate]);
-
-  // Subscribe to writing-task completion events from the mock backend
-  // and surface them as toasts (PRD §7.3).
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ task_id: string; title: string; score: number }>)
-        .detail;
-      if (!detail) return;
-      push({
-        icon: "✨",
-        title: "Your writing task is ready!",
-        body: `${detail.title} — hafuyfay scored it ${detail.score}.`,
-        action: "View result",
-        onAction: () => navigate(`/tasks/${detail.task_id}/result`),
-      });
-    };
-    window.addEventListener("storyteller:task-completed", handler);
-    return () => window.removeEventListener("storyteller:task-completed", handler);
-  }, [push, navigate]);
 
   if (!ready || !user || !user.onboarding_completed) {
     return (

@@ -137,7 +137,6 @@ Local URLs:
 Point the frontend at the local Function App:
 
 ```text
-VITE_USE_MOCK=false
 VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```
 
@@ -304,7 +303,7 @@ AZURE_KEYVAULT_NAME
 `AZURE_FUNCTIONAPP_BASE_URL` can be omitted if the app is reachable at
 `https://<AZURE_FUNCTIONAPP_NAME>.azurewebsites.net`.
 The frontend deployment uses these same variables to build with
-`VITE_USE_MOCK=false` and `VITE_API_BASE_URL=<function-app-base-url>/api/v1`.
+`VITE_API_BASE_URL=<function-app-base-url>/api/v1`.
 
 ## Deploy Code
 

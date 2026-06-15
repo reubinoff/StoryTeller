@@ -1,4 +1,4 @@
-import { IconBook, IconPen } from "./Icons";
+import { IconReadingTask, IconWritingTask } from "./Icons";
 import type { CourseId } from "~/lib/api/types";
 
 const COPY: Record<
@@ -6,18 +6,18 @@ const COPY: Record<
   {
     title: string;
     body: string;
-    Icon: typeof IconBook;
+    Icon: typeof IconReadingTask;
   }
 > = {
   reading: {
     title: "Generating your reading task",
     body: "Building a fresh passage and questions. This can take a moment.",
-    Icon: IconBook,
+    Icon: IconReadingTask,
   },
   writing: {
     title: "Generating your writing task",
     body: "Choosing a fresh prompt for your level. This can take a moment.",
-    Icon: IconPen,
+    Icon: IconWritingTask,
   },
 };
 

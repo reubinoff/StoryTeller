@@ -21,12 +21,10 @@ No lint script is configured.
 
 ```
 VITE_PUBLIC_SITE_URL=http://localhost:5174
-VITE_USE_MOCK=true                              # default — localStorage mock
-VITE_USE_MOCK=false
-VITE_API_BASE_URL=http://localhost:7071/api/v1  # required when mock is off
+VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```
 
-Switching mock vs real API requires only env changes — not code changes in `app/lib/api/client.ts`.
+Start the backend Function App before running the frontend dev server.
 
 ## Layout
 
@@ -44,7 +42,7 @@ Path alias: `~` → `app/`.
 
 - TypeScript strict; wire types in `types.ts` use snake_case per `API_CONTRACT.md`.
 - TanStack Query hooks live in `app/lib/api/queries.ts`.
-- Mock backend: `app/lib/api/mock/` — persists to localStorage, ~300ms simulated delay.
+- Mock implementation: `app/lib/api/mock/` — persists to localStorage, ~300ms simulated delay.
 - Reuse existing CSS atoms; do not invent parallel styling systems.
 - Responsive: sidebar collapses below 900px; mobile tab bar uses 44×44px targets.
 - **UI tasks:** verify mobile and desktop widths before finishing.

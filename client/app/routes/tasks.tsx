@@ -2,13 +2,13 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
   IconArrowRight,
-  IconBook,
   IconClock,
   IconDoc,
-  IconPen,
   IconPlus,
+  IconReadingTask,
   IconRefresh,
   IconSparkle,
+  IconWritingTask,
 } from "~/components/Icons";
 import { SectionHeader } from "~/components/SectionHeader";
 import { Skeleton } from "~/components/Skeleton";
@@ -185,7 +185,11 @@ function TaskRow({ task, onOpen }: { task: Task; onOpen: () => void }) {
   return (
     <article className="card task-row">
       <div className={`task-row-icon ${isReading ? "reading" : "writing"}`}>
-        {isReading ? <IconBook size={22} /> : <IconPen size={22} />}
+        {isReading ? (
+          <IconReadingTask size={22} />
+        ) : (
+          <IconWritingTask size={22} />
+        )}
       </div>
       <div className="task-row-main">
         <div className="task-row-kicker">

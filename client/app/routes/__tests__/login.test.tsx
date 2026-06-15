@@ -64,6 +64,17 @@ function renderLogin(search = "") {
   );
 }
 
+async function typeCredentials(
+  user: ReturnType<typeof userEvent.setup>,
+  email = "maya@example.com",
+  password = "demo1234"
+) {
+  await user.clear(screen.getByLabelText("Email"));
+  await user.type(screen.getByLabelText("Email"), email);
+  await user.clear(screen.getByLabelText("Password"));
+  await user.type(screen.getByLabelText("Password"), password);
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   mockAuthState = {
@@ -129,6 +140,7 @@ describe("LoginRoute submission", () => {
     mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin();
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() =>
       expect(mockSignin).toHaveBeenCalledWith("maya@example.com", "demo1234")
@@ -139,6 +151,7 @@ describe("LoginRoute submission", () => {
     mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin();
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
   });
@@ -147,6 +160,7 @@ describe("LoginRoute submission", () => {
     mockSignin.mockResolvedValue({ email: "maya@example.com", onboarding_completed: true });
     renderLogin("?returnTo=/courses");
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/courses"));
   });
@@ -155,6 +169,7 @@ describe("LoginRoute submission", () => {
     mockSignin.mockResolvedValue(completedUser);
     renderLogin("?returnTo=//evil.example/path");
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
   });
@@ -172,6 +187,7 @@ describe("LoginRoute submission", () => {
     );
     renderLogin();
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() =>
       expect(screen.getByText("Email or password is incorrect")).toBeInTheDocument()
@@ -183,6 +199,7 @@ describe("LoginRoute submission", () => {
     mockSignin.mockRejectedValue(new Error("Network error"));
     renderLogin();
     const user = userEvent.setup();
+    await typeCredentials(user);
     await user.click(screen.getByRole("button", { name: /log in/i }));
     await waitFor(() =>
       expect(screen.getByText("Invalid email or password")).toBeInTheDocument()
@@ -191,7 +208,7 @@ describe("LoginRoute submission", () => {
 });
 
 describe("Google sign-in", () => {
-  it("calls signinGoogle and navigates to dashboard", async () => {
+  it("calls signinGoogle with the dashboard destination", async () => {
     mockSigninGoogle.mockResolvedValue({
       email: "maya@example.com",
       onboarding_completed: true,
@@ -199,8 +216,10 @@ describe("Google sign-in", () => {
     renderLogin();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /continue with google/i }));
-    await waitFor(() => expect(mockSigninGoogle).toHaveBeenCalled());
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(mockSigninGoogle).toHaveBeenCalledWith("/dashboard", "login")
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("passes only safe returnTo values to Google sign-in", async () => {
@@ -211,7 +230,7 @@ describe("Google sign-in", () => {
     await waitFor(() =>
       expect(mockSigninGoogle).toHaveBeenCalledWith("/dashboard", "login")
     );
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("shows an error when Google sign-in fails", async () => {

@@ -135,6 +135,12 @@ describe("DashboardRoute", () => {
     expect(metricCard("Current streak")).toHaveTextContent("7 days");
     expect(metricCard("Average score")).toHaveTextContent("86%");
     expect(metricCard("Total XP")).toHaveTextContent("1,240");
+    expect(screen.getByRole("button", { name: /roll a reading task/i })).toHaveClass(
+      "btn-teal",
+    );
+    expect(screen.getByRole("button", { name: /roll a writing task/i })).toHaveClass(
+      "btn-accent",
+    );
     expect(screen.getByText("No tasks in progress.")).toBeInTheDocument();
     expect(screen.getByText("0 of 0").parentElement).toHaveTextContent(
       "badges earned",

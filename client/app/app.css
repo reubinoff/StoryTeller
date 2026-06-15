@@ -1690,6 +1690,13 @@ select:focus-visible {
     padding: 14px 22px;
     font-size: 15px;
   }
+  .roll-action-buttons {
+    width: 100%;
+  }
+  .roll-action-buttons .btn-lg {
+    width: 100%;
+    min-width: 0;
+  }
   .tasks-page-head {
     flex-direction: column;
   }

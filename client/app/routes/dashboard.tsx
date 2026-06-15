@@ -3,13 +3,13 @@ import { CardSkeleton, Skeleton } from "~/components/Skeleton";
 import { CourseCard } from "~/components/CourseCards";
 import {
   IconArrowRight,
-  IconBook,
   IconCalendar,
   IconCheck,
   IconFlame,
-  IconPen,
+  IconReadingTask,
   IconSparkle,
   IconTarget,
+  IconWritingTask,
 } from "~/components/Icons";
 import { BrandMark, Mascot } from "~/components/Mascot";
 import { RollTaskProgress } from "~/components/RollTaskProgress";
@@ -126,7 +126,7 @@ export default function DashboardRoute() {
             </p>
             <div className="row gap-12 roll-action-buttons" style={{ flexWrap: "wrap" }}>
               <button
-                className={`btn btn-accent btn-lg ${
+                className={`btn btn-teal btn-lg ${
                   rollingCourse === "reading" ? "btn-loading" : ""
                 }`}
                 onClick={() => onRoll("reading")}
@@ -139,18 +139,14 @@ export default function DashboardRoute() {
                   </>
                 ) : (
                   <>
-                    <IconSparkle size={16} /> Roll a Reading task
+                    <IconReadingTask size={16} /> Roll a Reading task
                   </>
                 )}
               </button>
               <button
-                className={`btn btn-ghost btn-lg ${
+                className={`btn btn-accent btn-lg ${
                   rollingCourse === "writing" ? "btn-loading" : ""
                 }`}
-                style={{
-                  color: "var(--dashboard-hero-fg)",
-                  borderColor: "var(--dashboard-hero-border)",
-                }}
                 onClick={() => onRoll("writing")}
                 disabled={rollTask.isPending}
                 aria-busy={rollingCourse === "writing"}
@@ -161,7 +157,7 @@ export default function DashboardRoute() {
                   </>
                 ) : (
                   <>
-                    <IconPen size={14} /> Roll a Writing task
+                    <IconWritingTask size={16} /> Roll a Writing task
                   </>
                 )}
               </button>
@@ -401,7 +397,7 @@ export default function DashboardRoute() {
               description="A short story and a few questions. Great for warm-ups."
               accent="var(--teal)"
               accentSoft="var(--teal-soft)"
-              icon={<IconBook size={20} />}
+              icon={<IconReadingTask size={20} />}
               meta="5 min · Grade 1–12"
               onClick={() => navigate("/courses/reading")}
             />
@@ -410,7 +406,7 @@ export default function DashboardRoute() {
               description="Get a topic, write 60–120 words, and we'll give you feedback."
               accent="var(--rust)"
               accentSoft="var(--rust-soft)"
-              icon={<IconPen size={20} />}
+              icon={<IconWritingTask size={20} />}
               meta="10 min · Grade 1–12"
               onClick={() => navigate("/courses/writing")}
             />
@@ -561,7 +557,11 @@ const ResumeRow = ({
           justifyContent: "center",
         }}
       >
-        {isReading ? <IconBook size={20} /> : <IconPen size={20} />}
+        {isReading ? (
+          <IconReadingTask size={20} />
+        ) : (
+          <IconWritingTask size={20} />
+        )}
       </div>
       <div>
         <div className="row gap-8" style={{ marginBottom: 4 }}>

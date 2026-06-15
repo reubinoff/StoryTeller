@@ -17,17 +17,10 @@ Storyteller/
 | [`client/`](client/) | React 19, React Router 7, Tailwind CSS 4, TanStack Query | [client/README.md](client/README.md) |
 | [`backend-serverless/`](backend-serverless/) | Azure Functions, FastAPI ASGI, Storage Queue worker, PostgreSQL, Claude | [backend-serverless/README.md](backend-serverless/README.md) |
 
-## Quick start (frontend only)
+## Quick start (local full stack)
 
-The client runs against a localStorage-backed mock backend by default — no server required.
-
-```bash
-cd client
-npm install
-npm run dev          # http://localhost:5174
-```
-
-## Quick start (full stack)
+Local development requires the backend API at `http://localhost:7071/api/v1`.
+Start the backend first, then run the client against it.
 
 **1. Backend**
 
@@ -43,16 +36,15 @@ docker run -d --name storyteller-pg -p 5432:5432 \
 
 uv sync
 uv run --no-sync alembic upgrade head
-func start
+uv run --no-sync func start
 ```
 
-**2. Frontend (point at the real API)**
+**2. Frontend**
 
 Create `client/.env.local`:
 
 ```
 VITE_PUBLIC_SITE_URL=http://localhost:5174
-VITE_USE_MOCK=false
 VITE_API_BASE_URL=http://localhost:7071/api/v1
 ```
 

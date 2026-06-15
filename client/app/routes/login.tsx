@@ -39,7 +39,7 @@ export default function LoginRoute() {
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: { email: "maya@example.com", password: "demo1234" },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -56,13 +56,11 @@ export default function LoginRoute() {
     }
   });
 
-  const onGoogle = async () => {
-    try {
-      const signedIn = await signinGoogle(returnTo, "login");
-      navigate(postAuthDestination(signedIn, returnTo));
-    } catch {
+  const onGoogle = () => {
+    setSubmitError(null);
+    void signinGoogle(returnTo, "login").catch(() => {
       setSubmitError("Couldn't sign in with Google");
-    }
+    });
   };
 
   return (

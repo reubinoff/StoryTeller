@@ -1,15 +1,10 @@
 /**
  * Typed API client for Storyteller.
  *
- * Sits in front of two transports:
- *   - the localStorage-backed mock router (default in dev)
- *   - real fetch() to `${VITE_API_BASE_URL}/api/v1`
- *
- * Toggle with `VITE_USE_MOCK=false` once the real backend is live.
+ * Uses fetch() against VITE_API_BASE_URL when configured, otherwise /api/v1.
  */
 
 import type { Problem } from "./types";
-import { mockHandle } from "./mock/router";
 
 const ACCESS_TOKEN_KEY = "storyteller.auth.accessToken";
 export const UNAUTHORIZED_EVENT = "storyteller:auth:unauthorized";
@@ -19,9 +14,6 @@ export interface UnauthorizedEventDetail {
   status: 401;
 }
 
-export const isUsingMock =
-  typeof import.meta !== "undefined" &&
-  (import.meta.env.VITE_USE_MOCK ?? "true") !== "false";
 const apiBase =
   (typeof import.meta !== "undefined" && import.meta.env.VITE_API_BASE_URL) ||
   "/api/v1";
@@ -111,19 +103,6 @@ export async function request<TResponse, TBody = unknown>(
   const url = buildUrl(path, query);
 
   const token = noAuth ? null : getAccessToken();
-
-  if (isUsingMock) {
-    const result = await mockHandle<TResponse, TBody>({
-      method,
-      url,
-      body,
-      token,
-    });
-    if (result.kind === "ok") return result.data;
-    if (!noAuth && result.problem.status === 401) notifyUnauthorized(url);
-    if (throwOnError) throw new ApiError(result.problem);
-    return result.problem as unknown as TResponse;
-  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

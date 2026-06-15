@@ -1,7 +1,7 @@
 /**
  * Strongly-typed wrappers around the API client. UI code should ALWAYS go
  * through these helpers (never call `request` directly), so the surface stays
- * consistent and easy to swap out when the real backend ships.
+ * consistent across the app.
  */
 
 import { apiUrl, request } from "./client";
@@ -37,12 +37,6 @@ export const api = {
       request<AuthResponse>("/auth/signup", { method: "POST", body, noAuth: true }),
     login: (body: LoginRequest) =>
       request<AuthResponse>("/auth/login", { method: "POST", body, noAuth: true }),
-    google: () =>
-      request<AuthResponse>("/auth/google/exchange", {
-        method: "POST",
-        body: { code: "demo" },
-        noAuth: true,
-      }),
     googleStartUrl: (returnTo: string, intent: "login" | "signup") =>
       apiUrl("/auth/google/start", { return_to: returnTo, intent }),
     refresh: () =>

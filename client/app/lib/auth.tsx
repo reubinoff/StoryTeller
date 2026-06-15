@@ -18,7 +18,6 @@ import {
   ApiError,
   UNAUTHORIZED_EVENT,
   getAccessToken,
-  isUsingMock,
   setAccessToken,
 } from "./api/client";
 import { api } from "./api/endpoints";
@@ -185,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return watchAutoThemePreference(displayPreferences);
   }, [user]);
 
-  // Auto-refresh metrics so the topbar stays current after a task completes.
+  // Load metrics when an authenticated session is available.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -198,13 +197,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     void load();
-    const onCompleted = () => {
-      void load();
-    };
-    window.addEventListener("storyteller:task-completed", onCompleted);
     return () => {
       cancelled = true;
-      window.removeEventListener("storyteller:task-completed", onCompleted);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -234,16 +228,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signinGoogle = useCallback(
     async (returnTo = "/dashboard", intent: "login" | "signup" = "login") => {
-      if (!isUsingMock && typeof window !== "undefined") {
+      if (typeof window !== "undefined") {
         window.location.assign(api.auth.googleStartUrl(returnTo, intent));
         return await new Promise<User>(() => {
           /* browser is navigating away */
         });
       }
-      const res = await api.auth.google();
-      setAccessToken(res.access_token);
-      setUserState(res.user);
-      return res.user;
+      return await new Promise<User>(() => {
+        /* Google sign-in is only available in the browser. */
+      });
     },
     []
   );
