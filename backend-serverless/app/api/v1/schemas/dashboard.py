@@ -8,7 +8,7 @@ from uuid import UUID
 
 from app.api.v1.schemas.catalog import CourseOut
 from app.api.v1.schemas.common import ApiModel
-from app.api.v1.schemas.task import PASSING_SCORE, CourseType, TaskStatus
+from app.api.v1.schemas.task import PASSING_SCORE, CourseType, ReadyTaskSummary, TaskStatus
 
 
 class DashboardMetrics(ApiModel):
@@ -51,11 +51,17 @@ class AchievementOut(ApiModel):
     earned_at: datetime | None
 
 
+class ReadyTasks(ApiModel):
+    reading: ReadyTaskSummary | None = None
+    writing: ReadyTaskSummary | None = None
+
+
 class DashboardResponse(ApiModel):
     greeting: str
     metrics: DashboardMetrics
     in_progress: list[RecentTask]
     recent: list[RecentTask]
+    ready_tasks: ReadyTasks
     recommended: list[CourseOut]
     achievements_recent: list[AchievementOut]
 

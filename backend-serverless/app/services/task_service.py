@@ -15,6 +15,7 @@ from app.api.v1.schemas.task import (
     ReadingPayloadOut,
     ReadingResultOut,
     ReadingResultQuestion,
+    ReadyTaskSummary,
     TaskOut,
     TaskQuestionOut,
     WritingEvaluationOut,
@@ -34,6 +35,11 @@ from app.db.models.task_evaluation import TaskEvaluation
 from app.db.models.task_question import TaskQuestion
 from app.db.models.user import User
 from app.services import content_service
+from app.services.task_prewarm_queue import (
+    TaskPrewarmCourseId,
+    TaskPrewarmQueueError,
+    enqueue_task_prewarm,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +52,8 @@ ROLL_BLOCKER_PRIORITY = (
     "failed",
     "not_started",
 )
+
+COURSE_SLUGS: tuple[TaskPrewarmCourseId, TaskPrewarmCourseId] = ("reading", "writing")
 
 
 # ---------- helpers ----------
@@ -302,6 +310,21 @@ async def _create_new_task(
 async def ensure_next_task_ready(
     db: AsyncSession, *, user_id: uuid.UUID, course_slug: str, exclude_task_id: uuid.UUID
 ) -> Task:
+    return await ensure_ready_task_for_course(
+        db,
+        user_id=user_id,
+        course_slug=course_slug,
+        exclude_task_id=exclude_task_id,
+    )
+
+
+async def ensure_ready_task_for_course(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_slug: str,
+    exclude_task_id: uuid.UUID | None = None,
+) -> Task:
     user = await db.get(User, user_id)
     if user is None:
         raise AppError(status_code=404, code="not_found", title="User not found")
@@ -315,6 +338,74 @@ async def ensure_next_task_ready(
     if existing is not None:
         return existing
     return await _create_new_task(db, user=user, course=course)
+
+
+def task_to_ready_summary(task: Task) -> ReadyTaskSummary:
+    course_id: str = "reading" if task.course_slug == "reading" else "writing"
+    return ReadyTaskSummary(
+        id=task.id,
+        course_id=course_id,  # type: ignore[arg-type]
+        course_type=task.course_type,  # type: ignore[arg-type]
+        status="not_started",
+        title=task.title,
+        topic_label=task.topic_label,
+    )
+
+
+async def ready_task_summary_for_course(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_slug: str,
+    exclude_task_id: uuid.UUID | None = None,
+) -> ReadyTaskSummary | None:
+    course = await _course(db, course_slug)
+    task = await _find_ready_next_task(
+        db,
+        user_id=user_id,
+        course_type=course.type,
+        exclude_task_id=exclude_task_id,
+    )
+    return task_to_ready_summary(task) if task is not None else None
+
+
+async def ready_task_summaries(
+    db: AsyncSession, *, user_id: uuid.UUID
+) -> dict[TaskPrewarmCourseId, ReadyTaskSummary | None]:
+    return {
+        course_slug: await ready_task_summary_for_course(
+            db,
+            user_id=user_id,
+            course_slug=course_slug,
+        )
+        for course_slug in COURSE_SLUGS
+    }
+
+
+async def enqueue_ready_task_refill(
+    user_id: uuid.UUID, course_slug: str
+) -> None:
+    if course_slug not in COURSE_SLUGS:
+        LOGGER.warning("unknown course_slug for task prewarm: %s", course_slug)
+        return
+    try:
+        await enqueue_task_prewarm(user_id, course_slug)  # type: ignore[arg-type]
+    except TaskPrewarmQueueError:
+        LOGGER.exception("task prewarm enqueue failed")
+
+
+async def enqueue_all_ready_task_refills(user_id: uuid.UUID) -> None:
+    for course_slug in COURSE_SLUGS:
+        await enqueue_ready_task_refill(user_id, course_slug)
+
+
+async def enqueue_missing_ready_task_refills(
+    user_id: uuid.UUID,
+    summaries: dict[TaskPrewarmCourseId, ReadyTaskSummary | None],
+) -> None:
+    for course_slug, summary in summaries.items():
+        if summary is None:
+            await enqueue_ready_task_refill(user_id, course_slug)
 
 
 async def roll_task(
@@ -475,11 +566,14 @@ async def list_tasks(
 
 
 async def start_task(db: AsyncSession, task: Task) -> Task:
+    was_ready = task.status == "not_started"
     if task.status == "not_started":
         task.status = "in_progress"
         task.started_at = utcnow()
         await db.commit()
         await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task
 
 
@@ -496,7 +590,8 @@ async def record_answer(
     if question is None or question.task_id != task.id:
         raise AppError(status_code=404, code="not_found", title="Question not found")
 
-    if task.status == "not_started":
+    was_ready = task.status == "not_started"
+    if was_ready:
         task.status = "in_progress"
         task.started_at = utcnow()
 
@@ -510,9 +605,11 @@ async def record_answer(
     if record is None:
         db.add(TaskAnswer(task_id=task.id, question_id=question_id, answer_text=answer_text))
     else:
-        record.answer_text = answer_text
-        record.submitted_at = utcnow()
+            record.answer_text = answer_text
+            record.submitted_at = utcnow()
     await db.commit()
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
 
 
 async def submit_reading(
@@ -532,6 +629,7 @@ async def submit_reading(
             title=f"Task is already {task.status}",
         )
 
+    was_ready = task.status == "not_started"
     questions = await _load_questions(db, task.id)
     total = len(questions)
     correct_count = 0
@@ -590,6 +688,8 @@ async def submit_reading(
 
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     if passed:
         await ensure_next_task_ready(
             db,
@@ -614,11 +714,14 @@ async def save_writing_draft(
             title="Drafts can only be saved before submission",
         )
     task.writing_draft = text
-    if task.status == "not_started":
+    was_ready = task.status == "not_started"
+    if was_ready:
         task.status = "in_progress"
         task.started_at = utcnow()
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task.updated_at
 
 
@@ -633,6 +736,8 @@ async def submit_writing(
         raise AppError(
             status_code=400, code="invalid_state", title=f"Task is already {task.status}"
         )
+
+    was_ready = task.status == "not_started"
 
     # Persist single full-text answer row (question_id NULL).
     existing_full = await db.execute(
@@ -652,6 +757,8 @@ async def submit_writing(
     task.submitted_at = utcnow()
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task
 
 
@@ -800,6 +907,14 @@ async def reading_result(db: AsyncSession, task: Task) -> ReadingResultOut:
         duration_seconds=duration,
         xp_earned=task.xp_awarded,
         passed=percentage >= PASSING_SCORE,
+        next_task=await ready_task_summary_for_course(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
+        if percentage >= PASSING_SCORE
+        else None,
         questions=out_questions,
     )
 
@@ -841,6 +956,14 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
         fail_reason=task.fail_reason,
         xp_earned=task.xp_awarded,
         passed=_passed(float(task.score) if task.score is not None else None),
+        next_task=await ready_task_summary_for_course(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
+        if _passed(float(task.score) if task.score is not None else None)
+        else None,
         submitted_at=task.submitted_at,
         completed_at=task.completed_at,
     )

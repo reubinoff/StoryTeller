@@ -31,7 +31,7 @@ from app.db.models._helpers import utcnow
 from app.db.models.interest import Interest, UserInterest
 from app.db.models.task import Task
 from app.deps import CurrentUser, DbSession
-from app.services import auth_service, dashboard_service
+from app.services import auth_service, dashboard_service, task_service
 from app.services.user_service import to_user_out
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -98,6 +98,8 @@ async def put_interests(
 ) -> UpdateInterestsResponse:
     await _replace_interests(db, current_user, body.interest_ids)
     await db.commit()
+    if current_user.onboarding_completed:
+        await task_service.enqueue_all_ready_task_refills(current_user.id)
     return UpdateInterestsResponse(interests=body.interest_ids)
 
 
@@ -111,6 +113,7 @@ async def complete_onboarding(
     current_user.onboarding_completed_at = utcnow()
     await db.commit()
     await db.refresh(current_user)
+    await task_service.enqueue_all_ready_task_refills(current_user.id)
     return await to_user_out(db, current_user)
 
 
