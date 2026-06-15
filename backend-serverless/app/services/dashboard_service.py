@@ -14,6 +14,7 @@ from app.api.v1.schemas.dashboard import (
     DashboardResponse,
     NotificationOut,
     RecentTask,
+    ReadyTasks,
     TaskProgress,
 )
 from app.api.v1.schemas.catalog import CourseOut
@@ -27,6 +28,7 @@ from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_question import TaskQuestion
 from app.db.models.user import User
+from app.services import task_service
 
 
 _LEVEL_THRESHOLDS = [
@@ -181,6 +183,9 @@ async def get_metrics(db: AsyncSession, user: User) -> DashboardMetrics:
 async def get_dashboard(db: AsyncSession, user: User) -> DashboardResponse:
     metrics = await get_metrics(db, user)
     recent = await _build_recent(db, user.id, limit=20)
+    ready = await task_service.ready_task_summaries(db, user_id=user.id)
+    if user.onboarding_completed:
+        await task_service.enqueue_missing_ready_task_refills(user.id, ready)
     in_progress = [
         rt
         for rt in recent
@@ -214,6 +219,7 @@ async def get_dashboard(db: AsyncSession, user: User) -> DashboardResponse:
         metrics=metrics,
         in_progress=in_progress,
         recent=recent,
+        ready_tasks=ReadyTasks(reading=ready["reading"], writing=ready["writing"]),
         recommended=recommended,
         achievements_recent=achievements_recent,
     )

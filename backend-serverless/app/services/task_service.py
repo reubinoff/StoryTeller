@@ -564,11 +564,14 @@ async def list_tasks(
 
 
 async def start_task(db: AsyncSession, task: Task) -> Task:
+    was_ready = task.status == "not_started"
     if task.status == "not_started":
         task.status = "in_progress"
         task.started_at = utcnow()
         await db.commit()
         await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task
 
 
@@ -585,7 +588,8 @@ async def record_answer(
     if question is None or question.task_id != task.id:
         raise AppError(status_code=404, code="not_found", title="Question not found")
 
-    if task.status == "not_started":
+    was_ready = task.status == "not_started"
+    if was_ready:
         task.status = "in_progress"
         task.started_at = utcnow()
 
@@ -602,6 +606,8 @@ async def record_answer(
         record.answer_text = answer_text
         record.submitted_at = utcnow()
     await db.commit()
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
 
 
 async def submit_reading(
@@ -621,6 +627,7 @@ async def submit_reading(
             title=f"Task is already {task.status}",
         )
 
+    was_ready = task.status == "not_started"
     questions = await _load_questions(db, task.id)
     total = len(questions)
     correct_count = 0
@@ -679,6 +686,8 @@ async def submit_reading(
 
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     if passed:
         await ensure_next_task_ready(
             db,
@@ -703,11 +712,14 @@ async def save_writing_draft(
             title="Drafts can only be saved before submission",
         )
     task.writing_draft = text
-    if task.status == "not_started":
+    was_ready = task.status == "not_started"
+    if was_ready:
         task.status = "in_progress"
         task.started_at = utcnow()
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task.updated_at
 
 
@@ -722,6 +734,8 @@ async def submit_writing(
         raise AppError(
             status_code=400, code="invalid_state", title=f"Task is already {task.status}"
         )
+
+    was_ready = task.status == "not_started"
 
     # Persist single full-text answer row (question_id NULL).
     existing_full = await db.execute(
@@ -741,6 +755,8 @@ async def submit_writing(
     task.submitted_at = utcnow()
     await db.commit()
     await db.refresh(task)
+    if was_ready:
+        await enqueue_ready_task_refill(task.user_id, task.course_slug)
     return task
 
 
@@ -889,6 +905,14 @@ async def reading_result(db: AsyncSession, task: Task) -> ReadingResultOut:
         duration_seconds=duration,
         xp_earned=task.xp_awarded,
         passed=percentage >= PASSING_SCORE,
+        next_task=await ready_task_summary_for_course(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
+        if percentage >= PASSING_SCORE
+        else None,
         questions=out_questions,
     )
 
@@ -922,6 +946,7 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
                 "highlights": eval_row.highlights,
             }
         )
+    passed = _passed(float(task.score) if task.score is not None else None)
     return WritingResultOut(
         task_id=task.id,
         status=task.status,  # type: ignore[arg-type]
@@ -929,7 +954,15 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
         evaluation=evaluation,
         fail_reason=task.fail_reason,
         xp_earned=task.xp_awarded,
-        passed=_passed(float(task.score) if task.score is not None else None),
+        passed=passed,
+        next_task=await ready_task_summary_for_course(
+            db,
+            user_id=task.user_id,
+            course_slug=task.course_slug,
+            exclude_task_id=task.id,
+        )
+        if passed
+        else None,
         submitted_at=task.submitted_at,
         completed_at=task.completed_at,
     )
