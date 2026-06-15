@@ -12,7 +12,6 @@ import { SettingsRow, SettingsSection } from "~/components/Settings";
 import { TopicSticker } from "~/components/Stickers";
 import { Toggle } from "~/components/Toggle";
 import { useToast } from "~/components/Toast";
-import { api } from "~/lib/api/endpoints";
 import {
   useChangePassword,
   useDeleteAccount,

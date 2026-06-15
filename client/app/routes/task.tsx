@@ -243,21 +243,18 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
           >
             <div className="passage" style={{ fontSize, lineHeight: comfortMode ? 1.95 : 1.75 }}>
               {reading.passage_paragraphs.map((p, i) => (
-                <p
-                  key={i}
-                  className={focusedParagraph === i ? "focused" : ""}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Focus paragraph ${i + 1}`}
-                  onClick={() => focusParagraph(i)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      focusParagraph(i);
-                    }
-                  }}
-                >
-                  {p}
+                <p key={i}>
+                  <button
+                    type="button"
+                    className={`passage-focus-button ${
+                      focusedParagraph === i ? "focused" : ""
+                    }`}
+                    aria-label={`Focus paragraph ${i + 1}`}
+                    aria-pressed={focusedParagraph === i}
+                    onClick={() => focusParagraph(i)}
+                  >
+                    {p}
+                  </button>
                 </p>
               ))}
             </div>
@@ -344,21 +341,18 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
                 style={{ fontSize: 15.5, lineHeight: comfortMode ? 1.9 : undefined }}
               >
                 {reading.passage_paragraphs.map((p, i) => (
-                  <p
-                    key={i}
-                    className={focusedParagraph === i ? "focused" : ""}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Focus paragraph ${i + 1}`}
-                    onClick={() => focusParagraph(i)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        focusParagraph(i);
-                      }
-                    }}
-                  >
-                    {p}
+                  <p key={i}>
+                    <button
+                      type="button"
+                      className={`passage-focus-button ${
+                        focusedParagraph === i ? "focused" : ""
+                      }`}
+                      aria-label={`Focus paragraph ${i + 1}`}
+                      aria-pressed={focusedParagraph === i}
+                      onClick={() => focusParagraph(i)}
+                    >
+                      {p}
+                    </button>
                   </p>
                 ))}
               </div>

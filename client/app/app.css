@@ -1023,15 +1023,24 @@ select:focus-visible {
 .passage p + p {
   margin-top: 16px;
 }
-.passage p[role="button"] {
+.passage-focus-button {
+  display: block;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
   border-radius: 14px;
   padding: 4px 6px;
   margin-left: -6px;
   margin-right: -6px;
   cursor: pointer;
 }
-.passage p[role="button"]:focus-visible,
-.passage p.focused {
+.passage-focus-button:focus-visible,
+.passage-focus-button.focused {
   background: var(--amber-soft);
   box-shadow: 0 0 0 2px var(--paper);
 }
