@@ -24,6 +24,7 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
+    environment: production
     steps:
       - uses: actions/checkout@v6
         with:
@@ -50,7 +51,7 @@ jobs:
           VITE_ADMIN_SITE_URL: ${{ vars.VITE_ADMIN_SITE_URL }}
         run: |
           set -euo pipefail
-          site_url="${VITE_ADMIN_SITE_URL:-https://delightful-sea-0af2d1103.azurestaticapps.net}"
+          site_url="${VITE_ADMIN_SITE_URL:-https://admin.storyteller.reubinoff.com}"
           site_url="${site_url%/}"
           base_url="${AZURE_FUNCTIONAPP_BASE_URL:-}"
           if [ -z "$base_url" ]; then
