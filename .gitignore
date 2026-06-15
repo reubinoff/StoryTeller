@@ -10,6 +10,8 @@ client/build/
 client/public/robots.txt
 client/public/sitemap.xml
 client/public/llms.txt
+admin-client/node_modules/
+admin-client/dist/
 
 # Azure Functions backend
 backend-serverless/.venv/

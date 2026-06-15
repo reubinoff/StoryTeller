@@ -11,6 +11,7 @@ Durable guidance for Codex in this repository. Keep prompts focused on the task;
 ```
 StoryTeller/
 ├── client/                 # React Router 7 SPA
+├── admin-client/           # Separate React/Vite admin console
 ├── backend-serverless/     # Azure Functions + FastAPI + queue worker
 ├── client/API_CONTRACT.md  # Shared API contract — source of truth for /api/v1
 └── .codex/
@@ -44,6 +45,17 @@ npm run test:run         # CI-style Vitest
 npx vitest run app/routes/__tests__/login.test.tsx   # single file
 ```
 
+### Admin console (`admin-client/`)
+
+```bash
+cd admin-client
+npm install
+npm run dev              # http://localhost:5175; requires backend API below
+npm run typecheck
+npm run test:run
+npm run build
+```
+
 ### Backend (`backend-serverless/`)
 
 ```bash
@@ -68,8 +80,9 @@ A task is complete only when:
 1. The requested behavior works for the stated scope (include mobile + desktop for UI changes).
 2. Relevant tests pass (`npm run test:run` and/or `uv run --no-sync pytest`).
 3. API changes stay aligned with `client/API_CONTRACT.md`.
-4. No secrets, tokens, or credentials are committed or printed.
-5. For Azure writes: subscription and resource group were confirmed first.
+4. Admin-impacting changes were considered for `admin-client/` and `/api/v1/admin`.
+5. No secrets, tokens, or credentials are committed or printed.
+6. For Azure writes: subscription and resource group were confirmed first.
 
 Partial pytest runs often fail coverage thresholds; that is expected until the full suite runs.
 
@@ -96,6 +109,13 @@ Partial pytest runs often fail coverage thresholds; that is expected until the f
 - Design tokens and atoms live in `client/app/app.css` — reuse `btn-*`, `card`, `chip-*`, `field-*`, `app-shell`.
 - Path alias `~` maps to `client/app/`.
 - For UI work: consider mobile/responsive behavior and verify at mobile and desktop widths before finishing.
+
+### Admin console
+
+- The admin console is separate from the learner SPA and lives in `admin-client/`.
+- Admin authorization must be enforced server-side under `/api/v1/admin/*`; frontend checks are only UX.
+- Any auth, user, role/status, metrics, task/content model, API contract, CORS, cookie, or deployment change must consider the admin console.
+- Never expose secrets, app settings dumps, tokens, connection strings, storage keys, or raw credentials in admin UI/API responses.
 
 ### API contract
 
