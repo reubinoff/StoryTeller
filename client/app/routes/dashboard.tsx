@@ -486,9 +486,10 @@ const Metric = ({
   icon: React.ReactNode;
   color: string;
 }) => (
-  <div className="card">
-    <div className="row gap-8" style={{ marginBottom: 10, color }}>
+  <div className="card metric-card">
+    <div className="row gap-8 metric-heading" style={{ marginBottom: 10, color }}>
       <div
+        className="metric-icon"
         style={{
           width: 30,
           height: 30,
@@ -502,6 +503,7 @@ const Metric = ({
         <span style={{ color: "#fff" }}>{icon}</span>
       </div>
       <span
+        className="metric-label"
         style={{
           fontSize: 12.5,
           fontWeight: 600,
@@ -514,7 +516,7 @@ const Metric = ({
       </span>
     </div>
     <div
-      className="metrics-row"
+      className="metric-value"
       style={{
         fontFamily: "var(--font-display)",
         fontSize: 34,

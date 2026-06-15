@@ -2,6 +2,10 @@
 
 Durable guidance for Codex in this repository. Keep prompts focused on the task; put repeatable rules here. When Codex makes the same mistake twice, update this file.
 
+## Frontend UI
+
+- For UI feature development, always consider mobile/responsive behavior and verify the feature at both mobile and desktop widths before finishing.
+
 ## Repository layout
 
 ```

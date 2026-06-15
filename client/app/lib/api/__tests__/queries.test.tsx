@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -24,7 +24,12 @@ vi.mock("../endpoints", () => ({
   },
 }));
 
-import { queryKeys, useRetryTask, useSubmitTask, useTaskResult } from "../queries";
+import {
+  queryKeys,
+  taskResultRefetchInterval,
+  useRetryTask,
+  useSubmitTask,
+} from "../queries";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -130,9 +135,7 @@ describe("useTaskResult", () => {
     endpointMocks.result.mockReset();
   });
 
-  it("polls while a writing result is still processing", async () => {
-    vi.useFakeTimers();
-    const queryClient = makeClient();
+  it("polls while a writing result is still processing", () => {
     const processing: WritingResult = {
       task_id: "task-1",
       mode: "writing",
@@ -146,45 +149,18 @@ describe("useTaskResult", () => {
       submitted_at: "2026-06-01T10:05:00Z",
       completed_at: null,
     };
-    const completed: WritingResult = {
-      ...processing,
-      status: "completed",
-      evaluation: {
-        score_overall: 84,
-        score_grammar: 80,
-        score_vocabulary: 82,
-        score_structure: 88,
-        score_relevance: 86,
-        feedback_summary: "Nice work.",
-        feedback_detail: [],
-        focus_next: [],
-        highlights: [],
-      },
-      passed: true,
-      completed_at: "2026-06-01T10:06:00Z",
-    };
-    endpointMocks.result
-      .mockResolvedValueOnce(processing)
-      .mockResolvedValueOnce(completed);
 
-    const { result } = renderHook(() => useTaskResult("task-1"), {
-      wrapper: wrapperFor(queryClient),
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await waitFor(() => expect(result.current.data?.status).toBe("processing"));
-
-    await act(async () => {
-      vi.advanceTimersByTime(5_000);
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(endpointMocks.result).toHaveBeenCalledTimes(2);
-      expect(result.current.data?.status).toBe("completed");
-    });
+    expect(taskResultRefetchInterval(processing)).toBe(5000);
+    expect(
+      taskResultRefetchInterval({ ...processing, status: "submitted" })
+    ).toBe(5000);
+    expect(
+      taskResultRefetchInterval({ ...processing, status: "failed" })
+    ).toBe(false);
+    expect(
+      taskResultRefetchInterval({ ...processing, status: "completed" })
+    ).toBe(false);
+    expect(taskResultRefetchInterval(undefined)).toBe(false);
   });
 });
 

@@ -38,15 +38,23 @@ export class ApiError extends Error {
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  try {
+    return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setAccessToken(token: string | null): void {
   if (typeof window === "undefined") return;
-  if (token) {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  } else {
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+  try {
+    if (token) {
+      window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    } else {
+      window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+  } catch {
+    /* Storage can be unavailable in private or embedded browser contexts. */
   }
 }
 

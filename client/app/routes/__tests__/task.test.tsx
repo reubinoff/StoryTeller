@@ -299,10 +299,11 @@ describe("TaskRoute", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
-    await waitFor(() => {
-      expect(mockSaveDraft).toHaveBeenCalledWith("one two three four five");
-      expect(screen.getByText(/^saved$/i)).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(mockSaveDraft).toHaveBeenCalledWith("one two three four five");
+    expect(screen.getByText(/^saved$/i)).toBeInTheDocument();
 
     fireEvent.change(textarea, {
       target: { value: "six seven eight nine ten" },

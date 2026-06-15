@@ -6,6 +6,7 @@ session here so the background work outlives the HTTP request scope.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from typing import cast
@@ -25,13 +26,16 @@ from app.db.session import get_sessionmaker
 from app.services import content_service, task_service
 
 LOGGER = logging.getLogger(__name__)
+_EVALUATION_LOCKS: dict[uuid.UUID, asyncio.Lock] = {}
 
 
 async def run_writing_evaluation(task_id: uuid.UUID) -> None:
     """BackgroundTask entrypoint: scores a submitted writing task with Claude."""
-    sm = get_sessionmaker()
-    async with sm() as db:
-        await _run(db, task_id)
+    lock = _EVALUATION_LOCKS.setdefault(task_id, asyncio.Lock())
+    async with lock:
+        sm = get_sessionmaker()
+        async with sm() as db:
+            await _run(db, task_id)
 
 
 async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:

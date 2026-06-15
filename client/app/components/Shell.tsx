@@ -174,13 +174,21 @@ export const Shell = ({ children }: ShellProps) => {
             <div className="row gap-12 topbar-actions" style={{ marginLeft: "auto" }}>
               <span className="streak-pill">
                 <IconFlame size={14} />{" "}
-                <span className="pill-value">{metrics.current_streak}</span>
-                <span className="pill-label"> day streak</span>
+                <span className="pill-full-label">
+                  {metrics.current_streak} day streak
+                </span>
+                <span className="pill-compact-label" aria-hidden="true">
+                  {metrics.current_streak}
+                </span>
               </span>
               <span className="xp-pill">
                 <IconSparkle size={14} />{" "}
-                <span className="pill-value">{metrics.xp_total.toLocaleString()}</span>
-                <span className="pill-label"> XP</span>
+                <span className="pill-full-label">
+                  {metrics.xp_total.toLocaleString()} XP
+                </span>
+                <span className="pill-compact-label" aria-hidden="true">
+                  {metrics.xp_total.toLocaleString()}
+                </span>
               </span>
               <button
                 className="icon-btn"

@@ -1,6 +1,5 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { BrandLogo } from "~/components/Mascot";
-import { useAuth } from "~/lib/auth";
 import { HELP_DESCRIPTION, HELP_TITLE, faqJsonLd, pageMeta } from "~/lib/seo";
 
 const FAQS: Array<[string, string]> = [
@@ -32,23 +31,26 @@ export function meta() {
 }
 
 export default function HelpRoute() {
-  const { user } = useAuth();
-  const homeTo = user ? "/dashboard" : "/";
+  const navigate = useNavigate();
 
   return (
     <div className="fullbleed-shell help-shell" style={{ padding: "32px 48px" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <div className="help-header">
           <Link
-            to={homeTo}
+            to="/"
             className="brand-logo-link"
             style={{ color: "inherit" }}
           >
             <BrandLogo width={160} />
           </Link>
-          <Link to={homeTo} className="btn btn-soft btn-sm">
-            {user ? "Back to app" : "Home"}
-          </Link>
+          <button
+            type="button"
+            className="btn btn-soft btn-sm"
+            onClick={() => navigate("/dashboard")}
+          >
+            Open app
+          </button>
         </div>
         <h1 className="page-title" style={{ fontSize: 42, marginBottom: 8 }}>
           Help & FAQ

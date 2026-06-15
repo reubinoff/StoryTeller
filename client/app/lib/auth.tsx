@@ -125,13 +125,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const cached = window.localStorage.getItem(USER_KEY);
+    let cached: string | null = null;
+    try {
+      cached = window.localStorage.getItem(USER_KEY);
+    } catch {
+      cached = null;
+    }
     const token = getAccessToken();
     if (cached && token) {
       try {
         setUserState(JSON.parse(cached) as User);
       } catch {
-        window.localStorage.removeItem(USER_KEY);
+        try {
+          window.localStorage.removeItem(USER_KEY);
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -161,10 +170,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Persist user.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (user) {
-      window.localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } else {
-      window.localStorage.removeItem(USER_KEY);
+    try {
+      if (user) {
+        window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+      } else {
+        window.localStorage.removeItem(USER_KEY);
+      }
+    } catch {
+      /* Storage can be unavailable in private or embedded browser contexts. */
     }
 
     const displayPreferences = displayPreferencesFromUser(user);

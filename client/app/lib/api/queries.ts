@@ -80,17 +80,20 @@ export function useTask(id: string | undefined) {
   });
 }
 
+export function taskResultRefetchInterval(data: TaskResult | undefined) {
+  if (data?.mode !== "writing") return false;
+  return data.status === "processing" || data.status === "submitted"
+    ? 5000
+    : false;
+}
+
 export function useTaskResult(id: string | undefined) {
   return useQuery({
     queryKey: id ? queryKeys.result(id) : ["tasks", "_", "result"],
     enabled: Boolean(id),
     queryFn: () => api.tasks.result(id as string),
     refetchInterval: (q) => {
-      const data = q.state.data as TaskResult | undefined;
-      if (data?.mode !== "writing") return false;
-      return data.status === "processing" || data.status === "submitted"
-        ? 5000
-        : false;
+      return taskResultRefetchInterval(q.state.data as TaskResult | undefined);
     },
   });
 }

@@ -632,9 +632,12 @@ select:focus-visible {
   font-size: 13.5px;
   white-space: nowrap;
 }
-.pill-value,
-.pill-label {
+.pill-full-label,
+.pill-compact-label {
   white-space: nowrap;
+}
+.pill-compact-label {
+  display: none;
 }
 .avatar {
   width: 36px;
@@ -649,6 +652,22 @@ select:focus-visible {
   font-size: 14px;
   border: 2px solid var(--paper);
   box-shadow: 0 0 0 1.5px var(--line);
+}
+
+.metric-heading,
+.metric-label,
+.metric-value {
+  min-width: 0;
+}
+.metric-icon {
+  flex: 0 0 auto;
+}
+.metric-label {
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+.metric-value {
+  overflow-wrap: anywhere;
 }
 
 .main-content {
@@ -968,8 +987,8 @@ select:focus-visible {
 
 /* Tap targets */
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -1488,7 +1507,7 @@ select:focus-visible {
     justify-self: flex-start;
   }
   .writing-subscores {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: 1fr !important;
   }
   .writing-result-hero {
     grid-template-columns: 1fr !important;
@@ -1567,8 +1586,11 @@ select:focus-visible {
   .xp-pill {
     padding: 6px 8px;
   }
-  .pill-label {
+  .pill-full-label {
     display: none;
+  }
+  .pill-compact-label {
+    display: inline;
   }
   .card {
     padding: 18px;
@@ -1690,6 +1712,7 @@ select:focus-visible {
   }
   .metrics-row {
     grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
   }
   .toast-wrap {
     right: 12px;
@@ -1775,6 +1798,40 @@ select:focus-visible {
   .mobile-tabbar {
     justify-content: space-around;
     overflow-x: hidden;
+  }
+}
+@media (max-width: 360px) {
+  .metrics-row {
+    grid-template-columns: 1fr !important;
+  }
+  .metric-card {
+    padding: 16px;
+  }
+  .metric-heading {
+    align-items: flex-start;
+  }
+  .writing-result-hero {
+    gap: 20px !important;
+  }
+  .writing-result-hero + .writing-subscores {
+    margin-top: 20px !important;
+  }
+  .mobile-tabbar {
+    gap: 2px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .mobile-tabbar .tab {
+    min-width: 48px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 10.5px;
+  }
+  .mobile-tabbar .tab.center {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
   }
 }
 
