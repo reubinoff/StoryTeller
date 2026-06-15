@@ -32,6 +32,10 @@ from app.services.evaluation_queue import (  # noqa: E402
     InMemoryEvaluationQueueClient,
     set_evaluation_queue_client,
 )
+from app.services.task_prewarm_queue import (  # noqa: E402
+    InMemoryTaskPrewarmQueueClient,
+    set_task_prewarm_queue_client,
+)
 from tests.__conftest_helpers__ import (  # noqa: E402
     READING_RESPONSE,
     WRITING_EVAL_RESPONSE,
@@ -106,6 +110,16 @@ async def evaluation_queue() -> AsyncIterator[InMemoryEvaluationQueueClient]:
         set_evaluation_queue_client(None)
 
 
+@pytest_asyncio.fixture
+async def task_prewarm_queue() -> AsyncIterator[InMemoryTaskPrewarmQueueClient]:
+    queue = InMemoryTaskPrewarmQueueClient()
+    set_task_prewarm_queue_client(queue)
+    try:
+        yield queue
+    finally:
+        set_task_prewarm_queue_client(None)
+
+
 # ----- DB / app -----
 
 
@@ -139,6 +153,7 @@ async def app(
     db_engine,
     claude_stub,  # noqa: ARG001  (registered for side-effect)
     evaluation_queue,  # noqa: ARG001  (registered for side-effect)
+    task_prewarm_queue,  # noqa: ARG001  (registered for side-effect)
 ):
     _engine, sm = db_engine
     fastapi_app = create_app()

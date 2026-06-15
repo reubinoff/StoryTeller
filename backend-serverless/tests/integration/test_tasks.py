@@ -180,6 +180,145 @@ async def test_same_user_second_roll_resumes_unfinished_task(
 
 
 @pytest.mark.asyncio
+async def test_onboarding_enqueues_ready_task_prewarm(
+    client: AsyncClient,
+    task_prewarm_queue,
+) -> None:
+    user, headers = await signup_and_login(client)
+
+    resp = await client.put(
+        "/me/onboarding",
+        headers=headers,
+        json={
+            "year_of_birth": user["year_of_birth"],
+            "grade_level": user["grade_level"],
+            "interest_ids": ["space", "travel"],
+        },
+    )
+
+    assert resp.status_code == 200, resp.text
+    user_id = uuid.UUID(user["id"])
+    assert task_prewarm_queue.jobs == [(user_id, "reading"), (user_id, "writing")]
+
+
+@pytest.mark.asyncio
+async def test_interest_change_for_onboarded_user_enqueues_ready_task_prewarm(
+    client: AsyncClient,
+    task_prewarm_queue,
+) -> None:
+    user, headers = await signup_and_login(client)
+    onboarded = await client.put(
+        "/me/onboarding",
+        headers=headers,
+        json={
+            "year_of_birth": user["year_of_birth"],
+            "grade_level": user["grade_level"],
+            "interest_ids": ["space"],
+        },
+    )
+    assert onboarded.status_code == 200, onboarded.text
+    task_prewarm_queue.jobs.clear()
+    task_prewarm_queue.messages.clear()
+
+    resp = await client.put(
+        "/me/interests",
+        headers=headers,
+        json={"interest_ids": ["travel"]},
+    )
+
+    assert resp.status_code == 200, resp.text
+    user_id = uuid.UUID(user["id"])
+    assert task_prewarm_queue.jobs == [(user_id, "reading"), (user_id, "writing")]
+
+
+@pytest.mark.asyncio
+async def test_task_prewarm_worker_creates_ready_task_idempotently(
+    client: AsyncClient,
+    claude_stub,
+) -> None:
+    from app.services.task_prewarm_service import run_task_prewarm
+
+    user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space"])
+    user_id = uuid.UUID(user["id"])
+
+    await run_task_prewarm(user_id, "reading")
+    await run_task_prewarm(user_id, "reading")
+
+    tasks = await client.get(
+        "/tasks", headers=headers, params={"course_type": "unseen_text"}
+    )
+    assert tasks.status_code == 200
+    items = tasks.json()["items"]
+    assert len(items) == 1
+    assert items[0]["status"] == "not_started"
+    assert len(claude_stub.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_consuming_ready_tasks_enqueues_same_course_refills(
+    client: AsyncClient,
+    task_prewarm_queue,
+) -> None:
+    user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["space", "travel"])
+    user_id = uuid.UUID(user["id"])
+
+    reading = await client.post("/courses/reading/tasks", headers=headers, json={})
+    assert reading.status_code == 201
+    question_id = reading.json()["reading"]["questions"][0]["id"]
+    answered = await client.post(
+        f"/tasks/{reading.json()['id']}/answer",
+        headers=headers,
+        json={"question_id": question_id, "answer": 0},
+    )
+    assert answered.status_code == 200
+
+    writing = await client.post("/courses/writing/tasks", headers=headers, json={})
+    assert writing.status_code == 201
+    drafted = await client.post(
+        f"/tasks/{writing.json()['id']}/draft",
+        headers=headers,
+        json={"text": "A small draft"},
+    )
+    assert drafted.status_code == 200
+
+    assert task_prewarm_queue.jobs == [(user_id, "reading"), (user_id, "writing")]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_returns_ready_tasks_and_enqueues_missing_buffers(
+    client: AsyncClient,
+    task_prewarm_queue,
+) -> None:
+    from app.services.task_prewarm_service import run_task_prewarm
+
+    user, headers = await signup_and_login(client)
+    onboarded = await client.put(
+        "/me/onboarding",
+        headers=headers,
+        json={
+            "year_of_birth": user["year_of_birth"],
+            "grade_level": user["grade_level"],
+            "interest_ids": ["space", "travel"],
+        },
+    )
+    assert onboarded.status_code == 200, onboarded.text
+    task_prewarm_queue.jobs.clear()
+    task_prewarm_queue.messages.clear()
+
+    await run_task_prewarm(uuid.UUID(user["id"]), "reading")
+    dashboard = await client.get("/me/dashboard", headers=headers)
+
+    assert dashboard.status_code == 200, dashboard.text
+    ready_tasks = dashboard.json()["ready_tasks"]
+    assert ready_tasks["reading"]["course_id"] == "reading"
+    assert ready_tasks["reading"]["status"] == "not_started"
+    assert ready_tasks["writing"] is None
+    assert task_prewarm_queue.jobs == [(uuid.UUID(user["id"]), "writing")]
+
+
+@pytest.mark.asyncio
 async def test_passing_reading_creates_ready_next_task(
     client: AsyncClient, claude_stub
 ) -> None:
@@ -203,6 +342,9 @@ async def test_passing_reading_creates_ready_next_task(
     assert submit.status_code == 200
     assert submit.json()["status"] == "completed"
     assert submit.json()["passed"] is True
+    result = await client.get(f"/tasks/{task['id']}/result", headers=headers)
+    assert result.status_code == 200
+    assert result.json()["next_task"]["course_id"] == "reading"
 
     next_roll = await client.post("/courses/reading/tasks", headers=headers, json={})
     assert next_roll.status_code == 201
@@ -560,6 +702,7 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rbody["evaluation"] is not None
     assert rbody["evaluation"]["score_overall"] == 84
     assert rbody["answer_text"].startswith("I would love")
+    assert rbody["next_task"]["course_id"] == "writing"
     eval_prompt = claude_stub.calls[1]["prompt"]
     assert f"School grade: **{_user['grade_level']}**" in eval_prompt
     assert f"English difficulty grade: **{content_grade}**" in eval_prompt

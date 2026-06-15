@@ -8,6 +8,7 @@ import pytest
 
 import function_app
 from app.services.evaluation_queue import writing_evaluation_message
+from app.services.task_prewarm_queue import task_prewarm_message
 
 
 class FakeQueueMessage:
@@ -39,3 +40,26 @@ async def test_writing_evaluation_worker_invokes_evaluation(monkeypatch) -> None
 async def test_writing_evaluation_worker_rejects_bad_payload() -> None:
     with pytest.raises(ValueError, match="Invalid writing evaluation"):
         await function_app.writing_evaluation_worker(FakeQueueMessage(b"not-json"))
+
+
+@pytest.mark.asyncio
+async def test_task_prewarm_worker_invokes_prewarm(monkeypatch) -> None:
+    user_id = uuid.uuid4()
+    calls: list[tuple[uuid.UUID, str]] = []
+
+    async def _capture(captured_user_id: uuid.UUID, captured_course_id: str) -> None:
+        calls.append((captured_user_id, captured_course_id))
+
+    monkeypatch.setattr(function_app, "run_task_prewarm", _capture)
+
+    await function_app.task_prewarm_worker(
+        FakeQueueMessage(task_prewarm_message(user_id, "writing").encode("utf-8"))
+    )
+
+    assert calls == [(user_id, "writing")]
+
+
+@pytest.mark.asyncio
+async def test_task_prewarm_worker_rejects_bad_payload() -> None:
+    with pytest.raises(ValueError, match="Invalid task prewarm"):
+        await function_app.task_prewarm_worker(FakeQueueMessage(b"not-json"))
