@@ -62,6 +62,14 @@ async def test_admin_can_view_overview_and_search_users(client: AsyncClient) -> 
     assert overview.json()["kpis"]["users_total"] >= 2
     assert overview.json()["range_days"] == 30
 
+    explicit_overview = await client.get(
+        "/admin/overview",
+        headers=admin_headers,
+        params={"range_days": 30},
+    )
+    assert explicit_overview.status_code == 200, explicit_overview.text
+    assert explicit_overview.json()["range_days"] == 30
+
     users = await client.get(
         "/admin/users",
         headers=admin_headers,

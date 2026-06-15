@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Query
 
@@ -19,19 +19,36 @@ from app.api.v1.schemas.admin import (
 )
 from app.api.v1.schemas.common import Page
 from app.api.v1.schemas.user import UserRole, UserStatus
+from app.core.errors import AppError
 from app.deps import CurrentAdminUser, DbSession
 from app.services import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+ADMIN_RANGE_DAY_VALUES = {7, 30, 90}
 
 
 def _parse_user_id(value: str) -> uuid.UUID:
     try:
         return uuid.UUID(value)
     except ValueError as exc:
-        from app.core.errors import AppError
-
         raise AppError(status_code=404, code="not_found", title="User not found") from exc
+
+
+def _parse_range_days(value: int) -> AdminRangeDays:
+    if value not in ADMIN_RANGE_DAY_VALUES:
+        raise AppError(
+            status_code=422,
+            code="validation_error",
+            title="Validation failed",
+            detail="One or more fields are invalid.",
+            errors=[
+                {
+                    "field": "range_days",
+                    "message": "Input should be 7, 30 or 90.",
+                }
+            ],
+        )
+    return cast(AdminRangeDays, value)
 
 
 @router.get("/session", response_model=AdminSessionOut)
@@ -46,9 +63,12 @@ async def admin_session(current_admin: CurrentAdminUser, db: DbSession) -> Admin
 async def admin_overview(
     current_admin: CurrentAdminUser,  # noqa: ARG001
     db: DbSession,
-    range_days: Annotated[AdminRangeDays, Query()] = 30,
+    range_days: Annotated[int, Query()] = 30,
 ) -> AdminOverviewOut:
-    return await admin_service.get_overview(db, range_days=range_days)
+    return await admin_service.get_overview(
+        db,
+        range_days=_parse_range_days(range_days),
+    )
 
 
 @router.get("/users", response_model=Page[AdminUserSummary])
