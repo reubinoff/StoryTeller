@@ -27,7 +27,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@react-router/dev": "7.17.0",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/eslint-plugin-query": "^5.101.0",
