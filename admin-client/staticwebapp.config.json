@@ -1,0 +1,18 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "headers": {
+        "X-Robots-Tag": "noindex, nofollow",
+        "Cache-Control": "no-store"
+      }
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/*.{css,js,ico,png,jpg,gif,svg,webp,woff,woff2}"
+    ]
+  }
+}

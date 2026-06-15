@@ -1,5 +1,6 @@
 """ORM models — re-exports every model so Alembic can autogenerate against them."""
 
+from app.db.models.admin import AdminAuditEvent
 from app.db.models.achievement import Achievement, UserAchievement
 from app.db.models.content import ContentPassage, WritingPrompt
 from app.db.models.course import Course
@@ -14,6 +15,7 @@ from app.db.models.user import AuthCredential, AuthIdentity, User
 
 __all__ = [
     "Achievement",
+    "AdminAuditEvent",
     "AuthCredential",
     "AuthIdentity",
     "ContentPassage",

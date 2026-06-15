@@ -121,7 +121,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
                 borderColor: "transparent",
               }}
             >
-              {passed ? "Nice work!" : "Try again"}
+              {passed ? "Nice work!" : "Let's fix one thing"}
             </span>
             <h1
               style={{
@@ -138,7 +138,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
             <div style={{ fontSize: 18, opacity: passed ? 0.85 : 0.7 }}>
               {passed
                 ? `That's ${result.percentage}%. Your next task is ready.`
-                : `You scored ${result.percentage}%. You need ${result.passing_score}% to move on.`}
+                : `You scored ${result.percentage}%. You need ${result.passing_score}% to move on, and one focused retry can get you there.`}
             </div>
           </div>
           <Mascot size={140} pose={passed ? "cheer" : "wave"} kind="ferret" />
@@ -215,7 +215,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
               style={{
                 padding: 24,
                 borderLeft:
-                  "4px solid " + (q.is_correct ? "var(--good)" : "var(--bad)"),
+                  "4px solid " + (q.is_correct ? "var(--good)" : "var(--amber)"),
               }}
             >
               <div className="row gap-8" style={{ marginBottom: 8 }}>
@@ -640,11 +640,11 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
           </div>
           <div>
             <span className={passed ? "chip chip-rust" : "chip chip-amber"}>
-              {passed ? "Strong submission" : "Try again"}
+              {passed ? "What you did well" : "Next clue"}
             </span>
             <h1 style={{ fontSize: 36, margin: "12px 0 8px" }}>
               {passed
-                ? `Nicely done${user ? `, ${user.first_name}` : ""}!`
+                ? `Nice progress${user ? `, ${user.first_name}` : ""}!`
                 : `You need ${result.passing_score}% to move on.`}
             </h1>
             <p
@@ -656,8 +656,23 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
               }}
             >
               {passed
-                ? `${evalData.feedback_summary} Your next task is ready.`
-                : `${evalData.feedback_summary} You can try this task again.`}
+                ? `${evalData.feedback_summary} Your next task is ready when you are.`
+                : `${evalData.feedback_summary} Try one focused rewrite with the clue below.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="writing-feedback-steps">
+          <div>
+            <strong>What you did well</strong>
+            <p>{evalData.feedback_detail[0] ?? evalData.feedback_summary}</p>
+          </div>
+          <div>
+            <strong>Next clue</strong>
+            <p>
+              {evalData.focus_next[0]
+                ? `Try this next: ${evalData.focus_next[0]}.`
+                : "Choose one sentence and make it clearer."}
             </p>
           </div>
         </div>

@@ -271,7 +271,7 @@ describe("signout", () => {
 
     await waitFor(() => expect(result.current.user).toBeNull());
     expect(document.body.dataset.theme).toBe("light");
-    expect(document.body.dataset.themePreference).toBe("auto");
+    expect(document.body.dataset.themePreference).toBe("light");
     expect(document.body.dataset.textSize).toBe("md");
     expect(document.body.dataset.reduceMotion).toBe("false");
   });

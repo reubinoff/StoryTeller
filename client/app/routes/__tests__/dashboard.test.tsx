@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardRoute from "../dashboard";
 import type { DashboardResponse, RecentTask, User } from "~/lib/api/types";
@@ -133,19 +133,20 @@ describe("DashboardRoute", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /hi maya! ready for today's story practice/i,
+        name: /choose today's story mission/i,
       }),
     ).toBeInTheDocument();
     expect(metricCard("Tasks completed")).toHaveTextContent("4");
     expect(metricCard("Current streak")).toHaveTextContent("7 days");
     expect(metricCard("Average score")).toHaveTextContent("86%");
     expect(metricCard("Total XP")).toHaveTextContent("1,240");
-    expect(screen.getByRole("button", { name: /roll a reading task/i })).toHaveClass(
+    expect(screen.getByRole("button", { name: /reading mission/i })).toHaveClass(
       "btn-teal",
     );
-    expect(screen.getByRole("button", { name: /roll a writing task/i })).toHaveClass(
+    expect(screen.getByRole("button", { name: /writing mission/i })).toHaveClass(
       "btn-accent",
     );
+    expect(screen.getByText(/rest days help stories settle/i)).toBeInTheDocument();
     expect(screen.getByText("No tasks in progress.")).toBeInTheDocument();
     expect(screen.getByText("0 of 0").parentElement).toHaveTextContent(
       "badges earned",
@@ -161,7 +162,7 @@ describe("DashboardRoute", () => {
     render(<DashboardRoute />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: /roll a reading task/i }),
+      screen.getByRole("button", { name: /reading mission/i }),
     );
 
     await waitFor(() => {
@@ -190,7 +191,7 @@ describe("DashboardRoute", () => {
 
     render(<DashboardRoute />);
 
-    fireEvent.click(screen.getByRole("button", { name: /roll a writing task/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start writing/i }));
 
     expect(mockRollTask.mutateAsync).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-ready-writing");
@@ -202,7 +203,7 @@ describe("DashboardRoute", () => {
     render(<DashboardRoute />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: /roll a writing task/i }),
+      screen.getByRole("button", { name: /writing mission/i }),
     );
 
     await waitFor(() =>
@@ -257,7 +258,7 @@ describe("DashboardRoute", () => {
     render(<DashboardRoute />);
 
     expect(
-      screen.getByRole("button", { name: /generating reading/i }),
+      screen.getByRole("button", { name: /making reading/i }),
     ).toBeDisabled();
     expect(
       screen.getByRole("status", { name: /generating your reading task/i }),
@@ -265,6 +266,31 @@ describe("DashboardRoute", () => {
     expect(
       screen.getByRole("progressbar", { name: /task generation in progress/i }),
     ).toBeInTheDocument();
+  });
+
+  it("prioritizes an in-progress task as today's mission", () => {
+    mockDashboard.data = {
+      ...(mockDashboard.data as DashboardResponse),
+      in_progress: [
+        recentTask({
+          id: "mission-task",
+          topic: "Moon mystery",
+          status: "in_progress",
+        }),
+      ],
+    };
+
+    render(<DashboardRoute />);
+
+    expect(
+      screen.getByRole("heading", { name: /today's story mission: moon mystery/i }),
+    ).toBeInTheDocument();
+    const mission = screen
+      .getByRole("heading", { name: /today's story mission: moon mystery/i })
+      .closest(".daily-mission-card");
+    expect(mission).not.toBeNull();
+    fireEvent.click(within(mission as HTMLElement).getByRole("button", { name: /resume/i }));
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/mission-task");
   });
 });
 

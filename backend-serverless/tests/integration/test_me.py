@@ -105,6 +105,19 @@ async def test_patch_me_updates_preferences(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_patch_me_keeps_auto_light_and_dark_preferences(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client)
+    for preference in ("auto", "light", "dark"):
+        resp = await client.patch(
+            "/me",
+            headers=headers,
+            json={"theme_preference": preference},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["theme_preference"] == preference
+
+
+@pytest.mark.asyncio
 async def test_unsafe_me_routes_require_csrf_header(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     cookie_only_headers = {"Cookie": headers["Cookie"]}

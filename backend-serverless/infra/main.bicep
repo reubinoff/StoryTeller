@@ -32,6 +32,12 @@ param corsOrigins string = '["https://storyteller.reubinoff.com"]'
 @description('Public frontend base URL used after backend auth redirects.')
 param frontendBaseUrl string = 'https://storyteller.reubinoff.com'
 
+@description('Public admin console base URL used after backend auth redirects.')
+param adminFrontendBaseUrl string = 'https://admin.storyteller.reubinoff.com'
+
+@description('Bootstrap admin emails as a JSON array string.')
+param adminBootstrapEmails string = '["reubinoff@gmail.com"]'
+
 @description('Google OAuth web client ID.')
 param googleOauthClientId string = ''
 
@@ -273,6 +279,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'FRONTEND_BASE_URL'
           value: frontendBaseUrl
+        }
+        {
+          name: 'ADMIN_FRONTEND_BASE_URL'
+          value: adminFrontendBaseUrl
+        }
+        {
+          name: 'ADMIN_BOOTSTRAP_EMAILS'
+          value: adminBootstrapEmails
         }
         {
           name: 'GOOGLE_OAUTH_CLIENT_ID'

@@ -17,6 +17,17 @@ LOGGER = logging.getLogger(__name__)
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
+@app.function_name(name="admin_http_api")
+@app.route(
+    route="api/v1/admin/{*route}",
+    auth_level=func.AuthLevel.ANONYMOUS,
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+)
+async def admin_http_api(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
+    await run_migrations_if_requested()
+    return await func.AsgiMiddleware(fastapi_app).handle_async(req, context)
+
+
 @app.function_name(name="http_api")
 @app.route(
     route="{*route}",

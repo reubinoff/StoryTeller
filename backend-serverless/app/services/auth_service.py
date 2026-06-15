@@ -13,6 +13,7 @@ from app.core.errors import AppError
 from app.core.security import hash_password, verify_password
 from app.db.models._helpers import utcnow
 from app.db.models.user import AuthCredential, AuthIdentity, User
+from app.services import admin_service
 from app.services.user_service import derive_grade_level
 
 GOOGLE_PROVIDER = "google"
@@ -34,11 +35,13 @@ async def signup(db: AsyncSession, body: SignupRequest) -> User:
         last_name=body.last_name.strip(),
         year_of_birth=body.year_of_birth,
         grade_level=derive_grade_level(body.year_of_birth),
+        theme_preference="light",
     )
     db.add(user)
     await db.flush()
     cred = AuthCredential(user_id=user.id, password_hash=hash_password(body.password))
     db.add(cred)
+    await admin_service.ensure_bootstrap_admin(db, user)
     await db.commit()
     await db.refresh(user)
     return user
@@ -71,6 +74,7 @@ async def login(db: AsyncSession, body: LoginRequest) -> User:
             code="invalid_credentials",
             title="Invalid email or password",
         )
+    await admin_service.ensure_bootstrap_admin(db, user, commit=True)
     return user
 
 
@@ -139,6 +143,7 @@ async def login_or_signup_google(db: AsyncSession, profile: Mapping[str, Any]) -
             user.avatar_url = avatar_url
         if user.email_verified_at is None:
             user.email_verified_at = utcnow()
+        await admin_service.ensure_bootstrap_admin(db, user)
         await db.commit()
         await db.refresh(user)
         return user
@@ -163,6 +168,7 @@ async def login_or_signup_google(db: AsyncSession, profile: Mapping[str, Any]) -
             year_of_birth=year_of_birth,
             grade_level=derive_grade_level(year_of_birth),
             avatar_url=avatar_url,
+            theme_preference="light",
         )
         db.add(user)
         await db.flush()
@@ -172,6 +178,7 @@ async def login_or_signup_google(db: AsyncSession, profile: Mapping[str, Any]) -
         if avatar_url and not user.avatar_url:
             user.avatar_url = avatar_url
 
+    await admin_service.ensure_bootstrap_admin(db, user)
     db.add(
         AuthIdentity(
             user_id=user.id,

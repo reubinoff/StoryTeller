@@ -119,6 +119,19 @@ describe("Shell", () => {
     expect(screen.getByText("1,234 XP")).toBeInTheDocument();
     expect(screen.getByText("Maya Patel")).toBeInTheDocument();
     expect(screen.getByText("Shell child content")).toBeInTheDocument();
+    expect(screen.queryByText(/search courses/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute(
+      "href",
+      "/dashboard"
+    );
+    expect(screen.getByRole("link", { name: "New" })).toHaveAttribute(
+      "href",
+      "/courses"
+    );
+    expect(screen.getByRole("link", { name: "More" })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
   });
 
   it("signs out and returns to the public landing page", async () => {

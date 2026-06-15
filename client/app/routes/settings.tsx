@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 import { IconCheck } from "~/components/Icons";
 import { Modal } from "~/components/Modal";
 import { SettingsRow, SettingsSection } from "~/components/Settings";
+import { TopicSticker } from "~/components/Stickers";
 import { Toggle } from "~/components/Toggle";
 import { useToast } from "~/components/Toast";
 import { api } from "~/lib/api/endpoints";
@@ -300,7 +301,7 @@ export default function SettingsRoute() {
                   position: "relative",
                 }}
               >
-                <div style={{ fontSize: 22, marginBottom: 4 }}>{t.emoji}</div>
+                <TopicSticker topic={t} selected={sel} size="sm" />
                 <div
                   style={{
                     fontSize: 11.5,

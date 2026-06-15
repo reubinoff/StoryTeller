@@ -9,7 +9,7 @@ export interface DisplayPreferences {
 }
 
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
-  theme_preference: "auto",
+  theme_preference: "light",
   text_size_preference: "md",
   reduce_motion: false,
 };

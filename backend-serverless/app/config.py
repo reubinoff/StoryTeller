@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool | None = None
 
     frontend_base_url: str = "http://localhost:5174"
+    admin_frontend_base_url: str = "http://localhost:5175"
+    admin_bootstrap_emails: list[str] = Field(
+        default_factory=lambda: ["reubinoff@gmail.com"]
+    )
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     google_oauth_redirect_uri: str = "http://localhost:7071/api/v1/auth/google/callback"
@@ -54,6 +58,8 @@ class Settings(BaseSettings):
             "http://127.0.0.1:5173",
             "http://localhost:5174",
             "http://127.0.0.1:5174",
+            "http://localhost:5175",
+            "http://127.0.0.1:5175",
             "https://storyteller.reubinoff.com",
         ]
     )
@@ -61,6 +67,14 @@ class Settings(BaseSettings):
     seed_on_startup: bool = True
     auto_create_schema: bool = False
     run_migrations_on_startup: bool = False
+
+    @property
+    def cors_origins_with_admin(self) -> list[str]:
+        origins = [origin.rstrip("/") for origin in self.cors_origins]
+        admin_origin = self.admin_frontend_base_url.rstrip("/")
+        if admin_origin and admin_origin not in origins:
+            origins.append(admin_origin)
+        return origins
 
 
 @lru_cache(maxsize=1)

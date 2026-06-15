@@ -40,8 +40,8 @@ interface AuthSideProps {
 export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
   <div
     style={{
-      background: "var(--ink)",
-      color: "var(--paper)",
+      background: "var(--paper-2)",
+      color: "var(--ink)",
       padding: 48,
       display: "flex",
       flexDirection: "column",
@@ -50,12 +50,12 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
     }}
     className="auth-side"
   >
-    <BrandLogo width={164} className="brand-logo brand-logo-on-dark" />
+    <BrandLogo width={164} />
     <div style={{ marginTop: "auto", position: "relative", zIndex: 2 }}>
       <h1
         style={{
           fontSize: 48,
-          color: "var(--paper)",
+          color: "var(--ink)",
           marginBottom: 14,
           lineHeight: 1.05,
         }}
@@ -65,7 +65,7 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
       <p
         style={{
           fontSize: 17,
-          color: "rgba(251,245,233,0.72)",
+          color: "var(--ink-2)",
           maxWidth: 380,
           lineHeight: 1.5,
         }}
@@ -81,7 +81,7 @@ export const AuthSide = ({ title, subtitle, pose }: AuthSideProps) => (
     </div>
     <div
       className="auth-side-watermark"
-      style={{ position: "absolute", right: 48, top: 48, opacity: 0.18 }}
+      style={{ position: "absolute", right: 48, top: 48, opacity: 0.12 }}
     >
       <BrandMark size={280} color="var(--rust)" />
     </div>

@@ -52,12 +52,19 @@ def _safe_return_to(value: str | None, fallback: str = "/dashboard") -> str:
     return value
 
 
-def _frontend_callback_url(return_to: str, error: str | None = None) -> str:
+def _frontend_callback_url(
+    return_to: str, error: str | None = None, surface: str = "app"
+) -> str:
     settings = get_settings()
     query: dict[str, str] = {"returnTo": _safe_return_to(return_to)}
     if error:
         query["error"] = error
-    return f"{settings.frontend_base_url.rstrip('/')}/auth/callback?{urlencode(query)}"
+    frontend_base_url = (
+        settings.admin_frontend_base_url
+        if surface == "admin"
+        else settings.frontend_base_url
+    )
+    return f"{frontend_base_url.rstrip('/')}/auth/callback?{urlencode(query)}"
 
 
 async def _user_from_refresh_cookie(db: DbSession, refresh_token: str | None) -> User:
@@ -188,6 +195,7 @@ async def logout(response: Response) -> Response:
 async def google_start(
     return_to: Annotated[str, Query(alias="return_to")] = "/dashboard",
     intent: str = "login",
+    surface: str = "app",
 ) -> RedirectResponse:
     settings = get_settings()
     if not (
@@ -202,7 +210,10 @@ async def google_start(
         )
     safe_return_to = _safe_return_to(return_to)
     safe_intent = intent if intent in {"login", "signup"} else "login"
-    state = create_oauth_state(return_to=safe_return_to, intent=safe_intent)
+    safe_surface = surface if surface in {"app", "admin"} else "app"
+    state = create_oauth_state(
+        return_to=safe_return_to, intent=safe_intent, surface=safe_surface
+    )
     params = {
         "client_id": settings.google_oauth_client_id,
         "redirect_uri": settings.google_oauth_redirect_uri,
@@ -223,17 +234,26 @@ async def google_callback(
     error: str | None = None,
 ) -> RedirectResponse:
     return_to = "/dashboard"
+    surface = "app"
     try:
         if state:
             state_payload = decode_oauth_state(state)
             return_to = _safe_return_to(str(state_payload.get("return_to") or ""))
+            decoded_surface = str(state_payload.get("surface") or "app")
+            surface = decoded_surface if decoded_surface in {"app", "admin"} else "app"
     except Exception:
-        return RedirectResponse(_frontend_callback_url(return_to, "invalid_oauth_state"))
+        return RedirectResponse(
+            _frontend_callback_url(return_to, "invalid_oauth_state", surface)
+        )
 
     if error:
-        return RedirectResponse(_frontend_callback_url(return_to, "google_oauth_denied"))
+        return RedirectResponse(
+            _frontend_callback_url(return_to, "google_oauth_denied", surface)
+        )
     if not code:
-        return RedirectResponse(_frontend_callback_url(return_to, "missing_google_code"))
+        return RedirectResponse(
+            _frontend_callback_url(return_to, "missing_google_code", surface)
+        )
 
     try:
         token_payload = await _exchange_google_code(code)
@@ -241,11 +261,13 @@ async def google_callback(
         profile = await _verify_google_id_token(id_token)
         user = await auth_service.login_or_signup_google(db, profile)
     except AppError as exc:
-        return RedirectResponse(_frontend_callback_url(return_to, exc.code))
+        return RedirectResponse(_frontend_callback_url(return_to, exc.code, surface))
     except Exception:
-        return RedirectResponse(_frontend_callback_url(return_to, "google_oauth_failed"))
+        return RedirectResponse(
+            _frontend_callback_url(return_to, "google_oauth_failed", surface)
+        )
 
-    redirect = RedirectResponse(_frontend_callback_url(return_to))
+    redirect = RedirectResponse(_frontend_callback_url(return_to, surface=surface))
     set_session_cookies(redirect, str(user.id))
     return redirect
 

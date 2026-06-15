@@ -25,7 +25,7 @@ machine-readable mirror of every model below.
 | Idempotency          | Mutating endpoints accept `Idempotency-Key: <uuid>`; duplicates return the original response.                                 |
 | Tracing              | Every response echoes `X-Request-Id`.                                                                                         |
 | Auth                 | Browser-managed cookies: HttpOnly `st_at` access cookie, HttpOnly `rt` refresh cookie, and CSRF token via `st_csrf` plus `X-CSRF-Token`. |
-| Errors               | RFC 7807 Problem Details (see §8).                                                                                            |
+| Errors               | RFC 7807 Problem Details (see §9).                                                                                            |
 | Time-zone            | Server returns UTC; client renders in the user's locale.                                                                      |
 | Locale               | v1: English only (`display_locale = "en"`).                                                                                   |
 | CORS / cookies       | Frontend sends `credentials: "include"` on every API call. Backend must allow-list the SPA origin and expose `X-CSRF-Token`.  |
@@ -91,13 +91,14 @@ Deprecated. Google sign-in now uses the redirect flow below.
 ### `GET /auth/google/start`
 
 Query: `return_to` (internal path, default `/dashboard`), `intent` (`login` or
-`signup`). Redirects to Google OAuth with `openid email profile`.
+`signup`), and optional `surface` (`app` or `admin`, default `app`). Redirects
+to Google OAuth with `openid email profile`.
 
 ### `GET /auth/google/callback`
 
 Google redirects here with `code` + `state`. The backend validates state,
 exchanges the code, verifies the Google identity, creates or links the user,
-sets the session cookies, and redirects to frontend
+sets the session cookies, and redirects to the selected frontend
 `/auth/callback?returnTo=<path>`. On failure, redirects there with `error`.
 
 ### `POST /auth/refresh`
@@ -146,6 +147,9 @@ Returns the authenticated `User`.
 ```
 
 Returns the updated `User`.
+
+New users default to `"light"` for the child experience. Existing users keep
+their saved preference, and Settings can still switch to `"auto"` or `"dark"`.
 
 ### `PUT /me/interests`
 
@@ -446,7 +450,61 @@ Long-poll fallback (25 s timeout) returning `Notification[]` of any new events.
 
 ---
 
-## 8. Errors (RFC 7807)
+## 8. Admin Console
+
+All admin endpoints are under `/api/v1/admin`, require an active authenticated
+user with `role="admin"`, send `Cache-Control: no-store`, and are consumed only
+by the separate admin static app. Frontend authorization is UX only; backend
+role checks are authoritative.
+
+Bootstrap admin emails come from `ADMIN_BOOTSTRAP_EMAILS` and default to
+`["reubinoff@gmail.com"]`. Bootstrap admins are protected from demotion and
+suspension through the admin API.
+
+### `GET /admin/session`
+
+Returns the authenticated admin session.
+
+```ts
+interface AdminSession {
+  user: AdminUserSummary;
+  protected_admin: boolean;
+}
+```
+
+### `GET /admin/overview`
+
+Query: `range_days=7|30|90` (default `30`). Returns aggregate user/task KPIs,
+daily activity buckets, and course completion metrics.
+
+### `GET /admin/users`
+
+Query: `query`, `role`, `status`, `limit`, `cursor`. Returns
+`Page<AdminUserSummary>` newest users first.
+
+### `GET /admin/users/{user_id}`
+
+Returns `AdminUserDetail`.
+
+### `PATCH /admin/users/{user_id}/admin`
+
+Request: `{ "is_admin": true | false }`. Promotes active users to admin or
+demotes admins to user. Blocks self-demotion, protected-admin demotion, and
+removing the last active admin.
+
+### `PATCH /admin/users/{user_id}/status`
+
+Request: `{ "status": "active" | "suspended" }`. Suspends/reactivates users.
+Blocks self-suspension, protected-admin suspension, and suspending the last
+active admin.
+
+### `GET /admin/audit`
+
+Query: `target_user_id`, `limit`, `cursor`. Returns `Page<AdminAuditEvent>`.
+
+---
+
+## 9. Errors (RFC 7807)
 
 ```json
 HTTP/1.1 422 Unprocessable Entity
@@ -476,11 +534,14 @@ Recognised `code` values currently used by the frontend:
 | `invalid_credentials` | 401    | Login: email or password wrong (generic, no enumeration).     |
 | `not_found`           | 404    | Resource missing.                                             |
 | `invalid_state`       | 400    | Task transition not allowed for current status.               |
+| `admin_required`      | 403    | Authenticated user is not an admin.                           |
+| `protected_admin`     | 403    | Bootstrap admin cannot be demoted or suspended.               |
+| `admin_safety_violation` | 409 | Admin action would remove a required safety guard.             |
 | `rate_limited`        | 429    | Per-user task-roll or eval limit exceeded.                    |
 
 ---
 
-## 9. Task status state machine
+## 10. Task status state machine
 
 ```mermaid
 stateDiagram-v2
@@ -505,7 +566,7 @@ always pass through `processing`.
 
 ---
 
-## 10. Data models (TypeScript)
+## 11. Data models (TypeScript)
 
 The full type set is exported from
 [`app/lib/api/types.ts`](app/lib/api/types.ts). Reproduced here for backend
@@ -520,6 +581,8 @@ interface AuthResponse { user: User; }
 interface PasswordChangeRequest { current_password: string; new_password: string; }
 interface DeleteAccountRequest { confirm: boolean; }
 interface AvatarUploadResponse { avatar_url: string; }
+interface AdminSetAdminRequest { is_admin: boolean; }
+interface AdminSetStatusRequest { status: "active" | "suspended"; }
 
 // ----- User -----
 type ThemePreference = "auto" | "light" | "dark";
@@ -761,6 +824,76 @@ interface Notification {
   created_at: ISO8601;
 }
 
+// ----- Admin -----
+interface AdminSession {
+  user: AdminUserSummary;
+  protected_admin: boolean;
+}
+
+interface AdminOverview {
+  range_days: 7 | 30 | 90;
+  generated_at: ISO8601;
+  kpis: {
+    users_total: number;
+    users_active: number;
+    users_suspended: number;
+    admins_total: number;
+    signups_in_range: number;
+    tasks_created_in_range: number;
+    tasks_completed_in_range: number;
+    tasks_failed_in_range: number;
+    writing_processing: number;
+    avg_completed_score: number;
+  };
+  daily_activity: Array<{
+    date: string;
+    signups: number;
+    tasks_created: number;
+    tasks_completed: number;
+  }>;
+  course_metrics: Array<{
+    course_type: string;
+    completed_count: number;
+    avg_score: number;
+  }>;
+}
+
+interface AdminUserSummary {
+  id: UUID;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  status: UserStatus;
+  protected_admin: boolean;
+  created_at: ISO8601;
+  updated_at: ISO8601;
+  tasks_total: number;
+  tasks_completed: number;
+  avg_score: number | null;
+  last_activity_at: ISO8601 | null;
+}
+
+interface AdminUserDetail extends AdminUserSummary {
+  email_verified: boolean;
+  grade_level: number;
+  year_of_birth: number;
+  onboarding_completed: boolean;
+  interests: InterestId[];
+  task_status_counts: Array<{ status: TaskStatus; count: number }>;
+}
+
+interface AdminAuditEvent {
+  id: UUID;
+  actor_user_id: UUID | null;
+  actor_email: string | null;
+  target_user_id: UUID;
+  target_email: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: ISO8601;
+}
+
 // ----- Errors -----
 interface Problem {
   type: string;
@@ -774,17 +907,20 @@ interface Problem {
 
 ---
 
-## 11. Front-end behaviour notes (for backend planning)
+## 12. Front-end behaviour notes (for backend planning)
 
 - The client polls `GET /tasks/{id}` and `GET /tasks/{id}/result` every 5 s while a writing task is `processing`. Worker SLA: complete within 30 s p95.
 - The client auto-saves writing drafts every 10 s via `POST /tasks/{id}/draft`. Backend should idempotently overwrite the latest draft only before submission.
 - The dashboard fetches `/me/dashboard` on every visit. Aim for p95 < 300 ms.
 - The catalog (`/interests`, `/courses`) is treated as immutable for the session; the frontend caches it for an hour.
 - The shell topbar shows `current_streak` and `xp_total` from `/me/metrics`; both must be returned as a single integer (no localisation on the wire).
+- Any auth, user, role/status, metrics, task/content model, CORS, cookie, or
+  deployment change must consider the separate admin console and its admin-only
+  API surface.
 
 ---
 
-## 12. Open questions tracked for v2
+## 13. Open questions tracked for v2
 
 1. Reading task — should `POST /tasks/{id}/answer` allow updates (going back) or remain append-only? Currently treated as append-only.
 2. Writing rubric weights — are sub-scores plain averages, or weighted? Frontend just renders whatever the backend returns.

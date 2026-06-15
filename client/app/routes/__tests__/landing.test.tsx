@@ -68,6 +68,9 @@ describe("LandingRoute", () => {
       "href",
       "/login"
     );
+    expect(screen.getByText(/for parents and guardians/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no ads/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/visible progress/i)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

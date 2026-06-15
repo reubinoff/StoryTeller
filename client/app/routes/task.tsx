@@ -88,6 +88,8 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
   const [answerSaveError, setAnswerSaveError] = useState<string | null>(null);
   const [fontStep, setFontStep] = useState(1);
   const [showPassage, setShowPassage] = useState(true);
+  const [comfortMode, setComfortMode] = useState(false);
+  const [focusedParagraph, setFocusedParagraph] = useState<number | null>(null);
   const submitTask = useSubmitTask();
   const answerQ = useAnswerQuestion(task.id);
   const ttsRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -163,6 +165,10 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
     }
   };
 
+  const focusParagraph = (index: number) => {
+    setFocusedParagraph((current) => (current === index ? null : index));
+  };
+
   if (phase === "passage") {
     return (
       <div>
@@ -189,6 +195,13 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               aria-pressed={isSpeaking}
             >
               <IconVolume size={14} /> {isSpeaking ? "Stop" : "Read aloud"}
+            </button>
+            <button
+              className="btn btn-soft btn-sm"
+              onClick={() => setComfortMode((mode) => !mode)}
+              aria-pressed={comfortMode}
+            >
+              <IconBook size={14} /> Comfort mode
             </button>
             <div
               className="row gap-4"
@@ -224,10 +237,28 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               </button>
             </div>
           </div>
-          <div className="card" style={{ padding: "32px 36px" }}>
-            <div className="passage" style={{ fontSize, lineHeight: 1.75 }}>
+          <div
+            className={`card reading-card ${comfortMode ? "reading-comfort" : ""}`}
+            style={{ padding: "32px 36px" }}
+          >
+            <div className="passage" style={{ fontSize, lineHeight: comfortMode ? 1.95 : 1.75 }}>
               {reading.passage_paragraphs.map((p, i) => (
-                <p key={i}>{p}</p>
+                <p
+                  key={i}
+                  className={focusedParagraph === i ? "focused" : ""}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Focus paragraph ${i + 1}`}
+                  onClick={() => focusParagraph(i)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      focusParagraph(i);
+                    }
+                  }}
+                >
+                  {p}
+                </p>
               ))}
             </div>
           </div>
@@ -296,7 +327,9 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               </button>
             </div>
             <div
-              className="card reading-passage-panel"
+              className={`card reading-passage-panel ${
+                comfortMode ? "reading-comfort" : ""
+              }`}
               style={{
                 padding: "24px 28px",
                 maxHeight: "calc(100vh - 220px)",
@@ -306,9 +339,27 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               }}
             >
               <h3 style={{ fontSize: 18, marginBottom: 12 }}>{reading.title}</h3>
-              <div className="passage" style={{ fontSize: 15.5 }}>
+              <div
+                className="passage"
+                style={{ fontSize: 15.5, lineHeight: comfortMode ? 1.9 : undefined }}
+              >
                 {reading.passage_paragraphs.map((p, i) => (
-                  <p key={i}>{p}</p>
+                  <p
+                    key={i}
+                    className={focusedParagraph === i ? "focused" : ""}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Focus paragraph ${i + 1}`}
+                    onClick={() => focusParagraph(i)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        focusParagraph(i);
+                      }
+                    }}
+                  >
+                    {p}
+                  </p>
                 ))}
               </div>
             </div>
@@ -531,6 +582,34 @@ interface WritingTaskProps {
 const SAMPLE_WRITING_TEXT =
   "I would love to visit Kyoto, the old capital of Japan. I would walk through the bamboo forest in Arashiyama early in the morning, when it's quiet and a little misty. After that, I would stop at a small tea shop to try matcha and sweet mochi. In the afternoon, I would visit the Fushimi Inari shrine and slowly climb the path under thousands of red gates. Kyoto matters to me because my grandmother always told me stories about Japanese gardens, and I want to see them with my own eyes one day.";
 
+interface WritingScaffold {
+  plan: string[];
+  starters: string[];
+  wordBank: string[];
+  checklist: string[];
+}
+
+function buildWritingScaffold(topicLabel: string, hints: string[]): WritingScaffold {
+  return {
+    plan: hints.length
+      ? hints.slice(0, 3)
+      : ["Name your idea.", "Add two details.", "Explain why it matters."],
+    starters: [
+      `I want to write about ${topicLabel.toLowerCase()} because `,
+      "First, ",
+      "One important detail is ",
+      "This matters because ",
+    ],
+    wordBank: ["because", "first", "next", "for example", "I noticed", "I wonder"],
+    checklist: [
+      "I answered the prompt.",
+      "I used complete sentences.",
+      "I added at least one reason.",
+      "I reread my answer once.",
+    ],
+  };
+}
+
 const WritingTask = ({ task }: WritingTaskProps) => {
   const navigate = useNavigate();
   const writing = task.writing;
@@ -548,6 +627,10 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     onSuccess: () => navigate(`/tasks/${task.id}`),
   });
   const { mutateAsync: saveDraftMutateAsync } = useSaveDraft(task.id);
+  const scaffold = useMemo(
+    () => (writing ? buildWritingScaffold(task.topic_label, writing.hints) : null),
+    [task.topic_label, writing]
+  );
 
   const minWords = writing?.min_words ?? 60;
   const maxWords = writing?.max_words ?? 120;
@@ -623,6 +706,16 @@ const WritingTask = ({ task }: WritingTaskProps) => {
       if (text !== lastSavedText) setDraftStatus("dirty");
       setSubmitError("We couldn't submit your answer. Please try again.");
     }
+  };
+
+  const insertStarter = (starter: string) => {
+    setText((prev) => {
+      const joiner = prev && !/\s$/.test(prev) ? " " : "";
+      return `${prev}${joiner}${starter}`;
+    });
+    setDraftStatus("dirty");
+    setDraftError(null);
+    setSubmitError(null);
   };
 
   if (!writing) return null;
@@ -772,6 +865,9 @@ const WritingTask = ({ task }: WritingTaskProps) => {
         </div>
 
         <div className="writing-side">
+          {scaffold && (
+            <WritingScaffoldCards scaffold={scaffold} onInsertStarter={insertStarter} />
+          )}
           <div className="card" style={{ marginBottom: 16 }}>
             <h4 style={{ marginBottom: 10 }}>Hints from hafuyfay</h4>
             <div className="col gap-10">
@@ -843,6 +939,59 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     </div>
   );
 };
+
+const WritingScaffoldCards = ({
+  scaffold,
+  onInsertStarter,
+}: {
+  scaffold: WritingScaffold;
+  onInsertStarter: (starter: string) => void;
+}) => (
+  <div className="card writing-scaffold-card">
+    <h4>Writing studio</h4>
+    <div className="writing-scaffold-section">
+      <strong>Plan</strong>
+      <ol>
+        {scaffold.plan.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
+    </div>
+    <div className="writing-scaffold-section">
+      <strong>Sentence starters</strong>
+      <div className="writing-starter-grid">
+        {scaffold.starters.map((starter) => (
+          <button
+            key={starter}
+            type="button"
+            className="btn btn-soft btn-sm"
+            onClick={() => onInsertStarter(starter)}
+          >
+            {starter.trim()}
+          </button>
+        ))}
+      </div>
+    </div>
+    <div className="writing-scaffold-section">
+      <strong>Word bank</strong>
+      <div className="writing-word-bank">
+        {scaffold.wordBank.map((word) => (
+          <span key={word}>{word}</span>
+        ))}
+      </div>
+    </div>
+    <div className="writing-scaffold-section">
+      <strong>Checklist</strong>
+      <ul>
+        {scaffold.checklist.map((item) => (
+          <li key={item}>
+            <IconCheck size={13} /> {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+);
 
 // ---------------- Writing Processing ----------------
 

@@ -14,7 +14,7 @@ describe("CoursesRoute", () => {
     mockNavigate.mockReset();
   });
 
-  it("shows the available courses and coming-soon options", () => {
+  it("shows the available courses and current mission flow", () => {
     render(<CoursesRoute />);
 
     expect(
@@ -22,10 +22,11 @@ describe("CoursesRoute", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Story Reading")).toBeInTheDocument();
     expect(screen.getByText("Writing Practice")).toBeInTheDocument();
-    expect(screen.getByText("Speaking Lab")).toBeInTheDocument();
-    expect(screen.getByText("Word Builder")).toBeInTheDocument();
-    expect(screen.getByText("Story Maker")).toBeInTheDocument();
-    expect(screen.getAllByText("Coming soon")).toHaveLength(3);
+    expect(screen.getByText("How missions work")).toBeInTheDocument();
+    expect(screen.getByText("Choose")).toBeInTheDocument();
+    expect(screen.getByText("Practice")).toBeInTheDocument();
+    expect(screen.getByText("Reflect")).toBeInTheDocument();
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
   });
 
   it("routes each course card to its detail page", () => {

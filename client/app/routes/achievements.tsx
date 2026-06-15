@@ -1,4 +1,5 @@
 import { Skeleton } from "~/components/Skeleton";
+import { AchievementSticker } from "~/components/Stickers";
 import { useAchievements } from "~/lib/api/queries";
 
 export function meta() {
@@ -33,7 +34,7 @@ export default function AchievementsRoute() {
             className="card"
             style={{ textAlign: "center", opacity: a.earned ? 1 : 0.5 }}
           >
-            <div style={{ fontSize: 48, marginBottom: 8 }}>{a.icon}</div>
+            <AchievementSticker achievement={a} size="lg" />
             <h4>{a.name}</h4>
             <p
               style={{

@@ -125,8 +125,8 @@ export default function Landing() {
             }}
           >
             Bite-sized reading and writing tasks tuned to your age and
-            interests. Roll a fresh story whenever you want, get practical
-            feedback, and watch your streak grow. Built for ages 6 to 99.
+            interests. Roll a fresh story, get practical feedback, and build
+            confidence one calm mission at a time.
           </p>
           <div className="row gap-12" style={{ flexWrap: "wrap" }}>
             <Link to="/signup" className="btn btn-accent btn-lg">
@@ -144,10 +144,10 @@ export default function Landing() {
               <IconCheck size={14} /> No credit card
             </div>
             <div className="row gap-6">
-              <IconCheck size={14} /> Adapts to your grade
+              <IconCheck size={14} /> No ads
             </div>
             <div className="row gap-6">
-              <IconCheck size={14} /> Works on any device
+              <IconCheck size={14} /> Grade-tuned tasks
             </div>
           </div>
         </div>
@@ -285,6 +285,50 @@ export default function Landing() {
             style={{ position: "absolute", right: -10, bottom: -30, zIndex: 3 }}
           >
             <Mascot size={140} pose="cheer" kind="ferret" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="landing-trust-band"
+        style={{
+          borderTop: "1px solid var(--line)",
+          background: "var(--paper)",
+          padding: "48px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1.4fr)",
+            gap: 28,
+            alignItems: "start",
+          }}
+          className="landing-trust"
+        >
+          <div>
+            <span className="chip chip-teal">For parents and guardians</span>
+            <h2 style={{ marginTop: 12, fontSize: 34 }}>
+              A calmer way to practice English.
+            </h2>
+          </div>
+          <div className="landing-trust-grid">
+            {[
+              ["No ads", "The learner experience is focused on the task, not attention traps."],
+              ["Privacy-first", "Only practical account and learning information is used to tune practice."],
+              ["Age-aware", "Year of birth, grade, and interests guide the tone and difficulty."],
+              ["Visible progress", "Parents can see recent work, badges, streaks, and task history."],
+            ].map(([title, body]) => (
+              <div key={title} className="landing-trust-item">
+                <IconCheck size={15} />
+                <div>
+                  <strong>{title}</strong>
+                  <p>{body}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

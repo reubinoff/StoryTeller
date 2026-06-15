@@ -41,6 +41,14 @@ export interface AvatarUploadResponse {
   avatar_url: string;
 }
 
+export interface AdminSetAdminRequest {
+  is_admin: boolean;
+}
+
+export interface AdminSetStatusRequest {
+  status: "active" | "suspended";
+}
+
 export interface CompleteOnboardingRequest {
   year_of_birth: number;
   grade_level: number;
@@ -371,6 +379,77 @@ export interface Notification {
   kind: "task_completed" | "task_failed" | "streak_milestone" | "system";
   payload: Record<string, unknown>;
   read_at: ISO8601 | null;
+  created_at: ISO8601;
+}
+
+// ----- Admin -----
+
+export interface AdminSession {
+  user: AdminUserSummary;
+  protected_admin: boolean;
+}
+
+export interface AdminOverview {
+  range_days: 7 | 30 | 90;
+  generated_at: ISO8601;
+  kpis: {
+    users_total: number;
+    users_active: number;
+    users_suspended: number;
+    admins_total: number;
+    signups_in_range: number;
+    tasks_created_in_range: number;
+    tasks_completed_in_range: number;
+    tasks_failed_in_range: number;
+    writing_processing: number;
+    avg_completed_score: number;
+  };
+  daily_activity: Array<{
+    date: string;
+    signups: number;
+    tasks_created: number;
+    tasks_completed: number;
+  }>;
+  course_metrics: Array<{
+    course_type: string;
+    completed_count: number;
+    avg_score: number;
+  }>;
+}
+
+export interface AdminUserSummary {
+  id: UUID;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  status: UserStatus;
+  protected_admin: boolean;
+  created_at: ISO8601;
+  updated_at: ISO8601;
+  tasks_total: number;
+  tasks_completed: number;
+  avg_score: number | null;
+  last_activity_at: ISO8601 | null;
+}
+
+export interface AdminUserDetail extends AdminUserSummary {
+  email_verified: boolean;
+  grade_level: number;
+  year_of_birth: number;
+  onboarding_completed: boolean;
+  interests: InterestId[];
+  task_status_counts: Array<{ status: TaskStatus; count: number }>;
+}
+
+export interface AdminAuditEvent {
+  id: UUID;
+  actor_user_id: UUID | null;
+  actor_email: string | null;
+  target_user_id: UUID;
+  target_email: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
   created_at: ISO8601;
 }
 

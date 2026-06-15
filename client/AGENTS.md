@@ -49,6 +49,7 @@ Path alias: `~` → `app/`.
 ## API contract
 
 `API_CONTRACT.md` in this directory is the source of truth. Coordinate with `backend-serverless/` when changing request/response shapes.
+Any auth, user, role/status, metrics, task/content model, CORS, cookie, or deployment change must also consider the separate `admin-client/` console and `/api/v1/admin/*`.
 
 ## Tests
 

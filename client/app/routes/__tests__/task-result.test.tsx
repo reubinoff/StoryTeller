@@ -300,9 +300,11 @@ describe("TaskResultRoute", () => {
 
     render(<TaskResultRoute />);
 
-    expect(screen.getByText(/nicely done, Maya/i)).toBeInTheDocument();
+    expect(screen.getByText(/nice progress, Maya/i)).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     expect(screen.getByText(/clear details/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/what you did well/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/next clue/i)).toBeInTheDocument();
     const annotated = screen.getByRole("button", {
       name: /word choice note: use a stronger verb/i,
     });

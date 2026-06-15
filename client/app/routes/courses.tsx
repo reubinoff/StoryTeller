@@ -61,11 +61,11 @@ export default function CoursesRoute() {
       </div>
       <div style={{ marginTop: 48 }}>
         <SectionHeader
-          title="More courses coming soon"
-          subtitle="We're working on speaking practice, vocabulary builders, and group challenges."
+          title="How missions work"
+          subtitle="Each task is short, clear, and tuned to your current level."
         />
         <div
-          className="courses-coming-grid"
+          className="courses-flow-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0,1fr))",
@@ -74,29 +74,28 @@ export default function CoursesRoute() {
         >
           {[
             {
-              name: "Speaking Lab",
-              desc: "Practice pronunciation with AI feedback",
-              icon: <FeatureIcon name="speak" size={48} alt="" />,
+              name: "Choose",
+              desc: "Pick reading or writing based on what feels right today.",
+              icon: <FeatureIcon name="stories" size={48} alt="" />,
             },
             {
-              name: "Word Builder",
-              desc: "Daily vocabulary, spaced repetition",
+              name: "Practice",
+              desc: "Work one question, paragraph, or clue at a time.",
               icon: <FeatureIcon name="words" size={48} alt="" />,
             },
             {
-              name: "Story Maker",
-              desc: "Co-write a story with hafuyfay",
-              icon: <FeatureIcon name="stories" size={48} alt="" />,
+              name: "Reflect",
+              desc: "Review friendly feedback and choose the next small step.",
+              icon: <FeatureIcon name="practice" size={48} alt="" />,
             },
           ].map((c) => (
             <div
               key={c.name}
               className="card"
-              style={{ background: "var(--paper-2)", opacity: 0.85 }}
+              style={{ background: "var(--paper-2)" }}
             >
               <div className="row gap-12" style={{ marginBottom: 10 }}>
                 {c.icon}
-                <span className="chip">Coming soon</span>
               </div>
               <h4 style={{ marginBottom: 4 }}>{c.name}</h4>
               <p style={{ color: "var(--ink-3)", fontSize: 13 }}>{c.desc}</p>

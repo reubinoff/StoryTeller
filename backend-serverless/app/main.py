@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.cors_origins_with_admin,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -82,6 +82,14 @@ def create_app() -> FastAPI:
     )
     register_exception_handlers(app)
     app.include_router(build_v1_router(), prefix="/api/v1")
+
+    @app.middleware("http")
+    async def admin_no_store_middleware(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/v1/admin"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+        return response
 
     @app.get("/healthz", tags=["health"])
     async def healthz() -> dict[str, str]:

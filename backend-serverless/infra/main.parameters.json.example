@@ -23,6 +23,12 @@
     "frontendBaseUrl": {
       "value": "https://storyteller.reubinoff.com"
     },
+    "adminFrontendBaseUrl": {
+      "value": "https://admin.storyteller.reubinoff.com"
+    },
+    "adminBootstrapEmails": {
+      "value": "[\"reubinoff@gmail.com\"]"
+    },
     "googleOauthClientId": {
       "value": "replace-with-google-oauth-web-client-id"
     },

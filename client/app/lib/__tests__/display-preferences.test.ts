@@ -50,4 +50,12 @@ describe("display preferences", () => {
 
     meta.remove();
   });
+
+  it("defaults signed-out display preferences to light mode", () => {
+    applyDisplayPreferences(undefined);
+
+    expect(document.body.dataset.theme).toBe("light");
+    expect(document.body.dataset.themePreference).toBe("light");
+    expect(document.body.dataset.textSize).toBe("md");
+  });
 });

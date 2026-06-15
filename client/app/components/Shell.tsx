@@ -9,7 +9,6 @@ import {
   IconLogout,
   IconPen,
   IconPlus,
-  IconSearch,
   IconSettings,
   IconSparkle,
   IconFlame,
@@ -198,9 +197,9 @@ export const Shell = ({ children }: ShellProps) => {
         </aside>
         <div className="col" style={{ minWidth: 0 }}>
           <header className="topbar">
-            <div className="topbar-search">
-              <IconSearch size={16} />
-              <span>Search courses, tasks…</span>
+            <div className="topbar-greeting" aria-label="Current progress">
+              <span>Today</span>
+              <strong>Story mission</strong>
             </div>
             <div className="row gap-12 topbar-actions" style={{ marginLeft: "auto" }}>
               <span className="streak-pill">
@@ -344,12 +343,6 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
       match: (p) => p === "/dashboard",
     },
     {
-      to: "/courses",
-      label: "Courses",
-      Icon: IconBook,
-      match: (p) => p.startsWith("/courses"),
-    },
-    {
       to: "/tasks",
       label: "Tasks",
       Icon: IconDoc,
@@ -357,7 +350,7 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
     },
     {
       to: "/courses",
-      label: "New task",
+      label: "New",
       Icon: IconPlus,
       match: () => false,
       center: true,
@@ -370,7 +363,7 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
     },
     {
       to: "/settings",
-      label: "Profile",
+      label: "More",
       Icon: IconPen,
       match: (p) => p === "/settings",
     },
@@ -386,7 +379,6 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
             to={t.to}
             className={cls}
             aria-current={active ? "page" : undefined}
-            aria-label={t.center ? "Choose a course to roll a new task" : undefined}
           >
             <t.Icon size={t.center ? 22 : 18} />
             {t.center ? <span className="sr">{t.label}</span> : <span>{t.label}</span>}

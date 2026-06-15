@@ -109,18 +109,38 @@ export interface MascotProps {
 
 export const Mascot = ({
   size = 120,
-  className = "mascot-img",
+  pose = "wave",
+  mood = "happy",
+  kind = "ferret",
+  className = "",
   style,
 }: MascotProps) => (
-  <BrandImage
-    name="mascot"
-    alt=""
-    decorative
-    className={className}
-    width={size}
-    height={size}
-    style={{ width: size, height: size, objectFit: "contain", ...style }}
-  />
+  <span
+    className={[
+      "mascot",
+      `mascot-${kind}`,
+      `mascot-pose-${pose}`,
+      `mascot-mood-${mood}`,
+      className,
+    ]
+      .filter(Boolean)
+      .join(" ")}
+    data-pose={pose}
+    data-mood={mood}
+    aria-hidden="true"
+    style={{ width: size, height: size, ...style }}
+  >
+    <BrandImage
+      name="mascot"
+      alt=""
+      decorative
+      className="mascot-art"
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: "contain" }}
+    />
+    <span className="mascot-cue" aria-hidden="true" />
+  </span>
 );
 
 export const FeatureIcon = ({

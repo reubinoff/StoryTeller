@@ -141,6 +141,18 @@ describe("OnboardingRoute — step 1 (welcome)", () => {
     renderOnboarding();
     expect(screen.getByRole("button", { name: /let's go/i })).toBeInTheDocument();
   });
+
+  it("uses simpler age-aware copy for younger learners", () => {
+    mockAuthState = {
+      user: { ...mockUser, year_of_birth: new Date().getFullYear() - 7 },
+      ready: true,
+      completeOnboarding: mockCompleteOnboarding,
+    };
+
+    renderOnboarding();
+
+    expect(screen.getByText(/big choices/i)).toBeInTheDocument();
+  });
 });
 
 describe("OnboardingRoute — step 2 (grade)", () => {

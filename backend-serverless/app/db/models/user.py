@@ -26,7 +26,7 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(1024))
 
     display_locale: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
-    theme_preference: Mapped[str] = mapped_column(String(10), nullable=False, default="auto")
+    theme_preference: Mapped[str] = mapped_column(String(10), nullable=False, default="light")
     text_size_preference: Mapped[str] = mapped_column(String(10), nullable=False, default="md")
     reduce_motion: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notif_email_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

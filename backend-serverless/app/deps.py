@@ -14,6 +14,7 @@ from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, SAFE_METHODS
 from app.core.security import decode_access_token
 from app.db.models.user import User
 from app.db.session import get_session
+from app.services import admin_service
 
 
 async def get_db() -> AsyncSession:  # type: ignore[empty-body]
@@ -84,3 +85,18 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_admin_user(db: DbSession, current_user: CurrentUser) -> User:
+    await admin_service.ensure_bootstrap_admin(db, current_user, commit=True)
+    if current_user.role != admin_service.ADMIN_ROLE:
+        raise AppError(
+            status_code=403,
+            code="admin_required",
+            title="Admin access required",
+            detail="This endpoint is restricted to active administrators.",
+        )
+    return current_user
+
+
+CurrentAdminUser = Annotated[User, Depends(get_current_admin_user)]

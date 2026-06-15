@@ -43,7 +43,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body
         data-theme="light"
-        data-theme-preference="auto"
+        data-theme-preference="light"
         data-palette="default"
         data-density="default"
         data-text-size="md"

@@ -7,6 +7,7 @@ import {
   IconSparkle,
 } from "~/components/Icons";
 import { BrandLogo, Mascot } from "~/components/Mascot";
+import { TopicSticker } from "~/components/Stickers";
 import { useToast } from "~/components/Toast";
 import { useAuth } from "~/lib/auth";
 import type { InterestId } from "~/lib/api/types";
@@ -14,6 +15,33 @@ import { TOPICS } from "~/lib/topics";
 
 export function meta() {
   return [{ title: "Welcome · Storyteller" }];
+}
+
+type AgeBand = "6-8" | "9-12" | "13+";
+
+const AGE_BAND_COPY: Record<AgeBand, { welcome: string; level: string; topics: string }> = {
+  "6-8": {
+    welcome: "We'll use big choices, friendly stories, and one step at a time.",
+    level: "We'll start gently. You can change this with a grown-up later.",
+    topics: "Pick pictures you like. We'll turn them into stories.",
+  },
+  "9-12": {
+    welcome: "We'll set up stories that feel playful, clear, and just right for your level.",
+    level: "Choose the grade that feels comfortable. You can stretch later.",
+    topics: "Pick topics you like. We'll mix them into reading and writing tasks.",
+  },
+  "13+": {
+    welcome: "We'll tune your practice around your grade, interests, and pace.",
+    level: "Choose the level that fits your English practice right now.",
+    topics: "Choose up to 6 interests so your tasks feel relevant.",
+  },
+};
+
+function ageBandForYear(yearOfBirth: number): AgeBand {
+  const age = new Date().getFullYear() - yearOfBirth;
+  if (age <= 8) return "6-8";
+  if (age <= 12) return "9-12";
+  return "13+";
 }
 
 export default function OnboardingRoute() {
@@ -37,6 +65,8 @@ export default function OnboardingRoute() {
     () => Math.max(1, Math.min(12, new Date().getFullYear() - yob - 5)),
     [yob]
   );
+  const ageBand = useMemo(() => ageBandForYear(yob), [yob]);
+  const ageCopy = AGE_BAND_COPY[ageBand];
 
   if (!user) return null;
 
@@ -153,7 +183,7 @@ export default function OnboardingRoute() {
                 }}
               >
                 I'll be your guide here. Let's set up your story practice in
-                three quick steps so every task fits you just right.
+                three quick steps so every task fits you just right. {ageCopy.welcome}
               </p>
               <button
                 className="btn btn-accent btn-lg"
@@ -180,8 +210,7 @@ export default function OnboardingRoute() {
                 >
                   Based on your year of birth ({yob}), we suggest{" "}
                   <strong style={{ color: "var(--ink)" }}>Grade {grade}</strong>
-                  . If you're ahead or want a stretch, pick something else —
-                  difficulty adapts as you go.
+                  . {ageCopy.level}
                 </p>
               </div>
 
@@ -295,8 +324,7 @@ export default function OnboardingRoute() {
                   What do you love?
                 </h1>
                 <p style={{ color: "var(--ink-3)", fontSize: 16 }}>
-                  Pick up to 6 topics. We'll mix them into your reading and
-                  writing tasks.
+                  {ageCopy.topics}
                 </p>
                 <div className="chip chip-teal" style={{ marginTop: 14 }}>
                   {interests.length} of 6 selected
@@ -309,7 +337,7 @@ export default function OnboardingRoute() {
                   gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
                   gap: 12,
                 }}
-                className="onboarding-topics"
+                className={`onboarding-topics onboarding-topics-${ageBand.replace("+", "plus")}`}
               >
                 {TOPICS.map((t) => {
                   const sel = interests.includes(t.id);
@@ -321,7 +349,7 @@ export default function OnboardingRoute() {
                       onClick={() => toggle(t.id)}
                       disabled={dim}
                       style={{
-                        padding: "18px 12px",
+                        padding: ageBand === "6-8" ? "20px 12px" : "18px 12px",
                         borderRadius: 18,
                         border:
                           "2px solid " +
@@ -334,12 +362,10 @@ export default function OnboardingRoute() {
                         position: "relative",
                       }}
                     >
-                      <div style={{ fontSize: 30, marginBottom: 8 }}>
-                        {t.emoji}
-                      </div>
+                      <TopicSticker topic={t} selected={sel} size={ageBand === "6-8" ? "lg" : "md"} />
                       <div
                         style={{
-                          fontSize: 13,
+                          fontSize: ageBand === "6-8" ? 14 : 13,
                           fontWeight: 600,
                           color: sel ? "var(--teal)" : "var(--ink-2)",
                         }}

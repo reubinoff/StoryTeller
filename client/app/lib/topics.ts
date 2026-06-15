@@ -1,5 +1,29 @@
 import type { Interest, InterestId } from "./api/types";
 
+export interface TopicSticker {
+  symbol: string;
+  bg: string;
+  fg: string;
+}
+
+export const TOPIC_STICKERS: Record<InterestId, TopicSticker> = {
+  animals: { symbol: "Paw", bg: "var(--moss-soft)", fg: "var(--moss)" },
+  sports: { symbol: "Goal", bg: "var(--teal-soft)", fg: "var(--teal)" },
+  music: { symbol: "Note", bg: "var(--berry-soft)", fg: "var(--berry)" },
+  movies: { symbol: "Scene", bg: "var(--sky-soft)", fg: "var(--sky)" },
+  science: { symbol: "Leaf", bg: "var(--moss-soft)", fg: "var(--moss)" },
+  space: { symbol: "Moon", bg: "var(--sky-soft)", fg: "var(--sky)" },
+  tech: { symbol: "Code", bg: "var(--teal-soft)", fg: "var(--teal)" },
+  food: { symbol: "Cook", bg: "var(--amber-soft)", fg: "var(--amber-ink)" },
+  travel: { symbol: "Map", bg: "var(--rust-soft)", fg: "var(--rust)" },
+  art: { symbol: "Paint", bg: "var(--berry-soft)", fg: "var(--berry)" },
+  books: { symbol: "Book", bg: "var(--teal-soft)", fg: "var(--teal)" },
+  games: { symbol: "Quest", bg: "var(--sky-soft)", fg: "var(--sky)" },
+  history: { symbol: "Time", bg: "var(--paper-3)", fg: "var(--sable)" },
+  cars: { symbol: "Ride", bg: "var(--rust-soft)", fg: "var(--rust)" },
+  health: { symbol: "Care", bg: "var(--good-soft)", fg: "var(--good)" },
+};
+
 export const TOPICS: Interest[] = [
   { id: "animals", display_name: "Animals & Pets", emoji: "🐾", display_order: 1 },
   { id: "sports", display_name: "Sports", emoji: "⚽", display_order: 2 },

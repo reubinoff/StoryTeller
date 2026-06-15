@@ -11,13 +11,19 @@ import {
   IconTarget,
   IconWritingTask,
 } from "~/components/Icons";
-import { BrandMark, Mascot } from "~/components/Mascot";
+import { Mascot } from "~/components/Mascot";
 import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { StatusPill } from "~/components/StatusPill";
+import { AchievementSticker } from "~/components/Stickers";
 import { useToast } from "~/components/Toast";
 import { useDashboard, useRollTask } from "~/lib/api/queries";
-import type { CourseId, RecentTask } from "~/lib/api/types";
+import type {
+  CourseId,
+  DashboardResponse,
+  ReadyTaskSummary,
+  RecentTask,
+} from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
 import { taskActionLabel, taskTarget } from "~/lib/task-routing";
 
@@ -62,35 +68,26 @@ export default function DashboardRoute() {
 
   const { metrics, in_progress: inProgress, recent, achievements_recent } =
     dashboard.data;
+  const dailyMission = getDailyMission(inProgress, dashboard.data.ready_tasks);
   const rollingCourse = rollTask.isPending ? rollTask.variables?.courseId : undefined;
 
   return (
     <div className="col gap-32">
       <div
-        className="card"
+        className="card daily-mission-card"
         style={{
-          background: "var(--dashboard-hero-bg)",
-          color: "var(--dashboard-hero-fg)",
+          background: "var(--paper-2)",
+          color: "var(--ink)",
           padding: 32,
           position: "relative",
           overflow: "hidden",
-          borderColor: "transparent",
+          borderColor: "var(--line)",
         }}
       >
         <div
           style={{
-            position: "absolute",
-            right: -30,
-            top: -40,
-            opacity: 0.08,
-          }}
-        >
-          <BrandMark size={300} color="var(--paper)" />
-        </div>
-        <div
-          style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+            gridTemplateColumns: "minmax(0, 1.25fr) minmax(280px, 0.75fr)",
             gap: 32,
             alignItems: "center",
             position: "relative",
@@ -101,82 +98,108 @@ export default function DashboardRoute() {
           <div>
             <span
               className="chip chip-rust"
-              style={{
-                background: "rgba(242,116,87,0.2)",
-                color: "var(--rust-2)",
-              }}
             >
               <IconCalendar size={12} /> {formatDate()}
             </span>
             <h1
               style={{
-                color: "var(--dashboard-hero-fg)",
+                color: "var(--ink)",
                 fontSize: 42,
                 margin: "14px 0 10px",
               }}
             >
-              Hi {user.first_name}! Ready for today's story practice?
+              {dailyMission.heading}
             </h1>
             <p
               style={{
-                color: "var(--dashboard-hero-muted)",
+                color: "var(--ink-2)",
                 fontSize: 16,
                 maxWidth: 520,
                 marginBottom: 22,
               }}
             >
-              You're on a {metrics.current_streak}-day streak. Keep it going
-              with a fresh reading or writing task. It should take about 5
-              minutes.
+              {dailyMission.description}
             </p>
             <div className="row gap-12 roll-action-buttons" style={{ flexWrap: "wrap" }}>
-              <button
-                className={`btn btn-teal btn-lg ${
-                  rollingCourse === "reading" ? "btn-loading" : ""
-                }`}
-                onClick={() => onRoll("reading")}
-                disabled={rollTask.isPending}
-                aria-busy={rollingCourse === "reading"}
-              >
-                {rollingCourse === "reading" ? (
-                  <>
-                    <span className="spinner" /> Generating reading...
-                  </>
-                ) : (
-                  <>
-                    <IconReadingTask size={16} /> Roll a Reading task
-                  </>
-                )}
-              </button>
-              <button
-                className={`btn btn-accent btn-lg ${
-                  rollingCourse === "writing" ? "btn-loading" : ""
-                }`}
-                onClick={() => onRoll("writing")}
-                disabled={rollTask.isPending}
-                aria-busy={rollingCourse === "writing"}
-              >
-                {rollingCourse === "writing" ? (
-                  <>
-                    <span className="spinner" /> Generating writing...
-                  </>
-                ) : (
-                  <>
-                    <IconWritingTask size={16} /> Roll a Writing task
-                  </>
-                )}
-              </button>
+              {dailyMission.task ? (
+                <button
+                  className="btn btn-accent btn-lg"
+                  onClick={() => navigate(taskTarget(dailyMission.task!))}
+                >
+                  {dailyMission.actionLabel} <IconArrowRight size={16} />
+                </button>
+              ) : dailyMission.readyTask ? (
+                <button
+                  className="btn btn-accent btn-lg"
+                  onClick={() => navigate(taskTarget(dailyMission.readyTask!))}
+                >
+                  {dailyMission.actionLabel} <IconArrowRight size={16} />
+                </button>
+              ) : (
+                <>
+                  <button
+                    className={`btn btn-teal btn-lg ${
+                      rollingCourse === "reading" ? "btn-loading" : ""
+                    }`}
+                    onClick={() => onRoll("reading")}
+                    disabled={rollTask.isPending}
+                    aria-busy={rollingCourse === "reading"}
+                  >
+                    {rollingCourse === "reading" ? (
+                      <>
+                        <span className="spinner" /> Making reading...
+                      </>
+                    ) : (
+                      <>
+                        <IconReadingTask size={16} /> Reading mission
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className={`btn btn-accent btn-lg ${
+                      rollingCourse === "writing" ? "btn-loading" : ""
+                    }`}
+                    onClick={() => onRoll("writing")}
+                    disabled={rollTask.isPending}
+                    aria-busy={rollingCourse === "writing"}
+                  >
+                    {rollingCourse === "writing" ? (
+                      <>
+                        <span className="spinner" /> Making writing...
+                      </>
+                    ) : (
+                      <>
+                        <IconWritingTask size={16} /> Writing mission
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
             {rollingCourse && (
               <RollTaskProgress
                 courseId={rollingCourse}
-                tone="dark"
                 className="roll-task-progress-dashboard"
               />
             )}
           </div>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Mascot size={180} pose="cheer" kind="ferret" />
+          <div className="mission-side">
+            <Mascot
+              size={150}
+              pose={dailyMission.pose}
+              mood={dailyMission.pose === "thinking" ? "thinking" : "happy"}
+              kind="ferret"
+            />
+            <div className="mastery-path" aria-label="Healthy practice path">
+              {["Read", "Write", "Reflect"].map((step, index) => (
+                <span key={step} className={index === 0 ? "active" : ""}>
+                  {step}
+                </span>
+              ))}
+            </div>
+            <p className="mission-rest-note">
+              Short practice counts. Rest days help stories settle.
+            </p>
           </div>
         </div>
       </div>
@@ -443,7 +466,7 @@ export default function DashboardRoute() {
                       "1px solid " + (a.earned ? "var(--line)" : "transparent"),
                   }}
                 >
-                  <div style={{ fontSize: 28, marginBottom: 6 }}>{a.icon}</div>
+                  <AchievementSticker achievement={a} size="sm" />
                   <div
                     style={{
                       fontSize: 11.5,
@@ -475,6 +498,59 @@ export default function DashboardRoute() {
       </div>
     </div>
   );
+}
+
+type DailyMission = {
+  heading: string;
+  description: string;
+  actionLabel: string;
+  pose: "read" | "write" | "cheer" | "thinking";
+  task?: RecentTask;
+  readyTask?: ReadyTaskSummary;
+};
+
+function getDailyMission(
+  inProgress: RecentTask[],
+  readyTasks: DashboardResponse["ready_tasks"]
+): DailyMission {
+  const waiting = inProgress[0];
+  if (waiting) {
+    return {
+      heading: `Today's story mission: ${waiting.topic}`,
+      description: `${waiting.course} is already waiting for you. Pick up where you left off and finish one clear step.`,
+      actionLabel: taskActionLabel(waiting.status),
+      pose: waiting.course_type === "unseen_text" ? "read" : "write",
+      task: waiting,
+    };
+  }
+
+  if (readyTasks.reading) {
+    return {
+      heading: "Today's story mission: read a new passage",
+      description: `${readyTasks.reading.title} is ready. Read, answer one question at a time, and take your time.`,
+      actionLabel: "Start reading",
+      pose: "read",
+      readyTask: readyTasks.reading,
+    };
+  }
+
+  if (readyTasks.writing) {
+    return {
+      heading: "Today's story mission: build a short answer",
+      description: `${readyTasks.writing.title} is ready. Use the writing studio cards when you want a little help.`,
+      actionLabel: "Start writing",
+      pose: "write",
+      readyTask: readyTasks.writing,
+    };
+  }
+
+  return {
+    heading: "Hi! Choose today's story mission.",
+    description:
+      "Pick a short reading warm-up or a guided writing task. Five calm minutes is enough for today.",
+    actionLabel: "Choose mission",
+    pose: "cheer",
+  };
 }
 
 const Metric = ({

@@ -236,6 +236,20 @@ describe("TaskRoute", () => {
     });
   });
 
+  it("toggles reading comfort mode and focuses a paragraph", () => {
+    mockTask = readingTask();
+
+    render(<TaskRoute />);
+
+    const comfort = screen.getByRole("button", { name: /comfort mode/i });
+    fireEvent.click(comfort);
+    expect(comfort).toHaveAttribute("aria-pressed", "true");
+
+    const paragraph = screen.getByRole("button", { name: /focus paragraph 1/i });
+    fireEvent.click(paragraph);
+    expect(paragraph).toHaveClass("focused");
+  });
+
   it("keeps the learner on the current reading question when answer save fails", async () => {
     mockTask = readingTask();
     mockAnswer.mockRejectedValueOnce(new Error("offline"));
@@ -301,6 +315,20 @@ describe("TaskRoute", () => {
     expect(screen.getByRole("heading", { name: /example answer/i })).toBeInTheDocument();
     expect(screen.getByText(/Kyoto, the old capital of Japan/i)).toBeInTheDocument();
     expect(textarea.value).toBe("my own draft");
+  });
+
+  it("inserts a writing scaffold sentence starter into the draft", () => {
+    mockTaskId = "task-writing";
+    mockTask = writingTask();
+
+    render(<TaskRoute />);
+
+    const textarea = screen.getByPlaceholderText(/start writing here/i) as HTMLTextAreaElement;
+    expect(screen.getByRole("heading", { name: /writing studio/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^First,$/i }));
+
+    expect(textarea.value).toBe("First, ");
   });
 
   it("saves writing drafts manually and automatically", async () => {

@@ -54,6 +54,9 @@ uv export --frozen --no-dev --format requirements-txt --no-hashes --output-file 
 - LLM prompts are Jinja templates in `app/llm/prompts/`.
 - `LOGGER.exception` in except blocks; no f-strings in LOGGER calls.
 - Add pytest tests one at a time; run each before writing the next.
+- Any auth, user, role/status, metrics, task/content model, CORS, cookie, or
+  deployment change must consider `/api/v1/admin/*` and the separate
+  `admin-client/` console.
 
 ## Database
 

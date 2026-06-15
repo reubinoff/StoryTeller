@@ -74,6 +74,7 @@ async def test_signup_returns_201_with_user_and_cookies(client: AsyncClient) -> 
     assert user["grade_level"] <= 12
     assert user["interests"] == []
     assert user["status"] == "active"
+    assert user["theme_preference"] == "light"
     assert user["onboarding_completed"] is False
     set_cookie = resp.headers.get("set-cookie") or ""
     assert f"{ACCESS_COOKIE}=" in set_cookie
@@ -341,6 +342,7 @@ async def test_google_callback_creates_new_user_and_sets_cookie(
     assert body["email"] == "google@example.com"
     assert body["first_name"] == "Gina"
     assert body["email_verified"] is True
+    assert body["theme_preference"] == "light"
     assert body["onboarding_completed"] is False
 
 

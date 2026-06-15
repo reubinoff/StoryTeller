@@ -64,12 +64,13 @@ def decode_refresh_token(token: str) -> dict[str, Any]:
     return payload
 
 
-def create_oauth_state(*, return_to: str, intent: str) -> str:
+def create_oauth_state(*, return_to: str, intent: str, surface: str = "app") -> str:
     settings = get_settings()
     now = int(time.time())
     payload: dict[str, Any] = {
         "return_to": return_to,
         "intent": intent,
+        "surface": surface,
         "iat": now,
         "exp": now + 10 * 60,
         "typ": "google_oauth_state",
