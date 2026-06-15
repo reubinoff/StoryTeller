@@ -33,6 +33,19 @@ Local config: copy `local.settings.json.example` → `local.settings.json` (giti
 - Azurite (queues): `docker start storyteller-azurite`
 - `AzureWebJobsStorage=UseDevelopmentStorage=true` when using Azurite
 
+## Python dependency files
+
+- `pyproject.toml` is the human-edited source for runtime dependencies, dev dependencies, Python version, and tool config.
+- `uv.lock` is the locked dependency resolution used by `uv run --frozen`; update it with `uv lock` after changing dependencies.
+- `requirements.txt` is generated from `uv.lock` for Azure Functions remote build compatibility. Do not edit it by hand.
+- After changing `pyproject.toml` or `uv.lock`, regenerate Azure's requirements file:
+
+```bash
+uv export --frozen --no-dev --format requirements-txt --no-hashes --output-file requirements.txt
+```
+
+- Before finishing dependency changes, run `git diff --exit-code -- requirements.txt` after the export, then run the relevant `uv run --frozen ...` test command.
+
 ## Conventions
 
 - Python 3.13, strict mypy, ruff (`line-length = 100`).
