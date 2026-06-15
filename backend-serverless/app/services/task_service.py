@@ -382,9 +382,7 @@ async def ready_task_summaries(
     }
 
 
-async def enqueue_ready_task_refill(
-    user_id: uuid.UUID, course_slug: str
-) -> None:
+async def enqueue_ready_task_refill(user_id: uuid.UUID, course_slug: str) -> None:
     if course_slug not in COURSE_SLUGS:
         LOGGER.warning("unknown course_slug for task prewarm: %s", course_slug)
         return
@@ -948,6 +946,7 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
                 "highlights": eval_row.highlights,
             }
         )
+    passed = _passed(float(task.score) if task.score is not None else None)
     return WritingResultOut(
         task_id=task.id,
         status=task.status,  # type: ignore[arg-type]
@@ -955,14 +954,14 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
         evaluation=evaluation,
         fail_reason=task.fail_reason,
         xp_earned=task.xp_awarded,
-        passed=_passed(float(task.score) if task.score is not None else None),
+        passed=passed,
         next_task=await ready_task_summary_for_course(
             db,
             user_id=task.user_id,
             course_slug=task.course_slug,
             exclude_task_id=task.id,
         )
-        if _passed(float(task.score) if task.score is not None else None)
+        if passed
         else None,
         submitted_at=task.submitted_at,
         completed_at=task.completed_at,
