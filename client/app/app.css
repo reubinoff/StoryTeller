@@ -1746,6 +1746,7 @@ select:focus-visible {
 
 /* Mobile bottom tabbar */
 .mobile-tabbar {
+  --tabbar-action-lift: 18px;
   display: none;
   position: fixed;
   bottom: 0;
@@ -1754,7 +1755,8 @@ select:focus-visible {
   z-index: 30;
   background: var(--paper);
   border-top: 1px solid var(--line);
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  padding: calc(8px + var(--tabbar-action-lift)) 12px
+    calc(8px + env(safe-area-inset-bottom));
   justify-content: flex-start;
   align-items: center;
   gap: 4px;
@@ -1791,13 +1793,13 @@ select:focus-visible {
   min-width: 52px;
   min-height: 52px;
   border-radius: 999px;
-  margin-top: -22px;
+  margin-top: calc(-1 * var(--tabbar-action-lift));
   box-shadow: var(--shadow);
 }
 @media (min-width: 390px) {
   .mobile-tabbar {
     justify-content: space-around;
-    overflow-x: hidden;
+    overflow-x: visible;
   }
 }
 @media (max-width: 360px) {
