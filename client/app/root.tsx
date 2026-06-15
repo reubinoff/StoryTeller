@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { BrandLogo } from "./components/Mascot";
 import { AppProviders } from "./lib/providers";
 
 export const links: Route.LinksFunction = () => [
@@ -61,6 +62,30 @@ export default function App() {
     <AppProviders>
       <Outlet />
     </AppProviders>
+  );
+}
+
+export function HydrateFallback() {
+  return (
+    <main
+      className="fullbleed-shell hydrate-fallback"
+      aria-labelledby="hydrate-fallback-title"
+      aria-busy="true"
+    >
+      <div className="hydrate-fallback-panel">
+        <BrandLogo width={176} />
+        <div className="hydrate-fallback-status">
+          <span className="spinner" aria-hidden="true" />
+          <p id="hydrate-fallback-title">Loading Storyteller...</p>
+        </div>
+        <p className="sr">The app is loading.</p>
+        <div className="hydrate-fallback-skeleton" aria-hidden="true">
+          <div className="skeleton hydrate-fallback-skeleton-title" />
+          <div className="skeleton hydrate-fallback-skeleton-line" />
+          <div className="skeleton hydrate-fallback-skeleton-line short" />
+        </div>
+      </div>
+    </main>
   );
 }
 
