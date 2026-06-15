@@ -88,6 +88,15 @@ class TaskOut(ApiModel):
     updated_at: datetime
 
 
+class ReadyTaskSummary(ApiModel):
+    id: UUID
+    course_id: CourseId
+    course_type: CourseType
+    status: Literal["not_started"] = "not_started"
+    title: str
+    topic_label: str
+
+
 class RollTaskRequest(ApiModel):
     interest_id: str | None = None
 
@@ -148,6 +157,7 @@ class ReadingResultOut(ApiModel):
     xp_earned: int
     passed: bool
     passing_score: int = PASSING_SCORE
+    next_task: ReadyTaskSummary | None = None
     questions: list[ReadingResultQuestion]
 
 
@@ -165,5 +175,6 @@ class WritingResultOut(ApiModel):
     xp_earned: int
     passed: bool | None
     passing_score: int = PASSING_SCORE
+    next_task: ReadyTaskSummary | None = None
     submitted_at: datetime | None
     completed_at: datetime | None

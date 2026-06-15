@@ -43,7 +43,9 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AzureWebJobsStorage", "AZURE_WEB_JOBS_STORAGE"),
     )
     evaluation_queue_name: str = Field(default="writing-evaluations")
+    task_prewarm_queue_name: str = Field(default="task-prewarm")
     create_evaluation_queue_on_enqueue: bool = Field(default=True)
+    create_task_prewarm_queue_on_enqueue: bool = Field(default=True)
 
     cors_origins: list[str] = Field(
         default_factory=lambda: [
