@@ -42,6 +42,11 @@ export default function DashboardRoute() {
   const { push } = useToast();
 
   const onRoll = async (courseId: CourseId) => {
+    const readyTask = dashboard.data?.ready_tasks[courseId];
+    if (readyTask) {
+      navigate(taskTarget(readyTask));
+      return;
+    }
     try {
       const task = await rollTask.mutateAsync({ courseId });
       navigate(taskTarget(task));

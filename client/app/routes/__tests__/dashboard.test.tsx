@@ -36,6 +36,10 @@ const baseDashboardData: DashboardResponse = {
   },
   in_progress: [],
   recent: [],
+  ready_tasks: {
+    reading: null,
+    writing: null,
+  },
   recommended: [],
   achievements_recent: [],
 };
@@ -102,6 +106,7 @@ describe("DashboardRoute", () => {
         metrics: { ...baseDashboardData.metrics },
         in_progress: [],
         recent: [],
+        ready_tasks: { reading: null, writing: null },
         recommended: [],
         achievements_recent: [],
       },
@@ -165,6 +170,30 @@ describe("DashboardRoute", () => {
       });
       expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-new");
     });
+  });
+
+  it("opens a ready writing task without rolling from the dashboard", () => {
+    mockDashboard.data = {
+      ...(mockDashboard.data as DashboardResponse),
+      ready_tasks: {
+        reading: null,
+        writing: {
+          id: "task-ready-writing",
+          course_id: "writing",
+          course_type: "short_writing",
+          status: "not_started",
+          title: "A ready prompt",
+          topic_label: "Travel",
+        },
+      },
+    };
+
+    render(<DashboardRoute />);
+
+    fireEvent.click(screen.getByRole("button", { name: /roll a writing task/i }));
+
+    expect(mockRollTask.mutateAsync).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-ready-writing");
   });
 
   it("surfaces roll failures from the dashboard", async () => {

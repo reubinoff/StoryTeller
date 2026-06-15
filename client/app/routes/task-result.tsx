@@ -62,6 +62,10 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
     ? rollTask.variables?.courseId ?? "reading"
     : undefined;
   const onNext = async () => {
+    if (result.next_task) {
+      navigate(taskTarget(result.next_task));
+      return;
+    }
     try {
       const t = await rollTask.mutateAsync({ courseId: "reading" });
       navigate(taskTarget(t));
@@ -427,6 +431,10 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
     : [];
 
   const onNext = async () => {
+    if (result.next_task) {
+      navigate(taskTarget(result.next_task));
+      return;
+    }
     try {
       const t = await rollTask.mutateAsync({ courseId: "writing" });
       navigate(taskTarget(t));

@@ -205,6 +205,15 @@ export interface Task {
   updated_at: ISO8601;
 }
 
+export interface ReadyTaskSummary {
+  id: UUID;
+  course_id: CourseId;
+  course_type: CourseType;
+  status: "not_started";
+  title: string;
+  topic_label: string;
+}
+
 export interface RollTaskRequest {
   interest_id?: InterestId;
 }
@@ -241,6 +250,7 @@ export interface ReadingResult {
   xp_earned: number;
   passed: boolean;
   passing_score: number;
+  next_task: ReadyTaskSummary | null;
   questions: Array<
     TaskQuestion & {
       user_answer: string | number | null;
@@ -280,6 +290,7 @@ export interface WritingResult {
   xp_earned: number;
   passed: boolean | null;
   passing_score: number;
+  next_task: ReadyTaskSummary | null;
   submitted_at: ISO8601 | null;
   completed_at: ISO8601 | null;
 }
@@ -322,11 +333,17 @@ export interface RecentTask {
   passing_score: number;
 }
 
+export interface ReadyTasks {
+  reading: ReadyTaskSummary | null;
+  writing: ReadyTaskSummary | null;
+}
+
 export interface DashboardResponse {
   greeting: string;
   metrics: DashboardMetrics;
   in_progress: RecentTask[];
   recent: RecentTask[];
+  ready_tasks: ReadyTasks;
   recommended: Course[];
   achievements_recent: Achievement[];
 }

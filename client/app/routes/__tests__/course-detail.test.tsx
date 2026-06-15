@@ -106,6 +106,10 @@ const dashboardData = (recent: RecentTask[] = []): DashboardResponse => ({
   },
   in_progress: [],
   recent,
+  ready_tasks: {
+    reading: null,
+    writing: null,
+  },
   recommended: [],
   achievements_recent: [],
 });

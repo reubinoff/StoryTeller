@@ -80,6 +80,14 @@ const readingResult = (overrides: Partial<ReadingResult> = {}): ReadingResult =>
   xp_earned: 72,
   passed: true,
   passing_score: 70,
+  next_task: {
+    id: "task-next",
+    course_id: "reading",
+    course_type: "unseen_text",
+    status: "not_started",
+    title: "Next moon story",
+    topic_label: "Space",
+  },
   questions: [
     {
       id: "q1",
@@ -127,6 +135,14 @@ const writingResult = (overrides: Partial<WritingResult> = {}): WritingResult =>
   xp_earned: 62,
   passed: true,
   passing_score: 70,
+  next_task: {
+    id: "task-writing-next",
+    course_id: "writing",
+    course_type: "short_writing",
+    status: "not_started",
+    title: "Next market prompt",
+    topic_label: "Travel",
+  },
   submitted_at: "2026-06-01T10:05:00Z",
   completed_at: "2026-06-01T10:06:00Z",
   ...overrides,
@@ -148,17 +164,27 @@ describe("TaskResultRoute", () => {
     mockResult = readingResult();
   });
 
-  it("opens the prepared next task after a passing reading result", async () => {
-    mockRoll.mockResolvedValue({ id: "task-next", status: "not_started" });
-
+  it("opens the prepared next task after a passing reading result", () => {
     render(<TaskResultRoute />);
 
     expect(screen.getByText(/your next task is ready/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
 
+    expect(mockRoll).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-next");
+  });
+
+  it("falls back to rolling the next reading task when no prepared task is returned", async () => {
+    mockResult = readingResult({ next_task: null });
+    mockRoll.mockResolvedValue({ id: "task-next-fallback", status: "not_started" });
+
+    render(<TaskResultRoute />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
+
     await waitFor(() => {
       expect(mockRoll).toHaveBeenCalledWith({ courseId: "reading" });
-      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-next");
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-next-fallback");
     });
   });
 
@@ -269,9 +295,8 @@ describe("TaskResultRoute", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows completed writing feedback with highlights and next-task action", async () => {
+  it("shows completed writing feedback with highlights and next-task action", () => {
     mockResult = writingResult();
-    mockRoll.mockResolvedValue({ id: "task-writing-next", status: "not_started" });
 
     render(<TaskResultRoute />);
 
@@ -293,9 +318,24 @@ describe("TaskResultRoute", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
 
+    expect(mockRoll).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next");
+  });
+
+  it("falls back to rolling the next writing task when no prepared task is returned", async () => {
+    mockResult = writingResult({ next_task: null });
+    mockRoll.mockResolvedValue({
+      id: "task-writing-next-fallback",
+      status: "not_started",
+    });
+
+    render(<TaskResultRoute />);
+
+    fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
+
     await waitFor(() => {
       expect(mockRoll).toHaveBeenCalledWith({ courseId: "writing" });
-      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next");
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next-fallback");
     });
   });
 

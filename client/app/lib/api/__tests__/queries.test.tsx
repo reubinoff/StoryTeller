@@ -170,6 +170,7 @@ describe("useTaskResult", () => {
       xp_earned: 0,
       passed: null,
       passing_score: 70,
+      next_task: null,
       submitted_at: "2026-06-01T10:05:00Z",
       completed_at: null,
     };
