@@ -71,6 +71,9 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
             content_grade_level=content_grade_level,
             topic_label=task.topic_label,
             prompt_text=prompt.prompt,
+            min_words=prompt.min_words,
+            max_words=prompt.max_words,
+            submitted_word_count=content_service.writing_submission_word_count(answer_text),
             student_answer=answer_text,
         )
     except Exception:
@@ -88,7 +91,7 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
     task_eval = TaskEvaluation(
         task_id=task.id,
         model=model_name,
-        prompt_version="v1",
+        prompt_version="v2",
         score_overall=float(evaluation.score_overall),
         score_grammar=float(evaluation.score_grammar),
         score_vocabulary=float(evaluation.score_vocabulary),

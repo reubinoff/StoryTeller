@@ -5,7 +5,11 @@ from __future__ import annotations
 import pytest
 
 from app.core.grading import is_correct_answer, normalize_answer, reading_xp
-from app.services.content_service import content_grade_for_school_grade, writing_word_bounds
+from app.services.content_service import (
+    content_grade_for_school_grade,
+    writing_submission_word_count,
+    writing_word_bounds,
+)
 from app.services.user_service import derive_grade_level
 
 
@@ -115,3 +119,9 @@ def test_writing_word_bounds_scale_with_grade() -> None:
     g12_min, g12_max = writing_word_bounds(12)
     assert g1_max < g6_max < g12_max
     assert g1_min < g12_min
+
+
+def test_writing_submission_word_count_matches_client_whitespace_split() -> None:
+    assert writing_submission_word_count("") == 0
+    assert writing_submission_word_count("  one\n two\tthree  ") == 3
+    assert writing_submission_word_count("one\u00a0two") == 2

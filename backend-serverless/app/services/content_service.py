@@ -7,10 +7,10 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.content import (
+    READING_QUESTION_COUNT,
     GeneratedReadingPassage,
     GeneratedWritingEvaluation,
     GeneratedWritingPrompt,
-    READING_QUESTION_COUNT,
 )
 from app.db.models.content import ContentPassage, WritingPrompt
 from app.llm.claude_client import ClaudeClient, get_claude_client, render_prompt
@@ -53,6 +53,12 @@ def writing_word_bounds(grade_level: int) -> tuple[int, int]:
     if grade_level <= 8:
         return 80, 180
     return 150, 320
+
+
+def writing_submission_word_count(text: str) -> int:
+    """Match the client word counter: trim, then split on whitespace."""
+    stripped = text.strip()
+    return len(stripped.split()) if stripped else 0
 
 
 async def generate_reading_passage(
@@ -135,6 +141,9 @@ async def evaluate_writing(
     content_grade_level: int,
     topic_label: str,
     prompt_text: str,
+    min_words: int,
+    max_words: int,
+    submitted_word_count: int,
     student_answer: str,
     client: ClaudeClient | None = None,
 ) -> tuple[GeneratedWritingEvaluation, int, str]:
@@ -146,6 +155,9 @@ async def evaluate_writing(
         content_grade_level=content_grade_level,
         topic_label=topic_label,
         prompt=prompt_text,
+        min_words=min_words,
+        max_words=max_words,
+        submitted_word_count=submitted_word_count,
         student_answer=student_answer,
     )
     raw, latency = await cli.generate_json(prompt=prompt)
