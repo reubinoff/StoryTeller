@@ -365,6 +365,8 @@ results unmask the correct answer and explanation for `completed` and
 `needs_retry` tasks. Writing results return the full `WritingEvaluation` once
 feedback is available; `evaluation` is `null` while still `processing`.
 Failed writing results include `fail_reason` so the client can offer a retry.
+Passing reading and writing results include `next_task` when a same-course
+`not_started` task is already prepared.
 
 ---
 
@@ -380,6 +382,10 @@ interface DashboardResponse {
   metrics: DashboardMetrics;
   in_progress: RecentTask[];
   recent: RecentTask[];          // newest first, max 20
+  ready_tasks: {
+    reading: ReadyTaskSummary | null;
+    writing: ReadyTaskSummary | null;
+  };
   recommended: Course[];          // top picks for the user (typically 2)
   achievements_recent: Achievement[];
 }
@@ -629,6 +635,15 @@ interface Task {
   updated_at: ISO8601;
 }
 
+interface ReadyTaskSummary {
+  id: UUID;
+  course_id: CourseId;
+  course_type: CourseType;
+  status: "not_started";
+  title: string;
+  topic_label: string;
+}
+
 // ----- Results -----
 interface ReadingResult {
   task_id: UUID;
@@ -640,6 +655,7 @@ interface ReadingResult {
   xp_earned: number;
   passed: boolean;
   passing_score: number;     // 70
+  next_task: ReadyTaskSummary | null;
   questions: Array<TaskQuestion & {
     user_answer: string | number | null;
     is_correct: boolean;
@@ -677,6 +693,7 @@ interface WritingResult {
   xp_earned: number;
   passed: boolean | null;
   passing_score: number;     // 70
+  next_task: ReadyTaskSummary | null;
   submitted_at: ISO8601 | null;
   completed_at: ISO8601 | null;
 }
@@ -712,6 +729,10 @@ interface DashboardResponse {
   metrics: DashboardMetrics;
   in_progress: RecentTask[];
   recent: RecentTask[];
+  ready_tasks: {
+    reading: ReadyTaskSummary | null;
+    writing: ReadyTaskSummary | null;
+  };
   recommended: Course[];
   achievements_recent: Achievement[];
 }

@@ -66,6 +66,11 @@ jobs:
       - serverless-tests
       - client-tests
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    # Serialize production deploys: a newly triggered deploy waits for the
+    # in-progress one to finish before it starts (no cancellation).
+    concurrency:
+      group: backend-deploy-production
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
