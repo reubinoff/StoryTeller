@@ -12,6 +12,7 @@ from app.core.security import create_access_token, create_refresh_token
 ACCESS_COOKIE = "st_at"
 REFRESH_COOKIE = "rt"
 CSRF_COOKIE = "st_csrf"
+CSRF_HEADER = "X-CSRF-Token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
@@ -64,6 +65,7 @@ def set_csrf_cookie(response: Response, value: str | None = None) -> str:
         samesite="lax",
         path="/",
     )
+    response.headers[CSRF_HEADER] = token
     return token
 
 

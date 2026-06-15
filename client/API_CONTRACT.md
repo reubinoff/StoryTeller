@@ -24,11 +24,11 @@ machine-readable mirror of every model below.
 | Pagination           | Cursor-based (`limit`, `cursor` query params; `next_cursor` in body). Default `limit=20`, max `100`.                          |
 | Idempotency          | Mutating endpoints accept `Idempotency-Key: <uuid>`; duplicates return the original response.                                 |
 | Tracing              | Every response echoes `X-Request-Id`.                                                                                         |
-| Auth                 | Browser-managed cookies: HttpOnly `st_at` access cookie, HttpOnly `rt` refresh cookie, readable `st_csrf` CSRF cookie.        |
+| Auth                 | Browser-managed cookies: HttpOnly `st_at` access cookie, HttpOnly `rt` refresh cookie, and CSRF token via `st_csrf` plus `X-CSRF-Token`. |
 | Errors               | RFC 7807 Problem Details (see §8).                                                                                            |
 | Time-zone            | Server returns UTC; client renders in the user's locale.                                                                      |
 | Locale               | v1: English only (`display_locale = "en"`).                                                                                   |
-| CORS / cookies       | Frontend sends `credentials: "include"` on every API call. Backend must allow-list the SPA origin.                            |
+| CORS / cookies       | Frontend sends `credentials: "include"` on every API call. Backend must allow-list the SPA origin and expose `X-CSRF-Token`.  |
 | CSRF                 | Authenticated unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`) require `X-CSRF-Token` matching the `st_csrf` cookie.         |
 
 ---
@@ -66,8 +66,9 @@ Validation:
 }
 ```
 
-Sets `st_at`, `rt`, and `st_csrf` cookies. The access and refresh cookies are
-HttpOnly; `st_csrf` is readable by the SPA for the `X-CSRF-Token` header.
+Sets `st_at`, `rt`, and `st_csrf` cookies and returns the current CSRF token in
+the `X-CSRF-Token` response header. The access and refresh cookies are HttpOnly;
+the SPA sends the CSRF token back in the `X-CSRF-Token` request header.
 
 Error codes: `validation_error` (422), `email_taken` (409).
 
@@ -102,7 +103,8 @@ sets the session cookies, and redirects to frontend
 ### `POST /auth/refresh`
 
 Cookie-only request using `rt`. **204 No Content** and refreshes `st_at`, `rt`,
-and `st_csrf`.
+and `st_csrf`; also returns the current CSRF token in the `X-CSRF-Token`
+response header.
 
 ### `POST /auth/logout`
 

@@ -7,7 +7,9 @@
 import type { Problem } from "./types";
 
 const CSRF_COOKIE = "st_csrf";
+const CSRF_HEADER = "X-CSRF-Token";
 export const UNAUTHORIZED_EVENT = "storyteller:auth:unauthorized";
+let cachedCsrfToken: string | null = null;
 
 export interface UnauthorizedEventDetail {
   path: string;
@@ -95,8 +97,8 @@ function requestHeaders(method: string, body: unknown): Record<string, string> {
     Accept: "application/json",
   };
   if (!isFormData(body)) headers["Content-Type"] = "application/json";
-  const csrf = getCookie(CSRF_COOKIE);
-  if (csrf && isUnsafeMethod(method)) headers["X-CSRF-Token"] = csrf;
+  const csrf = cachedCsrfToken ?? getCookie(CSRF_COOKIE);
+  if (csrf && isUnsafeMethod(method)) headers[CSRF_HEADER] = csrf;
   return headers;
 }
 
@@ -138,12 +140,27 @@ function asProblem(res: Response, json: unknown | null): Problem {
   return fallbackProblem(res);
 }
 
+function captureCsrfToken(res: Response): void {
+  const csrf = res.headers.get(CSRF_HEADER);
+  if (csrf) cachedCsrfToken = csrf;
+}
+
+function isCsrfMismatch(json: unknown | null): boolean {
+  return (
+    json !== null &&
+    typeof json === "object" &&
+    "code" in json &&
+    json.code === "csrf_mismatch"
+  );
+}
+
 async function refreshCookies(): Promise<boolean> {
   const res = await fetch(`${apiBase}/auth/refresh`, {
     method: "POST",
     headers: requestHeaders("POST", undefined),
     credentials: "include",
   });
+  captureCsrfToken(res);
   return res.ok;
 }
 
@@ -157,12 +174,14 @@ async function fetchOnce<TBody>(
     Pick<RequestOptions<TBody>, "body" | "query">
 ): Promise<Response> {
   const url = buildUrl(path, query);
-  return fetch(`${apiBase}${url}`, {
+  const res = await fetch(`${apiBase}${url}`, {
     method,
     headers: requestHeaders(method, body),
     body: requestBody(body),
     credentials: "include",
   });
+  captureCsrfToken(res);
+  return res;
 }
 
 export async function request<TResponse, TBody = unknown>(
@@ -193,7 +212,16 @@ export async function request<TResponse, TBody = unknown>(
 
   if (res.status === 204) return undefined as unknown as TResponse;
 
-  const json = await readJsonOrNull(res);
+  let json = await readJsonOrNull(res);
+
+  if (!noAuth && res.status === 403 && isCsrfMismatch(json)) {
+    const refreshed = await refreshCookies();
+    if (refreshed) {
+      res = await fetchOnce(path, { method, body, query });
+      if (res.status === 204) return undefined as unknown as TResponse;
+      json = await readJsonOrNull(res);
+    }
+  }
 
   if (!res.ok) {
     const problem = asProblem(res, json);

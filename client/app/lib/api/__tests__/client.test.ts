@@ -173,6 +173,36 @@ describe("request", () => {
     });
   });
 
+  it("uses CSRF tokens captured from response headers when the cookie is absent", async () => {
+    const { request } = await loadClient();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { user: { id: "user-1" } },
+          { status: 200, headers: { "X-CSRF-Token": "csrf-from-header" } }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse({ accepted: true }, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await request("/auth/login", {
+      method: "POST",
+      noAuth: true,
+      body: { email: "maya@example.com", password: "Snowflake42!" },
+    });
+    await request("/tasks/task-1/answer", {
+      method: "POST",
+      body: { question_id: "q1", answer: 0 },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, answerInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(answerInit.headers).toMatchObject({
+      "X-CSRF-Token": "csrf-from-header",
+    });
+  });
+
   it("returns undefined for 204 responses", async () => {
     const { request } = await loadClient();
     stubFetch(new Response(null, { status: 204 }));
@@ -261,6 +291,43 @@ describe("request", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1][0]).toBe(`${apiBase}/auth/refresh`);
     expect(fetchMock.mock.calls[2][0]).toBe(`${apiBase}/me`);
+  });
+
+  it("refreshes and retries once when an unsafe request has a stale CSRF token", async () => {
+    const { request } = await loadClient();
+    const csrfProblem: Problem = {
+      type: "about:blank",
+      title: "Security check failed",
+      status: 403,
+      code: "csrf_mismatch",
+      detail: "Missing or invalid CSRF token.",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(csrfProblem, { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+          headers: { "X-CSRF-Token": "fresh-csrf-token" },
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse({ accepted: true }, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      request<{ accepted: true }>("/tasks/task-1/answer", {
+        method: "POST",
+        body: { question_id: "q1", answer: 0 },
+      })
+    ).resolves.toEqual({ accepted: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${apiBase}/auth/refresh`);
+    expect(fetchMock.mock.calls[2][0]).toBe(`${apiBase}/tasks/task-1/answer`);
+    const [, retryInit] = fetchMock.mock.calls[2] as [string, RequestInit];
+    expect(retryInit.headers).toMatchObject({
+      "X-CSRF-Token": "fresh-csrf-token",
+    });
   });
 });
 

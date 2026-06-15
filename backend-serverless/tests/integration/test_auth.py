@@ -7,13 +7,13 @@ from collections.abc import Iterator
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
 
 from app.api.v1.routers import auth as auth_router
 from app.config import get_settings
 from app.core.errors import AppError
 from app.core.security import create_access_token, create_oauth_state, decode_oauth_state
-from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, CSRF_HEADER, REFRESH_COOKIE
 from app.db.models.user import User
 
 SIGNUP_BODY = {
@@ -23,6 +23,12 @@ SIGNUP_BODY = {
     "password": "Snowflake42!",
     "year_of_birth": 2017,
 }
+
+
+def _assert_csrf_header_matches_cookie(resp: Response) -> None:
+    csrf_cookie = resp.cookies.get(CSRF_COOKIE)
+    assert csrf_cookie
+    assert resp.headers.get(CSRF_HEADER) == csrf_cookie
 
 
 @pytest.fixture
@@ -53,7 +59,11 @@ def unconfigured_google_oauth(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]
 
 @pytest.mark.asyncio
 async def test_signup_returns_201_with_user_and_cookies(client: AsyncClient) -> None:
-    resp = await client.post("/auth/signup", json=SIGNUP_BODY)
+    resp = await client.post(
+        "/auth/signup",
+        headers={"Origin": "https://storyteller.reubinoff.com"},
+        json=SIGNUP_BODY,
+    )
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert set(body.keys()) == {"user"}
@@ -69,6 +79,8 @@ async def test_signup_returns_201_with_user_and_cookies(client: AsyncClient) -> 
     assert f"{ACCESS_COOKIE}=" in set_cookie
     assert f"{REFRESH_COOKIE}=" in set_cookie
     assert f"{CSRF_COOKIE}=" in set_cookie
+    _assert_csrf_header_matches_cookie(resp)
+    assert CSRF_HEADER in resp.headers.get("access-control-expose-headers", "")
 
 
 @pytest.mark.asyncio
@@ -113,6 +125,7 @@ async def test_login_happy_path(client: AsyncClient) -> None:
     body = resp.json()
     assert set(body.keys()) == {"user"}
     assert body["user"]["email"] == SIGNUP_BODY["email"]
+    _assert_csrf_header_matches_cookie(resp)
 
 
 @pytest.mark.asyncio
@@ -186,6 +199,7 @@ async def test_refresh_with_cookie_refreshes_session_cookies(client: AsyncClient
     assert f"{ACCESS_COOKIE}=" in set_cookie
     assert f"{REFRESH_COOKIE}=" in set_cookie
     assert f"{CSRF_COOKIE}=" in set_cookie
+    _assert_csrf_header_matches_cookie(resp)
 
 
 @pytest.mark.asyncio

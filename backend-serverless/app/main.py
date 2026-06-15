@@ -17,6 +17,7 @@ from app.api.v1 import build_v1_router
 from app.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.middleware import RequestIdMiddleware
+from app.core.session_cookies import CSRF_HEADER
 from app.db.base import Base
 from app.db.session import get_engine
 from app.seed import seed_static_catalog
@@ -77,7 +78,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-Id"],
+        expose_headers=["X-Request-Id", CSRF_HEADER],
     )
     register_exception_handlers(app)
     app.include_router(build_v1_router(), prefix="/api/v1")
