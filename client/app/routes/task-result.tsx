@@ -33,6 +33,25 @@ export function meta() {
   return [{ title: "Result · Storyteller" }];
 }
 
+const NUMERIC_OPTION_INDEX = /^\d+$/;
+
+function formatAnswerText(
+  answer: string | number | null | undefined,
+  options: string[] | null | undefined,
+  fallback: string
+) {
+  if (answer === null || answer === undefined) return fallback;
+  const raw = String(answer).trim();
+  if (!raw) return fallback;
+
+  if (options && (typeof answer === "number" || NUMERIC_OPTION_INDEX.test(raw))) {
+    const option = options[Number(raw)];
+    if (option) return option;
+  }
+
+  return raw;
+}
+
 export default function TaskResultRoute() {
   const { taskId } = useParams<{ taskId: string }>();
   const taskQ = useTask(taskId);
@@ -198,16 +217,13 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
         {result.questions.map((q, i) => {
           const userText =
             q.question_type === "fill_blank"
-              ? String(q.user_answer ?? "(no answer)")
-              : q.options
-              ? q.options[Number(q.user_answer ?? -1)] ?? "—"
-              : "—";
-          const correctText =
-            q.question_type === "fill_blank"
-              ? String(q.correct_answer ?? "")
-              : q.options
-              ? q.options[Number(q.correct_answer ?? 0)] ?? ""
-              : "";
+              ? formatAnswerText(q.user_answer, null, "(no answer)")
+              : formatAnswerText(q.user_answer, q.options, "—");
+          const correctText = formatAnswerText(
+            q.correct_answer,
+            q.question_type === "fill_blank" ? null : q.options,
+            "—"
+          );
           return (
             <div
               key={q.id}
