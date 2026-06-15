@@ -44,7 +44,7 @@ async def test_roll_reading_task_with_empty_cache_calls_claude(
     assert body["status"] == "not_started"
     assert body["grade_level_at_roll"] == _user["grade_level"]
     assert body["reading"] is not None
-    assert len(body["reading"]["questions"]) == 3
+    assert len(body["reading"]["questions"]) == 10
     # While not_started, questions must NOT include correct_answer
     for q in body["reading"]["questions"]:
         assert "correct_answer" not in q
@@ -119,6 +119,46 @@ async def test_roll_reading_task_reuses_adjusted_content_grade_cache(
     assert body["grade_level_at_roll"] == school_grade
     assert body["title"] == "Cached Easier Space Story"
     assert len(claude_stub.calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_roll_reading_task_skips_cached_passage_with_too_few_questions(
+    client: AsyncClient, claude_stub
+) -> None:
+    from app.db.models.content import ContentPassage
+    from app.db.session import get_sessionmaker
+    from app.services.content_service import content_grade_for_school_grade
+
+    school_grade = 5
+    content_grade = content_grade_for_school_grade(school_grade)
+    _user, headers = await signup_and_login(
+        client,
+        email="short-cached-reader@example.com",
+        year_of_birth=_year_of_birth_for_school_grade(school_grade),
+    )
+    await set_interests(client, headers, ["space"])
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        db.add(
+            ContentPassage(
+                interest_slug="space",
+                grade_level=content_grade,
+                title="Short Cached Space Story",
+                paragraphs=READING_RESPONSE["paragraphs"],
+                questions=READING_RESPONSE["questions"][:3],
+                word_count=24,
+                model="test",
+            )
+        )
+        await db.commit()
+
+    resp = await client.post("/courses/reading/tasks", headers=headers, json={})
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["title"] == READING_RESPONSE["title"]
+    assert len(body["reading"]["questions"]) == 10
+    assert len(claude_stub.calls) == 1
 
 
 @pytest.mark.asyncio
@@ -577,8 +617,8 @@ async def test_submit_reading_scores_and_unmasks_correct_answers(
     assert submit.status_code == 200, submit.text
     body = submit.json()
     assert body["status"] == "completed"
-    assert body["correct_count"] == 3
-    assert body["total"] == 3
+    assert body["correct_count"] == 10
+    assert body["total"] == 10
     assert body["score"] == 100
 
     # /result reveals correct answers + explanations.
@@ -586,8 +626,8 @@ async def test_submit_reading_scores_and_unmasks_correct_answers(
     assert result.status_code == 200
     rbody = result.json()
     assert rbody["mode"] == "reading"
-    assert rbody["score"] == 3
-    assert rbody["total"] == 3
+    assert rbody["score"] == 10
+    assert rbody["total"] == 10
     assert rbody["percentage"] == 100
     for q in rbody["questions"]:
         assert q["correct_answer"]
@@ -948,7 +988,7 @@ async def test_submit_uses_answers_recorded_via_answer_endpoint(
     )
     assert submit.status_code == 200
     body = submit.json()
-    assert body["correct_count"] == 3
+    assert body["correct_count"] == 10
 
 
 @pytest.mark.asyncio

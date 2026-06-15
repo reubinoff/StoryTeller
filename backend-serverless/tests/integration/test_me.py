@@ -7,23 +7,24 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE
 from app.db.models.user import User
 from tests.integration._helpers import set_interests, signup_and_login
 
 
 @pytest.mark.parametrize(
-    "authorization",
+    "headers",
     [
-        "Bearer",
-        "Basic not-a-bearer-token",
-        "Bearer not-a-jwt",
+        {},
+        {"Cookie": f"{ACCESS_COOKIE}=not-a-jwt"},
     ],
 )
 @pytest.mark.asyncio
-async def test_get_me_rejects_malformed_or_invalid_auth_headers(
-    client: AsyncClient, authorization: str
+async def test_get_me_rejects_missing_or_invalid_access_cookie(
+    client: AsyncClient, headers: dict[str, str]
 ) -> None:
-    resp = await client.get("/me", headers={"Authorization": authorization})
+    client.cookies.clear()
+    resp = await client.get("/me", headers=headers)
     assert resp.status_code == 401
     assert resp.json()["code"] == "unauthenticated"
 
@@ -101,6 +102,31 @@ async def test_patch_me_updates_preferences(client: AsyncClient) -> None:
     assert body["reduce_motion"] is True
     assert body["notif_email_enabled"] is False
     assert body["phone_number"] == "+15551234"
+
+
+@pytest.mark.asyncio
+async def test_unsafe_me_routes_require_csrf_header(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client)
+    cookie_only_headers = {"Cookie": headers["Cookie"]}
+    resp = await client.patch(
+        "/me",
+        headers=cookie_only_headers,
+        json={"first_name": "Maya"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "csrf_mismatch"
+
+    bad_csrf_headers = {
+        "Cookie": headers["Cookie"],
+        "X-CSRF-Token": "not-the-token",
+    }
+    resp = await client.patch(
+        "/me",
+        headers=bad_csrf_headers,
+        json={"first_name": "Maya"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "csrf_mismatch"
 
 
 @pytest.mark.asyncio
@@ -274,14 +300,6 @@ async def test_delete_me_requires_confirm_true(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     resp = await client.request("DELETE", "/me", headers=headers, json={"confirm": False})
     assert resp.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_avatar_upload_returns_not_implemented(client: AsyncClient) -> None:
-    _user, headers = await signup_and_login(client)
-    resp = await client.post("/me/avatar", headers=headers)
-    assert resp.status_code == 501
-    assert resp.json()["code"] == "not_implemented"
 
 
 @pytest.mark.asyncio

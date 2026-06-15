@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsRoute from "../settings";
@@ -19,16 +19,32 @@ vi.mock("~/components/Toast", async (importOriginal) => {
 });
 
 const mockUpdateProfile = vi.fn();
+const mockChangePassword = vi.fn();
+const mockUploadAvatar = vi.fn();
+const mockDeleteAccount = vi.fn();
 
 vi.mock("~/lib/api/queries", () => ({
   useUpdateProfile: () => ({
     mutateAsync: mockUpdateProfile,
     isPending: false,
   }),
+  useChangePassword: () => ({
+    mutateAsync: mockChangePassword,
+    isPending: false,
+  }),
+  useUploadAvatar: () => ({
+    mutateAsync: mockUploadAvatar,
+    isPending: false,
+  }),
+  useDeleteAccount: () => ({
+    mutateAsync: mockDeleteAccount,
+    isPending: false,
+  }),
 }));
 
 const mockSetUser = vi.fn();
 const mockSetInterests = vi.fn();
+const mockSignout = vi.fn();
 let mockUser: User;
 
 vi.mock("~/lib/auth", () => ({
@@ -36,6 +52,7 @@ vi.mock("~/lib/auth", () => ({
     user: mockUser,
     setUser: mockSetUser,
     setInterests: mockSetInterests,
+    signout: mockSignout,
   }),
 }));
 
@@ -85,6 +102,9 @@ beforeEach(() => {
   mockUser = { ...baseUser };
   mockSetInterests.mockResolvedValue(undefined);
   mockUpdateProfile.mockResolvedValue(mockUser);
+  mockChangePassword.mockResolvedValue(null);
+  mockUploadAvatar.mockResolvedValue({ avatar_url: "/api/v1/me/avatar?version=1" });
+  mockDeleteAccount.mockResolvedValue(null);
   document.body.dataset.theme = "light";
   document.body.dataset.themePreference = "auto";
   document.body.dataset.textSize = "md";
@@ -207,6 +227,80 @@ describe("SettingsRoute", () => {
     expect(mockSetInterests).not.toHaveBeenCalled();
     expect(mockSetUser).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("uploads a valid avatar and updates the user", async () => {
+    const user = userEvent.setup();
+    const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+
+    render(<SettingsRoute />);
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error("Missing avatar file input");
+    await user.upload(input, file);
+
+    await waitFor(() => expect(mockUploadAvatar).toHaveBeenCalledWith(file));
+    expect(mockSetUser).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar_url: "/api/v1/me/avatar?version=1" }),
+    );
+    expect(mockPush).toHaveBeenCalledWith({
+      icon: "✓",
+      title: "Avatar updated",
+    });
+  });
+
+  it("changes the password from the account modal", async () => {
+    const user = userEvent.setup();
+
+    render(<SettingsRoute />);
+
+    await user.click(rowActionButton("Password"));
+    const dialog = screen.getByRole("dialog", { name: "Update password" });
+    await user.type(within(dialog).getByLabelText("Current password"), "Oldpass1");
+    await user.type(within(dialog).getByLabelText("New password"), "Newpass2");
+    await user.type(
+      within(dialog).getByLabelText("Confirm new password"),
+      "Newpass2",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Update password" }));
+
+    await waitFor(() =>
+      expect(mockChangePassword).toHaveBeenCalledWith({
+        current_password: "Oldpass1",
+        new_password: "Newpass2",
+      }),
+    );
+    expect(mockPush).toHaveBeenCalledWith({
+      icon: "✓",
+      title: "Password updated",
+    });
+  });
+
+  it("deletes the account after confirmation", async () => {
+    const user = userEvent.setup();
+
+    render(<SettingsRoute />);
+
+    await user.click(rowActionButton("Delete account"));
+    const dialog = screen.getByRole("dialog", { name: "Delete account" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete account" }));
+
+    await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalled());
+    expect(mockSignout).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/");
+  });
+
+  it("shows honest messaging for unsupported email changes", async () => {
+    const user = userEvent.setup();
+
+    render(<SettingsRoute />);
+
+    await user.click(rowActionButton("Email"));
+
+    expect(
+      screen.getByRole("dialog", { name: "Email changes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/need support verification/i)).toBeInTheDocument();
   });
 });
 

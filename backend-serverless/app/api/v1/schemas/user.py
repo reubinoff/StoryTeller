@@ -50,6 +50,10 @@ class UpdateUserRequest(ApiModel):
     notif_inapp_enabled: bool | None = None
 
 
+class AvatarUploadResponse(ApiModel):
+    avatar_url: str
+
+
 class UpdateInterestsRequest(ApiModel):
     interest_ids: list[str] = Field(min_length=1, max_length=6)
 

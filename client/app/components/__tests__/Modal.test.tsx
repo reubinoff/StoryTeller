@@ -73,4 +73,52 @@ describe("Modal", () => {
       expect(trigger).toHaveFocus();
     });
   });
+
+  it("traps tab focus inside the dialog", () => {
+    render(
+      <div>
+        <button type="button">Outside</button>
+        <Modal open onClose={() => undefined} ariaLabel="Confirm submit">
+          <button type="button">Keep editing</button>
+          <button type="button">Submit answer</button>
+        </Modal>
+      </div>
+    );
+
+    const dialog = screen.getByRole("dialog", { name: /confirm submit/i });
+    const first = screen.getByRole("button", { name: /keep editing/i });
+    const last = screen.getByRole("button", { name: /submit answer/i });
+
+    expect(dialog).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(first).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(last).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(first).toHaveFocus();
+  });
+
+  it("marks background content inert while open and restores it afterward", () => {
+    const { unmount } = render(
+      <main data-testid="page-content">
+        <button type="button">Open modal</button>
+        <Modal open onClose={() => undefined} ariaLabel="Leave task">
+          <button type="button">Stay</button>
+        </Modal>
+      </main>
+    );
+
+    const routeContainer = screen.getByTestId("page-content").parentElement as HTMLElement;
+
+    expect(routeContainer).toHaveAttribute("aria-hidden", "true");
+    expect(routeContainer).toHaveProperty("inert", true);
+
+    unmount();
+
+    expect(routeContainer).not.toHaveAttribute("aria-hidden");
+    expect(routeContainer.inert).not.toBe(true);
+  });
 });

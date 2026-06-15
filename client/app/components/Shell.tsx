@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   IconBell,
@@ -17,6 +17,13 @@ import {
 } from "./Icons";
 import { BrandLogo } from "./Mascot";
 import { useAuth } from "~/lib/auth";
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useMetrics,
+  useNotifications,
+} from "~/lib/api/queries";
+import type { DashboardMetrics, Notification } from "~/lib/api/types";
 
 interface NavItem {
   id: string;
@@ -74,6 +81,16 @@ const BOTTOM_ITEMS: NavItem[] = [
   },
 ];
 
+const DEFAULT_METRICS: DashboardMetrics = {
+  tasks_completed: 0,
+  current_streak: 0,
+  longest_streak: 0,
+  avg_score: 0,
+  xp_total: 0,
+  level: 1,
+  level_label: "Apprentice",
+};
+
 interface ShellProps {
   children: ReactNode;
 }
@@ -81,8 +98,22 @@ interface ShellProps {
 export const Shell = ({ children }: ShellProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signout, metrics } = useAuth();
+  const { user, signout } = useAuth();
+  const metricsQuery = useMetrics(Boolean(user));
+  const notifications = useNotifications(Boolean(user));
+  const markNotificationRead = useMarkNotificationRead();
+  const markAllNotificationsRead = useMarkAllNotificationsRead();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pathname = location.pathname;
+  const metrics = metricsQuery.data ?? DEFAULT_METRICS;
+  const notificationItems = useMemo(
+    () => notifications.data?.items ?? [],
+    [notifications.data?.items]
+  );
+  const unreadCount = useMemo(
+    () => notificationItems.filter((item) => !item.read_at).length,
+    [notificationItems]
+  );
 
   const handleSignout = () => {
     signout();
@@ -197,9 +228,64 @@ export const Shell = ({ children }: ShellProps) => {
               >
                 <IconHelp size={18} />
               </button>
-              <button className="icon-btn" aria-label="Notifications">
+              <div className="notification-anchor">
+              <button
+                className={`icon-btn ${unreadCount ? "has-unread" : ""}`}
+                aria-label={
+                  unreadCount
+                    ? `${unreadCount} unread notifications`
+                    : "Notifications"
+                }
+                aria-expanded={notificationsOpen}
+                aria-haspopup="dialog"
+                onClick={() => setNotificationsOpen((open) => !open)}
+              >
                 <IconBell size={18} />
+                {unreadCount > 0 && (
+                  <span className="notification-dot" aria-hidden="true" />
+                )}
               </button>
+              {notificationsOpen && (
+                <div
+                  className="notification-popover"
+                  role="dialog"
+                  aria-label="Notifications"
+                >
+                  <div className="notification-popover-header">
+                    <span>Notifications</span>
+                    <button
+                      type="button"
+                      className="btn btn-soft btn-sm"
+                      onClick={() => markAllNotificationsRead.mutate()}
+                      disabled={!unreadCount || markAllNotificationsRead.isPending}
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+                  <div className="notification-list">
+                    {notificationItems.length ? (
+                      notificationItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`notification-item ${
+                            item.read_at ? "" : "unread"
+                          }`}
+                          onClick={() => {
+                            if (!item.read_at) markNotificationRead.mutate(item.id);
+                          }}
+                        >
+                          <span>{notificationTitle(item)}</span>
+                          <small>{notificationDetail(item)}</small>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="notification-empty">No notifications yet</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
               <button
                 className="icon-btn"
                 aria-label="Sign out"
@@ -218,6 +304,30 @@ export const Shell = ({ children }: ShellProps) => {
     </>
   );
 };
+
+function notificationTitle(notification: Notification): string {
+  const title = notification.payload.title;
+  if (typeof title === "string" && title.trim()) return title;
+  switch (notification.kind) {
+    case "task_completed":
+      return "Task completed";
+    case "task_failed":
+      return "Task needs attention";
+    case "streak_milestone":
+      return "Streak milestone";
+    default:
+      return "Storyteller update";
+  }
+}
+
+function notificationDetail(notification: Notification): string {
+  const detail = notification.payload.detail ?? notification.payload.message;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  return new Date(notification.created_at).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 const MobileTabbar = ({ pathname }: { pathname: string }) => {
   const tabs: Array<{

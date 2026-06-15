@@ -9,6 +9,7 @@ from pydantic import Field, field_validator
 from app.api.v1.schemas.common import ApiModel
 
 QuestionType = Literal["multiple_choice", "true_false", "fill_blank"]
+READING_QUESTION_COUNT = 10
 
 
 class GeneratedQuestion(ApiModel):
@@ -33,7 +34,10 @@ class GeneratedQuestion(ApiModel):
 class GeneratedReadingPassage(ApiModel):
     title: str = Field(min_length=1, max_length=160)
     paragraphs: list[str] = Field(min_length=1)
-    questions: list[GeneratedQuestion] = Field(min_length=1)
+    questions: list[GeneratedQuestion] = Field(
+        min_length=READING_QUESTION_COUNT,
+        max_length=READING_QUESTION_COUNT,
+    )
 
 
 class GeneratedWritingPrompt(ApiModel):

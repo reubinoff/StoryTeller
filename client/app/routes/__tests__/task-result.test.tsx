@@ -322,6 +322,54 @@ describe("TaskResultRoute", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next");
   });
 
+  it("renders only valid sorted non-overlapping writing highlights", () => {
+    mockResult = writingResult({
+      answer_text: "abcdefghi",
+      evaluation: {
+        ...writingResult().evaluation!,
+        highlights: [
+          {
+            start: 5,
+            end: 8,
+            kind: "suggestion",
+            message: "Overlapping note should be ignored.",
+          },
+          {
+            start: 4,
+            end: 7,
+            kind: "grammar",
+            message: "Second valid note.",
+          },
+          {
+            start: -1,
+            end: 2,
+            kind: "word_choice",
+            message: "Invalid note should be ignored.",
+          },
+          {
+            start: 0,
+            end: 2,
+            kind: "word_choice",
+            message: "First valid note.",
+          },
+        ],
+      },
+    });
+
+    render(<TaskResultRoute />);
+
+    expect(
+      screen.getByRole("button", {
+        name: /word choice note: first valid note/i,
+      })
+    ).toHaveTextContent("ab");
+    expect(
+      screen.getByRole("button", { name: /grammar note: second valid note/i })
+    ).toHaveTextContent("efg");
+    expect(screen.queryByText(/overlapping note should be ignored/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/invalid note should be ignored/i)).not.toBeInTheDocument();
+  });
+
   it("falls back to rolling the next writing task when no prepared task is returned", async () => {
     mockResult = writingResult({ next_task: null });
     mockRoll.mockResolvedValue({

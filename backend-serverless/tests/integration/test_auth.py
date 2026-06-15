@@ -13,6 +13,7 @@ from app.api.v1.routers import auth as auth_router
 from app.config import get_settings
 from app.core.errors import AppError
 from app.core.security import create_access_token, create_oauth_state, decode_oauth_state
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
 from app.db.models.user import User
 
 SIGNUP_BODY = {
@@ -51,12 +52,11 @@ def unconfigured_google_oauth(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]
 
 
 @pytest.mark.asyncio
-async def test_signup_returns_201_with_user_and_access_token(client: AsyncClient) -> None:
+async def test_signup_returns_201_with_user_and_cookies(client: AsyncClient) -> None:
     resp = await client.post("/auth/signup", json=SIGNUP_BODY)
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["expires_in"] > 0
-    assert body["access_token"]
+    assert set(body.keys()) == {"user"}
     user = body["user"]
     assert user["email"] == "maya@example.com"
     assert user["first_name"] == "Maya"
@@ -65,7 +65,10 @@ async def test_signup_returns_201_with_user_and_access_token(client: AsyncClient
     assert user["interests"] == []
     assert user["status"] == "active"
     assert user["onboarding_completed"] is False
-    assert "rt=" in (resp.headers.get("set-cookie") or "")
+    set_cookie = resp.headers.get("set-cookie") or ""
+    assert f"{ACCESS_COOKIE}=" in set_cookie
+    assert f"{REFRESH_COOKIE}=" in set_cookie
+    assert f"{CSRF_COOKIE}=" in set_cookie
 
 
 @pytest.mark.asyncio
@@ -108,8 +111,8 @@ async def test_login_happy_path(client: AsyncClient) -> None:
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
+    assert set(body.keys()) == {"user"}
     assert body["user"]["email"] == SIGNUP_BODY["email"]
-    assert body["access_token"]
 
 
 @pytest.mark.asyncio
@@ -175,13 +178,14 @@ async def test_google_exchange_returns_410(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_refresh_with_cookie_returns_new_access(client: AsyncClient) -> None:
+async def test_refresh_with_cookie_refreshes_session_cookies(client: AsyncClient) -> None:
     await client.post("/auth/signup", json=SIGNUP_BODY)
     resp = await client.post("/auth/refresh")
-    assert resp.status_code == 200
-    new_body = resp.json()
-    assert new_body["access_token"]
-    assert new_body["expires_in"] > 0
+    assert resp.status_code == 204
+    set_cookie = resp.headers.get("set-cookie") or ""
+    assert f"{ACCESS_COOKIE}=" in set_cookie
+    assert f"{REFRESH_COOKIE}=" in set_cookie
+    assert f"{CSRF_COOKIE}=" in set_cookie
 
 
 @pytest.mark.asyncio
@@ -195,7 +199,7 @@ async def test_refresh_without_cookie_returns_401(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_refresh_with_invalid_cookie_returns_401(client: AsyncClient) -> None:
     client.cookies.clear()
-    client.cookies.set(auth_router.REFRESH_COOKIE, "not-a-jwt")
+    client.cookies.set(REFRESH_COOKIE, "not-a-jwt")
     resp = await client.post("/auth/refresh")
     assert resp.status_code == 401
     assert resp.json()["code"] == "unauthenticated"
@@ -207,7 +211,7 @@ async def test_refresh_rejects_access_token_cookie(client: AsyncClient) -> None:
     assert signup.status_code == 201
     access_token, _expires_in = create_access_token(signup.json()["user"]["id"])
     client.cookies.clear()
-    client.cookies.set(auth_router.REFRESH_COOKIE, access_token)
+    client.cookies.set(REFRESH_COOKIE, access_token)
 
     resp = await client.post("/auth/refresh")
     assert resp.status_code == 401
@@ -238,7 +242,10 @@ async def test_logout_clears_refresh_cookie(client: AsyncClient) -> None:
     await client.post("/auth/signup", json=SIGNUP_BODY)
     resp = await client.post("/auth/logout")
     assert resp.status_code == 204
-    assert "rt=" in (resp.headers.get("set-cookie") or "")
+    set_cookie = resp.headers.get("set-cookie") or ""
+    assert f"{REFRESH_COOKIE}=" in set_cookie
+    assert f"{ACCESS_COOKIE}=" in set_cookie
+    assert f"{CSRF_COOKIE}=" in set_cookie
     assert "Max-Age=0" in (resp.headers.get("set-cookie") or "")
 
 
@@ -308,11 +315,14 @@ async def test_google_callback_creates_new_user_and_sets_cookie(
     resp = await client.get(f"/auth/google/callback?code=code-123&state={state}")
     assert resp.status_code == 307
     assert resp.headers["location"].endswith("/auth/callback?returnTo=%2Fcourses")
-    assert "rt=" in (resp.headers.get("set-cookie") or "")
+    set_cookie = resp.headers.get("set-cookie") or ""
+    assert f"{ACCESS_COOKIE}=" in set_cookie
+    assert f"{REFRESH_COOKIE}=" in set_cookie
+    assert f"{CSRF_COOKIE}=" in set_cookie
 
     refresh = await client.post("/auth/refresh")
-    token = refresh.json()["access_token"]
-    me = await client.get("/me", headers={"Authorization": f"Bearer {token}"})
+    assert refresh.status_code == 204
+    me = await client.get("/me")
     body = me.json()
     assert body["email"] == "google@example.com"
     assert body["first_name"] == "Gina"
@@ -342,8 +352,8 @@ async def test_google_callback_links_existing_verified_email(
     assert resp.status_code == 307
 
     refresh = await client.post("/auth/refresh")
-    token = refresh.json()["access_token"]
-    me = await client.get("/me", headers={"Authorization": f"Bearer {token}"})
+    assert refresh.status_code == 204
+    me = await client.get("/me")
     assert me.json()["id"] == existing_id
 
 

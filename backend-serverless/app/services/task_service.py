@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas.content import READING_QUESTION_COUNT
 from app.api.v1.schemas.task import (
     PASSING_SCORE,
     ReadingPayloadOut,
@@ -125,9 +126,12 @@ async def _find_unused_passage(
             ContentPassage.id.not_in(used_subq),
         )
         .order_by(ContentPassage.created_at.asc())
-        .limit(1)
     )
-    return (await db.execute(stmt)).scalar_one_or_none()
+    passages = (await db.execute(stmt)).scalars().all()
+    for passage in passages:
+        if len(passage.questions) == READING_QUESTION_COUNT:
+            return passage
+    return None
 
 
 async def _find_unused_writing_prompt(

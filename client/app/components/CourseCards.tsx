@@ -23,20 +23,19 @@ export const CourseCard = ({
   onClick,
   large,
 }: CourseCardProps) => (
-  <div
+  <button
+    type="button"
     className="card"
     onClick={onClick}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => {
-      if (e.key === "Enter" || e.key === " ") onClick();
-    }}
     style={{
       cursor: "pointer",
+      display: "block",
+      width: "100%",
       padding: large ? 28 : 20,
       transition: "transform .15s, box-shadow .15s",
       position: "relative",
       overflow: "hidden",
+      textAlign: "left",
     }}
     onMouseEnter={(e) => {
       e.currentTarget.style.transform = "translateY(-2px)";
@@ -87,7 +86,7 @@ export const CourseCard = ({
     >
       Roll a new task <IconArrowRight size={14} />
     </div>
-  </div>
+  </button>
 );
 
 interface BigCourseCardProps {
@@ -111,19 +110,18 @@ export const BigCourseCard = ({
   meta,
   onClick,
 }: BigCourseCardProps) => (
-  <div
+  <button
+    type="button"
     className="card"
     onClick={onClick}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => {
-      if (e.key === "Enter" || e.key === " ") onClick();
-    }}
     style={{
       cursor: "pointer",
+      display: "block",
+      width: "100%",
       padding: 0,
       overflow: "hidden",
       transition: "transform .15s, box-shadow .15s",
+      textAlign: "left",
     }}
     onMouseEnter={(e) => {
       e.currentTarget.style.transform = "translateY(-3px)";
@@ -172,12 +170,12 @@ export const BigCourseCard = ({
         style={{ justifyContent: "space-between", alignItems: "center" }}
       >
         <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{meta}</span>
-        <button className="btn btn-primary btn-sm">
+        <span className="btn btn-primary btn-sm">
           Start a task <IconArrowRight size={12} />
-        </button>
+        </span>
       </div>
     </div>
-  </div>
+  </button>
 );
 
 export const ReadingIllustration = () => (

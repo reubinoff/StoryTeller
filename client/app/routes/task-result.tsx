@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { BackBar } from "~/components/BackBar";
 import {
@@ -378,6 +378,29 @@ const HIGHLIGHT_LABELS: Record<HighlightKind, string> = {
   suggestion: "Suggestion",
 };
 
+const normalizeWritingHighlights = (
+  text: string,
+  highlights: WritingHighlight[]
+) => {
+  let cursor = 0;
+  return [...highlights]
+    .filter(
+      (h) =>
+        Number.isInteger(h.start) &&
+        Number.isInteger(h.end) &&
+        h.start >= 0 &&
+        h.end > h.start &&
+        h.end <= text.length &&
+        h.kind in HIGHLIGHT_COLORS
+    )
+    .sort((a, b) => a.start - b.start || a.end - b.end)
+    .filter((h) => {
+      if (h.start < cursor) return false;
+      cursor = h.end;
+      return true;
+    });
+};
+
 const renderAnnotatedAnswer = (
   text: string,
   highlights: WritingHighlight[],
@@ -426,9 +449,13 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
     : undefined;
 
   const evalData = result.evaluation;
-  const highlights = evalData
-    ? [...evalData.highlights].sort((a, b) => a.start - b.start)
-    : [];
+  const highlights = useMemo(
+    () =>
+      evalData
+        ? normalizeWritingHighlights(result.answer_text, evalData.highlights)
+        : [],
+    [evalData, result.answer_text]
+  );
 
   const onNext = async () => {
     if (result.next_task) {

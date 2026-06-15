@@ -26,8 +26,8 @@ async def _create_writing_task(
     with_prompt: bool = True,
     draft: str | None = "Kyoto is amazing because of bamboo and tea.",
     answer_text: str | None = None,
+    school_grade: int = 3,
 ) -> uuid.UUID:
-    school_grade = 3
     content_grade = content_grade_for_school_grade(school_grade)
     async with sm() as db:
         user = User(
@@ -217,6 +217,27 @@ async def test_worker_uses_persisted_answer_when_draft_is_empty(
     assert "Israeli school English learner" in prompt
     assert "School grade: **3**" in prompt
     assert "English difficulty grade: **2**" in prompt
+
+
+@pytest.mark.asyncio
+async def test_worker_requests_beginner_level_feedback_for_grade_one(
+    db_engine,
+    claude_stub,
+) -> None:
+    _engine, sm = db_engine
+    task_id = await _create_writing_task(
+        sm,
+        school_grade=1,
+        draft="I like cats. Cats are fun.",
+    )
+
+    await run_writing_evaluation(task_id)
+
+    assert len(claude_stub.calls) == 1
+    prompt = claude_stub.calls[0]["prompt"]
+    assert "English difficulty grade: **1**" in prompt
+    assert "Write every feedback field in English at difficulty grade 1" in prompt
+    assert "Use very short sentences with common words" in prompt
 
 
 @pytest.mark.asyncio

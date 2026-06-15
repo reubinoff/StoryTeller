@@ -31,20 +31,13 @@ describe("CoursesRoute", () => {
   it("routes each course card to its detail page", () => {
     render(<CoursesRoute />);
 
-    const readingCard = screen
-      .getByText("Story Reading")
-      .closest('[role="button"]');
-    const writingCard = screen
-      .getByText("Writing Practice")
-      .closest('[role="button"]');
+    const readingCard = screen.getByRole("button", { name: /story reading/i });
+    const writingCard = screen.getByRole("button", { name: /writing practice/i });
 
-    expect(readingCard).not.toBeNull();
-    expect(writingCard).not.toBeNull();
-
-    fireEvent.click(readingCard as HTMLElement);
+    fireEvent.click(readingCard);
     expect(mockNavigate).toHaveBeenCalledWith("/courses/reading");
 
-    fireEvent.keyDown(writingCard as HTMLElement, { key: "Enter" });
+    fireEvent.click(writingCard);
     expect(mockNavigate).toHaveBeenCalledWith("/courses/writing");
   });
 });

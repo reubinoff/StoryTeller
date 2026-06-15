@@ -172,7 +172,7 @@ export default function Landing() {
                   color: "var(--ink-3)",
                 }}
               >
-                Question 3 of 6
+                Question 3 of 10
               </span>
             </div>
             <div

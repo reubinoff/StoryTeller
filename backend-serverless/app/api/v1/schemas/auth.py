@@ -68,10 +68,5 @@ class PasswordChangeRequest(ApiModel):
         return v
 
 
-class AccessTokenResponse(ApiModel):
-    access_token: str
-    expires_in: int
-
-
-class AuthResponse(AccessTokenResponse):
+class AuthResponse(ApiModel):
     user: UserOut

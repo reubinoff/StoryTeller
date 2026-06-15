@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import uuid
+import secrets
 from typing import Annotated
 
-from fastapi import Depends, Header
+from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, SAFE_METHODS
 from app.core.security import decode_access_token
 from app.db.models.user import User
 from app.db.session import get_session
@@ -24,26 +26,20 @@ DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 async def get_current_user(
     db: DbSession,
-    authorization: Annotated[str | None, Header()] = None,
+    request: Request,
+    access_token: Annotated[str | None, Cookie(alias=ACCESS_COOKIE)] = None,
+    csrf_cookie: Annotated[str | None, Cookie(alias=CSRF_COOKIE)] = None,
+    csrf_header: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
 ) -> User:
-    if not authorization:
+    if not access_token:
         raise AppError(
             status_code=401,
             code="unauthenticated",
             title="Authentication required",
-            detail="Missing Authorization header.",
+            detail="Missing access cookie.",
         )
-    parts = authorization.split(None, 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise AppError(
-            status_code=401,
-            code="unauthenticated",
-            title="Authentication required",
-            detail="Authorization header must be 'Bearer <token>'.",
-        )
-    token = parts[1].strip()
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(access_token)
     except Exception as exc:  # jwt errors
         raise AppError(
             status_code=401,
@@ -74,6 +70,16 @@ async def get_current_user(
             title="Authentication required",
             detail="Account is not active.",
         )
+    if request.method.upper() not in SAFE_METHODS:
+        if not csrf_cookie or not csrf_header or not secrets.compare_digest(
+            csrf_cookie, csrf_header
+        ):
+            raise AppError(
+                status_code=403,
+                code="csrf_mismatch",
+                title="Security check failed",
+                detail="Missing or invalid CSRF token.",
+            )
     return user
 
 

@@ -10,6 +10,7 @@ from app.api.v1.schemas.content import (
     GeneratedReadingPassage,
     GeneratedWritingEvaluation,
     GeneratedWritingPrompt,
+    READING_QUESTION_COUNT,
 )
 from app.db.models.content import ContentPassage, WritingPrompt
 from app.llm.claude_client import ClaudeClient, get_claude_client, render_prompt
@@ -39,8 +40,8 @@ def _reading_paragraphs_target(grade_level: int) -> int:
     return 5
 
 
-def _reading_num_questions(grade_level: int) -> int:
-    return 5 if grade_level <= 4 else 6 if grade_level <= 8 else 7
+def _reading_num_questions(_grade_level: int) -> int:
+    return READING_QUESTION_COUNT
 
 
 def writing_word_bounds(grade_level: int) -> tuple[int, int]:

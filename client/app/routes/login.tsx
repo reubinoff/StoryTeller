@@ -25,6 +25,7 @@ export default function LoginRoute() {
   const [params] = useSearchParams();
   const { user, ready, signin, signinGoogle } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showPasswordHelp, setShowPasswordHelp] = useState(false);
   const returnTo = safeReturnTo(params.get("returnTo"));
 
   useEffect(() => {
@@ -125,10 +126,27 @@ export default function LoginRoute() {
             {...register("password")}
           />
           <div style={{ textAlign: "right", marginTop: 6 }}>
-            <a style={{ fontSize: 12, color: "var(--rust)", cursor: "pointer" }}>
+            <button
+              type="button"
+              onClick={() => setShowPasswordHelp((show) => !show)}
+              aria-expanded={showPasswordHelp}
+              aria-controls="password-help"
+              style={{
+                fontSize: 12,
+                color: "var(--rust)",
+                fontWeight: 600,
+                textDecoration: "underline",
+              }}
+            >
               Forgot password?
-            </a>
+            </button>
           </div>
+          {showPasswordHelp && (
+            <div id="password-help" className="field-help" role="status">
+              Password reset is not available yet. Ask your teacher or Storyteller
+              support to reset it for you.
+            </div>
+          )}
           {errors.password && (
             <div className="field-error">{errors.password.message}</div>
           )}

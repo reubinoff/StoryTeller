@@ -9,16 +9,19 @@ import type {
   Achievement,
   AnswerQuestionRequest,
   AuthResponse,
-  AuthTokens,
+  AvatarUploadResponse,
   CompleteOnboardingRequest,
   Course,
   CourseId,
   DashboardResponse,
+  DashboardMetrics,
+  DeleteAccountRequest,
   Interest,
   InterestId,
   LoginRequest,
   Notification,
   Page,
+  PasswordChangeRequest,
   RollTaskRequest,
   SignupRequest,
   SubmitTaskRequest,
@@ -40,8 +43,10 @@ export const api = {
     googleStartUrl: (returnTo: string, intent: "login" | "signup") =>
       apiUrl("/auth/google/start", { return_to: returnTo, intent }),
     refresh: () =>
-      request<AuthTokens>("/auth/refresh", { method: "POST", noAuth: true }),
+      request<void>("/auth/refresh", { method: "POST", noAuth: true }),
     logout: () => request<null>("/auth/logout", { method: "POST" }),
+    forgotPassword: () =>
+      request<null>("/auth/password/forgot", { method: "POST", noAuth: true }),
   },
   me: {
     get: () => request<User>("/me"),
@@ -55,12 +60,26 @@ export const api = {
     completeOnboarding: (body: CompleteOnboardingRequest) =>
       request<User>("/me/onboarding", { method: "PUT", body }),
     dashboard: () => request<DashboardResponse>("/me/dashboard"),
+    metrics: () => request<DashboardMetrics>("/me/metrics"),
     achievements: () => request<Achievement[]>("/me/achievements"),
     notifications: () => request<Page<Notification>>("/me/notifications"),
     notificationRead: (id: string) =>
       request<null>(`/me/notifications/${id}/read`, { method: "POST" }),
     notificationsReadAll: () =>
       request<null>("/me/notifications/read-all", { method: "POST" }),
+    changePassword: (body: PasswordChangeRequest) =>
+      request<null>("/me/password/change", { method: "POST", body }),
+    deleteAccount: (body: DeleteAccountRequest) =>
+      request<null>("/me", { method: "DELETE", body }),
+    avatarUrl: () => apiUrl("/me/avatar"),
+    uploadAvatar: (file: File) => {
+      const form = new FormData();
+      form.set("file", file);
+      return request<AvatarUploadResponse>("/me/avatar", {
+        method: "POST",
+        body: form,
+      });
+    },
   },
   catalog: {
     interests: () => request<Interest[]>("/interests"),

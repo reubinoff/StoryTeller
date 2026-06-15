@@ -6,6 +6,8 @@ from typing import Any
 
 from httpx import AsyncClient
 
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
+
 
 DEFAULT_SIGNUP = {
     "first_name": "Maya",
@@ -19,12 +21,25 @@ DEFAULT_SIGNUP = {
 async def signup_and_login(
     client: AsyncClient, **overrides: Any
 ) -> tuple[dict[str, Any], dict[str, str]]:
-    """Sign up a fresh user, return (user_dict, auth_headers)."""
+    """Sign up a fresh user, return (user_dict, cookie + CSRF auth headers)."""
     body = {**DEFAULT_SIGNUP, **overrides}
     resp = await client.post("/auth/signup", json=body)
     assert resp.status_code == 201, resp.text
     payload = resp.json()
-    headers = {"Authorization": f"Bearer {payload['access_token']}"}
+    access_cookie = resp.cookies.get(ACCESS_COOKIE)
+    refresh_cookie = resp.cookies.get(REFRESH_COOKIE)
+    csrf_cookie = resp.cookies.get(CSRF_COOKIE)
+    assert access_cookie
+    assert refresh_cookie
+    assert csrf_cookie
+    headers = {
+        "Cookie": (
+            f"{ACCESS_COOKIE}={access_cookie}; "
+            f"{REFRESH_COOKIE}={refresh_cookie}; "
+            f"{CSRF_COOKIE}={csrf_cookie}"
+        ),
+        "X-CSRF-Token": csrf_cookie,
+    }
     return payload["user"], headers
 
 

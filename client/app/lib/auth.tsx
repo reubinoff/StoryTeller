@@ -1,7 +1,5 @@
 /**
- * Auth context: keeps user + token in state, persists token to localStorage,
- * and exposes signin / signup / signout actions plus the topbar metrics
- * (streak / xp) that the Shell needs.
+ * Auth context: keeps the active user in memory while cookies own the session.
  */
 
 import {
@@ -14,12 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  ApiError,
-  UNAUTHORIZED_EVENT,
-  getAccessToken,
-  setAccessToken,
-} from "./api/client";
+import { UNAUTHORIZED_EVENT } from "./api/client";
 import { api } from "./api/endpoints";
 import {
   applyDisplayPreferences,
@@ -28,26 +21,12 @@ import {
 } from "./display-preferences";
 import type {
   CompleteOnboardingRequest,
-  DashboardMetrics,
   InterestId,
   User,
 } from "./api/types";
 
-const USER_KEY = "storyteller.auth.user";
-
-const DEFAULT_METRICS: DashboardMetrics = {
-  tasks_completed: 0,
-  current_streak: 0,
-  longest_streak: 0,
-  avg_score: 0,
-  xp_total: 0,
-  level: 1,
-  level_label: "Apprentice",
-};
-
 interface AuthContextValue {
   user: User | null;
-  metrics: DashboardMetrics;
   ready: boolean;
   signin: (email: string, password: string) => Promise<User>;
   signup: (data: {
@@ -63,31 +42,25 @@ interface AuthContextValue {
   setUser: (u: User | null) => void;
   setInterests: (ids: InterestId[]) => Promise<void>;
   completeOnboarding: (data: CompleteOnboardingRequest) => Promise<User>;
-  setMetrics: (m: DashboardMetrics) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null);
-  const [metrics, setMetricsState] = useState<DashboardMetrics>(DEFAULT_METRICS);
   const [ready, setReady] = useState(false);
   const queryClient = useQueryClient();
 
   const setUser = useCallback((u: User | null) => setUserState(u), []);
-  const setMetrics = useCallback((m: DashboardMetrics) => setMetricsState(m), []);
 
   const clearLocalSession = useCallback(() => {
-    setAccessToken(null);
     setUserState(null);
-    setMetricsState(DEFAULT_METRICS);
     queryClient.clear();
   }, [queryClient]);
 
   const refreshSession = useCallback(async () => {
     try {
-      const tokens = await api.auth.refresh();
-      setAccessToken(tokens.access_token);
+      await api.auth.refresh();
       const current = await api.me.get();
       setUserState(current);
       return current;
@@ -111,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, [clearLocalSession]);
 
-  // Hydrate from localStorage on mount.
+  // Hydrate from backend-managed cookies on mount.
   useEffect(() => {
     let cancelled = false;
 
@@ -124,39 +97,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    let cached: string | null = null;
-    try {
-      cached = window.localStorage.getItem(USER_KEY);
-    } catch {
-      cached = null;
-    }
-    const token = getAccessToken();
-    if (cached && token) {
-      try {
-        setUserState(JSON.parse(cached) as User);
-      } catch {
-        try {
-          window.localStorage.removeItem(USER_KEY);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-
     const hydrate = async () => {
-      if (token) {
-        try {
-          const current = await api.me.get();
-          if (!cancelled) setUserState(current);
-          return;
-        } catch (e) {
-          if (!(e instanceof ApiError && e.status === 401)) {
-            clearLocalSession();
-            return;
-          }
-        }
-      }
-      await refreshSession();
+      const current = await refreshSession();
+      if (!cancelled) setUserState(current);
     };
 
     void hydrate().finally(finish);
@@ -166,46 +109,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [clearLocalSession, refreshSession]);
 
-  // Persist user.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      if (user) {
-        window.localStorage.setItem(USER_KEY, JSON.stringify(user));
-      } else {
-        window.localStorage.removeItem(USER_KEY);
-      }
-    } catch {
-      /* Storage can be unavailable in private or embedded browser contexts. */
-    }
-
     const displayPreferences = displayPreferencesFromUser(user);
     applyDisplayPreferences(displayPreferences);
     return watchAutoThemePreference(displayPreferences);
   }, [user]);
 
-  // Load metrics when an authenticated session is available.
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const dash = await api.me.dashboard();
-        if (!cancelled) setMetricsState(dash.metrics);
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 401) signout();
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
   const signin = useCallback(async (email: string, password: string) => {
     const res = await api.auth.login({ email, password });
-    setAccessToken(res.access_token);
     setUserState(res.user);
     return res.user;
   }, []);
@@ -219,7 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       year_of_birth: number;
     }) => {
       const res = await api.auth.signup(data);
-      setAccessToken(res.access_token);
       setUserState(res.user);
       return res.user;
     },
@@ -246,6 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserState((prev) => (prev ? { ...prev, interests: ids } : prev));
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     void queryClient.invalidateQueries({ queryKey: ["me", "dashboard"] });
+    void queryClient.invalidateQueries({ queryKey: ["me", "metrics"] });
   }, [queryClient]);
 
   const completeOnboarding = useCallback(async (data: CompleteOnboardingRequest) => {
@@ -257,7 +168,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      metrics,
       ready,
       signin,
       signup,
@@ -267,11 +177,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser,
       setInterests,
       completeOnboarding,
-      setMetrics,
     }),
     [
       user,
-      metrics,
       ready,
       signin,
       signup,
@@ -281,7 +189,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser,
       setInterests,
       completeOnboarding,
-      setMetrics,
     ]
   );
 

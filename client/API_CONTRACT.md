@@ -24,11 +24,12 @@ machine-readable mirror of every model below.
 | Pagination           | Cursor-based (`limit`, `cursor` query params; `next_cursor` in body). Default `limit=20`, max `100`.                          |
 | Idempotency          | Mutating endpoints accept `Idempotency-Key: <uuid>`; duplicates return the original response.                                 |
 | Tracing              | Every response echoes `X-Request-Id`.                                                                                         |
-| Auth                 | Access tokens via `Authorization: Bearer <jwt>`. Refresh via HttpOnly `rt` cookie.                                            |
+| Auth                 | Browser-managed cookies: HttpOnly `st_at` access cookie, HttpOnly `rt` refresh cookie, readable `st_csrf` CSRF cookie.        |
 | Errors               | RFC 7807 Problem Details (see §8).                                                                                            |
 | Time-zone            | Server returns UTC; client renders in the user's locale.                                                                      |
 | Locale               | v1: English only (`display_locale = "en"`).                                                                                   |
-| CORS / cookies       | Frontend includes `credentials: "include"` so the browser keeps the refresh cookie. Backend must allow-list the SPA origin.   |
+| CORS / cookies       | Frontend sends `credentials: "include"` on every API call. Backend must allow-list the SPA origin.                            |
+| CSRF                 | Authenticated unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`) require `X-CSRF-Token` matching the `st_csrf` cookie.         |
 
 ---
 
@@ -61,13 +62,12 @@ Validation:
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "expires_in": 900,
   "user": { ... User object ... }
 }
 ```
 
-Sets `Set-Cookie: rt=<refresh>; HttpOnly; Secure; SameSite=Lax`.
+Sets `st_at`, `rt`, and `st_csrf` cookies. The access and refresh cookies are
+HttpOnly; `st_csrf` is readable by the SPA for the `X-CSRF-Token` header.
 
 Error codes: `validation_error` (422), `email_taken` (409).
 
@@ -78,7 +78,7 @@ Error codes: `validation_error` (422), `email_taken` (409).
 { "email": "maya@example.com", "password": "..." }
 
 // 200 OK
-{ "access_token": "...", "expires_in": 900, "user": { ... } }
+{ "user": { ... } }
 ```
 
 Same generic error for invalid email vs. invalid password.
@@ -96,17 +96,17 @@ Query: `return_to` (internal path, default `/dashboard`), `intent` (`login` or
 
 Google redirects here with `code` + `state`. The backend validates state,
 exchanges the code, verifies the Google identity, creates or links the user,
-sets the refresh cookie, and redirects to frontend
+sets the session cookies, and redirects to frontend
 `/auth/callback?returnTo=<path>`. On failure, redirects there with `error`.
 
 ### `POST /auth/refresh`
 
-Cookie-only request. **200 OK** `{ "access_token": "...", "expires_in": 900 }`
-and refreshes the signed refresh cookie.
+Cookie-only request using `rt`. **204 No Content** and refreshes `st_at`, `rt`,
+and `st_csrf`.
 
 ### `POST /auth/logout`
 
-Deletes the app refresh cookie. **204 No Content**.
+Deletes the app session cookies. **204 No Content**.
 
 ### `POST /auth/email/verify/request` · `POST /auth/email/verify/confirm`
 
@@ -177,7 +177,9 @@ Server validates the year range, `1 ≤ grade_level ≤ 12`, and `1 ≤ interest
 
 ### `POST /me/avatar`
 
-`multipart/form-data` with a single file part. Returns `{ "avatar_url": "..." }`.
+`multipart/form-data` with a single `file` part. Accepts PNG, JPEG, or WebP up
+to 2 MiB. Returns `{ "avatar_url": "..." }`. `GET /me/avatar` serves the
+authenticated user's current avatar bytes.
 
 ### `POST /me/password/change`
 
@@ -215,7 +217,7 @@ Server first returns the user's most relevant unfinished same-course task
 `not_started`). If no such task exists, it creates a new ready task and picks a
 random interest from the user's selection when omitted.
 
-**201 Created** — returns a `Task` with the appropriate payload (`reading` for unseen-text, `writing` for short-writing). For reading tasks the questions are returned **without** their `correct_answer` and `explanation` until the task is completed.
+**201 Created** — returns a `Task` with the appropriate payload (`reading` for unseen-text, `writing` for short-writing). Reading tasks contain 10 questions, returned **without** their `correct_answer` and `explanation` until the task is completed.
 
 ```json
 // Reading example
@@ -512,8 +514,10 @@ export type ISO8601 = string;
 export type UUID = string;
 
 // ----- Auth -----
-interface AuthTokens { access_token: string; expires_in: number; }
-interface AuthResponse extends AuthTokens { user: User; }
+interface AuthResponse { user: User; }
+interface PasswordChangeRequest { current_password: string; new_password: string; }
+interface DeleteAccountRequest { confirm: boolean; }
+interface AvatarUploadResponse { avatar_url: string; }
 
 // ----- User -----
 type ThemePreference = "auto" | "light" | "dark";

@@ -202,7 +202,7 @@ describe("TaskRoute", () => {
       answer: 1,
     });
 
-    expect(screen.getByText("Question 2 of 3")).toBeInTheDocument();
+    expect(await screen.findByText("Question 2 of 3")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /true/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
@@ -211,7 +211,7 @@ describe("TaskRoute", () => {
       answer: 0,
     });
 
-    expect(screen.getByText("Question 3 of 3")).toBeInTheDocument();
+    expect(await screen.findByText("Question 3 of 3")).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText(/type your answer/i), {
       target: { value: "crater" },
     });
@@ -234,6 +234,23 @@ describe("TaskRoute", () => {
       });
       expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-1/result");
     });
+  });
+
+  it("keeps the learner on the current reading question when answer save fails", async () => {
+    mockTask = readingTask();
+    mockAnswer.mockRejectedValueOnce(new Error("offline"));
+
+    render(<TaskRoute />);
+
+    fireEvent.click(screen.getByRole("button", { name: /start questions/i }));
+    fireEvent.click(screen.getByRole("button", { name: /near the quiet ridge/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(
+      await screen.findByText(/couldn't save that answer/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText("Question 1 of 3")).toBeInTheDocument();
+    expect(mockSubmit).not.toHaveBeenCalled();
   });
 
   it("gates writing submission by the configured word count", () => {

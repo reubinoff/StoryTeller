@@ -24,42 +24,24 @@ function stubFetch(response: Response) {
   return fetchMock;
 }
 
-describe("getAccessToken / setAccessToken", () => {
+describe("getCookie", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
-    localStorage.clear();
+    document.cookie = "st_csrf=; Max-Age=0";
   });
 
-  it("returns null when nothing is stored", async () => {
-    const { getAccessToken } = await loadClient();
+  it("returns null when the cookie is absent", async () => {
+    const { getCookie } = await loadClient();
 
-    expect(getAccessToken()).toBeNull();
+    expect(getCookie("st_csrf")).toBeNull();
   });
 
-  it("stores and retrieves a token", async () => {
-    const { getAccessToken, setAccessToken } = await loadClient();
+  it("reads and decodes a cookie value", async () => {
+    const { getCookie } = await loadClient();
 
-    setAccessToken("tok-abc123");
+    document.cookie = "st_csrf=csrf%20123";
 
-    expect(getAccessToken()).toBe("tok-abc123");
-  });
-
-  it("removes the token when passed null", async () => {
-    const { getAccessToken, setAccessToken } = await loadClient();
-
-    setAccessToken("tok-abc123");
-    setAccessToken(null);
-
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it("overwrites a previously stored token", async () => {
-    const { getAccessToken, setAccessToken } = await loadClient();
-
-    setAccessToken("old-token");
-    setAccessToken("new-token");
-
-    expect(getAccessToken()).toBe("new-token");
+    expect(getCookie("st_csrf")).toBe("csrf 123");
   });
 });
 
@@ -152,16 +134,16 @@ describe("request", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-    localStorage.clear();
+    document.cookie = "st_csrf=; Max-Age=0";
   });
 
   it("returns JSON from successful fetch responses", async () => {
-    const { request, setAccessToken } = await loadClient();
+    const { request } = await loadClient();
     const fetchMock = stubFetch(
       jsonResponse({ id: "task-1", status: "completed" }, { status: 200 })
     );
+    document.cookie = "st_csrf=csrf-abc123";
 
-    setAccessToken("tok-abc123");
     const data = await request<{ id: string; status: string }, { answer: string }>(
       "tasks/task-1",
       {
@@ -183,8 +165,11 @@ describe("request", () => {
     });
     expect(init.headers).toMatchObject({
       Accept: "application/json",
-      Authorization: "Bearer tok-abc123",
       "Content-Type": "application/json",
+      "X-CSRF-Token": "csrf-abc123",
+    });
+    expect(init.headers).not.toMatchObject({
+      Authorization: expect.any(String),
     });
   });
 
@@ -232,13 +217,58 @@ describe("request", () => {
       request<Problem>("/tasks/missing", { throwOnError: false })
     ).resolves.toEqual(problem);
   });
+
+  it("turns non-JSON error responses into ApiError problems", async () => {
+    const { request } = await loadClient();
+    stubFetch(
+      new Response("plain failure", {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: { "Content-Type": "text/plain" },
+      })
+    );
+
+    await expect(request("/tasks/task-1")).rejects.toMatchObject({
+      status: 500,
+      problem: {
+        status: 500,
+        code: "invalid_response",
+      },
+    });
+  });
+
+  it("retries an authenticated 401 once after refreshing cookies", async () => {
+    const { request } = await loadClient();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Unauthorized",
+            status: 401,
+            code: "unauthenticated",
+          },
+          { status: 401 }
+        )
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ id: "user-1" }, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(request<{ id: string }>("/me")).resolves.toEqual({ id: "user-1" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${apiBase}/auth/refresh`);
+    expect(fetchMock.mock.calls[2][0]).toBe(`${apiBase}/me`);
+  });
 });
 
 describe("unauthorized notifications", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-    localStorage.clear();
+    document.cookie = "st_csrf=; Max-Age=0";
   });
 
   it("dispatches the unauthorized event with request context", async () => {
@@ -258,7 +288,7 @@ describe("unauthorized notifications", () => {
   });
 
   it("notifies when an authenticated request receives a 401", async () => {
-    const { UNAUTHORIZED_EVENT, request, setAccessToken } = await loadClient();
+    const { UNAUTHORIZED_EVENT, request } = await loadClient();
     const problem: Problem = {
       type: "about:blank",
       title: "Unauthorized",
@@ -267,7 +297,6 @@ describe("unauthorized notifications", () => {
       detail: "Please sign in again",
     };
     stubFetch(jsonResponse(problem, { status: 401, statusText: "Unauthorized" }));
-    setAccessToken("tok-abc123");
     const listener = vi.fn();
     window.addEventListener(UNAUTHORIZED_EVENT, listener);
 

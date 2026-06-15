@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 from azure.core.exceptions import ResourceExistsError
+from azure.core.pipeline.transport import AioHttpTransport
 
 from app.services import evaluation_queue as queue_module
 from app.services.evaluation_queue import (
@@ -17,6 +18,13 @@ from app.services.evaluation_queue import (
     parse_writing_evaluation_message,
     set_evaluation_queue_client,
     writing_evaluation_message,
+)
+
+DUMMY_STORAGE_CONNECTION_STRING = (
+    "DefaultEndpointsProtocol=https;"
+    "AccountName=devstoreaccount1;"
+    "AccountKey=Eby8vdM02xNOcqFeqCnf2pT7RLmPz53c0u6Nk1QbHXIpGIbScU6VDp3zR0UjLqfD1Q1Hq1XkR2R3W3N3g==;"
+    "EndpointSuffix=core.windows.net"
 )
 
 
@@ -90,6 +98,27 @@ def test_azure_queue_client_requires_storage_connection(monkeypatch: pytest.Monk
 
     with pytest.raises(EvaluationQueueError, match="AzureWebJobsStorage"):
         AzureStorageEvaluationQueueClient()
+
+
+@pytest.mark.asyncio
+async def test_azure_queue_client_builds_async_transport_from_requirements(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        queue_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            azure_web_jobs_storage=DUMMY_STORAGE_CONNECTION_STRING,
+            evaluation_queue_name="writing-tests",
+            create_evaluation_queue_on_enqueue=False,
+        ),
+    )
+
+    client = AzureStorageEvaluationQueueClient()
+    try:
+        assert isinstance(client._client._pipeline._transport, AioHttpTransport)
+    finally:
+        await client._client.close()
 
 
 @pytest.mark.asyncio

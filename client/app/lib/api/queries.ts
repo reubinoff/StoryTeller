@@ -8,6 +8,7 @@ import { api } from "./endpoints";
 import type {
   AnswerQuestionRequest,
   CourseId,
+  PasswordChangeRequest,
   RollTaskRequest,
   SubmitTaskRequest,
   SubmitTaskResponse,
@@ -20,6 +21,7 @@ import type {
 export const queryKeys = {
   me: ["me"] as const,
   dashboard: ["me", "dashboard"] as const,
+  metrics: ["me", "metrics"] as const,
   achievements: ["me", "achievements"] as const,
   notifications: ["me", "notifications"] as const,
   courses: ["catalog", "courses"] as const,
@@ -34,6 +36,23 @@ export function useDashboard() {
   return useQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => api.me.dashboard(),
+  });
+}
+
+export function useMetrics(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.metrics,
+    queryFn: () => api.me.metrics(),
+    enabled,
+  });
+}
+
+export function useNotifications(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: () => api.me.notifications(),
+    enabled,
+    refetchInterval: enabled ? 30_000 : false,
   });
 }
 
@@ -118,6 +137,7 @@ export function useRollTask() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.metrics });
     },
   });
 }
@@ -167,6 +187,7 @@ export function useSubmitTask(
       }
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.metrics });
       callerOnSettled?.(data, error, vars, onMutateResult, ctx);
     },
     ...rest,
@@ -188,6 +209,7 @@ export function useRedoTask() {
       void qc.invalidateQueries({ queryKey: queryKeys.result(data.id) });
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.metrics });
     },
   });
 }
@@ -201,6 +223,7 @@ export function useRetryTask() {
       void qc.invalidateQueries({ queryKey: queryKeys.result(data.id) });
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.metrics });
     },
   });
 }
@@ -212,6 +235,49 @@ export function useUpdateProfile() {
     onSuccess: (data) => {
       qc.setQueryData(queryKeys.me, data);
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+      void qc.invalidateQueries({ queryKey: queryKeys.metrics });
+    },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (body: PasswordChangeRequest) => api.me.changePassword(body),
+  });
+}
+
+export function useUploadAvatar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => api.me.uploadAvatar(file),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.me });
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: () => api.me.deleteAccount({ confirm: true }),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.me.notificationRead(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.me.notificationsReadAll(),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
 }

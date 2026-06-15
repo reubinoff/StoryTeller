@@ -69,7 +69,7 @@ async def test_dashboard_in_progress_includes_started_reading_task(
     in_progress = body["in_progress"][0]
     assert in_progress["status"] == "in_progress"
     assert in_progress["progress"] is not None
-    assert in_progress["progress"]["total"] == 3
+    assert in_progress["progress"]["total"] == 10
 
 
 @pytest.mark.asyncio

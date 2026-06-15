@@ -83,4 +83,52 @@ describe("api endpoint helpers", () => {
       method: "POST",
     });
   });
+
+  it("exposes cookie auth and account endpoints", async () => {
+    await api.auth.refresh();
+    await api.auth.forgotPassword();
+    await api.me.metrics();
+    await api.me.changePassword({
+      current_password: "Oldpass1",
+      new_password: "Newpass2",
+    });
+    await api.me.deleteAccount({ confirm: true });
+
+    expect(clientMocks.request).toHaveBeenNthCalledWith(1, "/auth/refresh", {
+      method: "POST",
+      noAuth: true,
+    });
+    expect(clientMocks.request).toHaveBeenNthCalledWith(2, "/auth/password/forgot", {
+      method: "POST",
+      noAuth: true,
+    });
+    expect(clientMocks.request).toHaveBeenNthCalledWith(3, "/me/metrics");
+    expect(clientMocks.request).toHaveBeenNthCalledWith(4, "/me/password/change", {
+      method: "POST",
+      body: {
+        current_password: "Oldpass1",
+        new_password: "Newpass2",
+      },
+    });
+    expect(clientMocks.request).toHaveBeenNthCalledWith(5, "/me", {
+      method: "DELETE",
+      body: { confirm: true },
+    });
+  });
+
+  it("uploads avatars with form data", async () => {
+    const file = new File(["avatar"], "avatar.png", { type: "image/png" });
+
+    await api.me.uploadAvatar(file);
+
+    const [, options] = clientMocks.request.mock.calls[0] as [
+      string,
+      { method: string; body: FormData },
+    ];
+    expect(clientMocks.request).toHaveBeenCalledWith("/me/avatar", {
+      method: "POST",
+      body: expect.any(FormData),
+    });
+    expect(options.body.get("file")).toBe(file);
+  });
 });

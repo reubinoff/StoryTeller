@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ToastProvider } from "~/components/Toast";
 import { AuthProvider, useAuth } from "../auth";
 import { UNAUTHORIZED_EVENT } from "../api/client";
-import type { AuthResponse, DashboardResponse, User } from "../api/types";
+import type { AuthResponse, User } from "../api/types";
 
 // ---------------------------------------------------------------------------
 // Module mock — controls all api calls AuthProvider makes.
@@ -17,7 +17,7 @@ vi.mock("~/lib/api/endpoints", () => ({
     auth: {
       login: vi.fn(),
       signup: vi.fn(),
-      google: vi.fn(),
+      googleStartUrl: vi.fn(),
       refresh: vi.fn(),
       logout: vi.fn(),
     },
@@ -25,7 +25,6 @@ vi.mock("~/lib/api/endpoints", () => ({
       get: vi.fn(),
       setInterests: vi.fn(),
       completeOnboarding: vi.fn(),
-      dashboard: vi.fn(),
     },
   },
 }));
@@ -60,30 +59,7 @@ const mockUser: User = {
 };
 
 const mockAuthResponse: AuthResponse = {
-  access_token: "tok-test",
-  expires_in: 900,
   user: mockUser,
-};
-
-const mockDashboard: DashboardResponse = {
-  greeting: "Hi",
-  metrics: {
-    tasks_completed: 0,
-    current_streak: 0,
-    longest_streak: 0,
-    avg_score: 0,
-    xp_total: 0,
-    level: 1,
-    level_label: "Apprentice",
-  },
-  in_progress: [],
-  recent: [],
-  ready_tasks: {
-    reading: null,
-    writing: null,
-  },
-  recommended: [],
-  achievements_recent: [],
 };
 
 function setSystemDarkMode(matches: boolean) {
@@ -134,7 +110,6 @@ beforeEach(() => {
   vi.mocked(api.auth.refresh).mockRejectedValue(new Error("No refresh cookie"));
   vi.mocked(api.me.get).mockRejectedValue(new Error("No access token"));
   vi.mocked(api.auth.logout).mockResolvedValue(null);
-  vi.mocked(api.me.dashboard).mockResolvedValue(mockDashboard);
 });
 
 // ---------------------------------------------------------------------------
@@ -154,14 +129,14 @@ describe("useAuth", () => {
     expect(result.current.user).toBeNull();
   });
 
-  it("restores user from localStorage on mount", async () => {
-    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
-    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+  it("loads the current user after refreshing cookie auth on mount", async () => {
+    vi.mocked(api.auth.refresh).mockResolvedValue(undefined);
     vi.mocked(api.me.get).mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user?.email).toBe("test@test.com"));
     await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(api.auth.refresh).toHaveBeenCalled();
   });
 
   it("applies display preferences from the loaded user", async () => {
@@ -171,8 +146,7 @@ describe("useAuth", () => {
       text_size_preference: "lg",
       reduce_motion: true,
     };
-    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
-    localStorage.setItem("storyteller.auth.user", JSON.stringify(darkUser));
+    vi.mocked(api.auth.refresh).mockResolvedValue(undefined);
     vi.mocked(api.me.get).mockResolvedValue(darkUser);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -186,8 +160,7 @@ describe("useAuth", () => {
 
   it("resolves auto display preferences from system dark mode", async () => {
     setSystemDarkMode(true);
-    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
-    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+    vi.mocked(api.auth.refresh).mockResolvedValue(undefined);
     vi.mocked(api.me.get).mockResolvedValue(mockUser);
 
     renderHook(() => useAuth(), { wrapper });
@@ -196,10 +169,8 @@ describe("useAuth", () => {
     expect(document.body.dataset.themePreference).toBe("auto");
   });
 
-  it("ignores corrupted localStorage data", async () => {
-    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
-    localStorage.setItem("storyteller.auth.user", "{bad json");
-    vi.mocked(api.me.get).mockRejectedValue(new Error("Expired token"));
+  it("keeps the session empty when refresh fails", async () => {
+    vi.mocked(api.auth.refresh).mockRejectedValue(new Error("No refresh cookie"));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -256,7 +227,7 @@ describe("signup", () => {
 });
 
 describe("signout", () => {
-  it("clears user and resets metrics", async () => {
+  it("clears user", async () => {
     vi.mocked(api.auth.login).mockResolvedValue(mockAuthResponse);
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -266,10 +237,9 @@ describe("signout", () => {
 
     result.current.signout();
     await waitFor(() => expect(result.current.user).toBeNull());
-    expect(result.current.metrics.level).toBe(1);
   });
 
-  it("clears localStorage token on signout", async () => {
+  it("calls the backend logout endpoint on signout", async () => {
     vi.mocked(api.auth.login).mockResolvedValue(mockAuthResponse);
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -277,7 +247,7 @@ describe("signout", () => {
     await result.current.signin("test@test.com", "pass");
     result.current.signout();
 
-    expect(localStorage.getItem("storyteller.auth.accessToken")).toBeNull();
+    await waitFor(() => expect(api.auth.logout).toHaveBeenCalled());
   });
 
   it("resets display preferences on signout", async () => {
@@ -307,8 +277,7 @@ describe("signout", () => {
   });
 
   it("clears the session when an authenticated API request returns 401", async () => {
-    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
-    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+    vi.mocked(api.auth.refresh).mockResolvedValue(undefined);
     vi.mocked(api.me.get).mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -321,7 +290,6 @@ describe("signout", () => {
     );
 
     await waitFor(() => expect(result.current.user).toBeNull());
-    expect(localStorage.getItem("storyteller.auth.accessToken")).toBeNull();
   });
 });
 
@@ -342,6 +310,7 @@ describe("setInterests", () => {
     );
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tasks"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["me", "dashboard"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["me", "metrics"] });
   });
 });
 

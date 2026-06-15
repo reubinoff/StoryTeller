@@ -194,9 +194,13 @@ export default function OnboardingRoute() {
                   padding: 28,
                 }}
               >
-                <label className="field-label">Starting grade</label>
+                <div className="field-label" id="starting-grade-label">
+                  Starting grade
+                </div>
                 <div
                   className="onboarding-grade-grid"
+                  role="radiogroup"
+                  aria-labelledby="starting-grade-label"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(6, 1fr)",

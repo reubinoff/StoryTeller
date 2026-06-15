@@ -110,6 +110,18 @@ describe("LoginRoute rendering", () => {
     renderLogin();
     expect(screen.getByRole("link", { name: /create an account/i })).toBeInTheDocument();
   });
+
+  it("shows honest forgot-password support messaging", async () => {
+    renderLogin();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /forgot password/i }));
+
+    expect(
+      screen.getByText(/password reset is not available yet/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/storyteller support/i)).toBeInTheDocument();
+  });
 });
 
 describe("LoginRoute form validation", () => {

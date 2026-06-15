@@ -260,7 +260,10 @@ export default function DashboardRoute() {
             title="Recent tasks"
             subtitle="Everything you've rolled"
             action={
-              <button className="btn btn-ghost btn-sm">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => navigate("/tasks")}
+              >
                 View all <IconArrowRight size={12} />
               </button>
             }

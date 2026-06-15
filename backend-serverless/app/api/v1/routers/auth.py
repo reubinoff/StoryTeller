@@ -14,7 +14,6 @@ from fastapi.responses import RedirectResponse
 from jwt import PyJWKClient
 
 from app.api.v1.schemas.auth import (
-    AccessTokenResponse,
     AuthResponse,
     LoginRequest,
     SignupRequest,
@@ -22,11 +21,14 @@ from app.api.v1.schemas.auth import (
 from app.config import get_settings
 from app.core.errors import AppError
 from app.core.security import (
-    create_access_token,
     create_oauth_state,
-    create_refresh_token,
     decode_oauth_state,
     decode_refresh_token,
+)
+from app.core.session_cookies import (
+    REFRESH_COOKIE,
+    clear_session_cookies,
+    set_session_cookies,
 )
 from app.db.models.user import User
 from app.deps import DbSession
@@ -35,7 +37,6 @@ from app.services.user_service import to_user_out
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-REFRESH_COOKIE = "rt"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
@@ -51,32 +52,12 @@ def _safe_return_to(value: str | None, fallback: str = "/dashboard") -> str:
     return value
 
 
-def _cookie_secure() -> bool:
-    settings = get_settings()
-    if settings.auth_cookie_secure is not None:
-        return settings.auth_cookie_secure
-    return settings.environment not in {"dev", "local", "test"}
-
-
 def _frontend_callback_url(return_to: str, error: str | None = None) -> str:
     settings = get_settings()
     query: dict[str, str] = {"returnTo": _safe_return_to(return_to)}
     if error:
         query["error"] = error
     return f"{settings.frontend_base_url.rstrip('/')}/auth/callback?{urlencode(query)}"
-
-
-def _set_refresh_cookie(response: Response, user_id: str) -> None:
-    token, max_age = create_refresh_token(user_id)
-    response.set_cookie(
-        key=REFRESH_COOKIE,
-        value=token,
-        max_age=max_age,
-        httponly=True,
-        secure=_cookie_secure(),
-        samesite="lax",
-        path="/",
-    )
 
 
 async def _user_from_refresh_cookie(db: DbSession, refresh_token: str | None) -> User:
@@ -173,34 +154,32 @@ async def _verify_google_id_token(id_token: str) -> dict[str, Any]:
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def signup(body: SignupRequest, response: Response, db: DbSession) -> AuthResponse:
     user = await auth_service.signup(db, body)
-    token, expires_in = create_access_token(str(user.id))
-    _set_refresh_cookie(response, str(user.id))
-    return AuthResponse(access_token=token, expires_in=expires_in, user=await to_user_out(db, user))
+    set_session_cookies(response, str(user.id))
+    return AuthResponse(user=await to_user_out(db, user))
 
 
 @router.post("/login", response_model=AuthResponse)
 async def login(body: LoginRequest, response: Response, db: DbSession) -> AuthResponse:
     user = await auth_service.login(db, body)
-    token, expires_in = create_access_token(str(user.id))
-    _set_refresh_cookie(response, str(user.id))
-    return AuthResponse(access_token=token, expires_in=expires_in, user=await to_user_out(db, user))
+    set_session_cookies(response, str(user.id))
+    return AuthResponse(user=await to_user_out(db, user))
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
+@router.post("/refresh", status_code=status.HTTP_204_NO_CONTENT)
 async def refresh(
     response: Response,
     db: DbSession,
     refresh_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE)] = None,
-) -> AccessTokenResponse:
+) -> Response:
     current_user = await _user_from_refresh_cookie(db, refresh_token)
-    token, expires_in = create_access_token(str(current_user.id))
-    _set_refresh_cookie(response, str(current_user.id))
-    return AccessTokenResponse(access_token=token, expires_in=expires_in)
+    set_session_cookies(response, str(current_user.id))
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(response: Response) -> Response:
-    response.delete_cookie(REFRESH_COOKIE, path="/", samesite="lax")
+    clear_session_cookies(response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 
@@ -267,7 +246,7 @@ async def google_callback(
         return RedirectResponse(_frontend_callback_url(return_to, "google_oauth_failed"))
 
     redirect = RedirectResponse(_frontend_callback_url(return_to))
-    _set_refresh_cookie(redirect, str(user.id))
+    set_session_cookies(redirect, str(user.id))
     return redirect
 
 

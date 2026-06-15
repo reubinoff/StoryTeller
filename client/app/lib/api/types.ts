@@ -11,11 +11,6 @@ export type UUID = string;
 
 // ----- Auth -----
 
-export interface AuthTokens {
-  access_token: string;
-  expires_in: number;
-}
-
 export interface SignupRequest {
   first_name: string;
   last_name: string;
@@ -29,8 +24,21 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface AuthResponse extends AuthTokens {
+export interface AuthResponse {
   user: User;
+}
+
+export interface PasswordChangeRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface DeleteAccountRequest {
+  confirm: boolean;
+}
+
+export interface AvatarUploadResponse {
+  avatar_url: string;
 }
 
 export interface CompleteOnboardingRequest {

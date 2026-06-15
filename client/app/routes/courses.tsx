@@ -41,7 +41,7 @@ export default function CoursesRoute() {
         <BigCourseCard
           title="Story Reading"
           subtitle="Unseen Text"
-          description="Read a short passage about something you love, then answer 5–10 questions. Get an instant score and a question-by-question breakdown."
+          description="Read a short passage about something you love, then answer 10 questions. Get an instant score and a question-by-question breakdown."
           accent="var(--teal)"
           accentSoft="var(--teal-soft)"
           illustration={<ReadingIllustration />}

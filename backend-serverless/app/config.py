@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     )
     evaluation_queue_name: str = Field(default="writing-evaluations")
     task_prewarm_queue_name: str = Field(default="task-prewarm")
+    avatar_container_name: str = Field(default="avatars")
     create_evaluation_queue_on_enqueue: bool = Field(default=True)
     create_task_prewarm_queue_on_enqueue: bool = Field(default=True)
 

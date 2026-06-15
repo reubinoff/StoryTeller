@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { Shell } from "../Shell";
-import type { User } from "~/lib/api/types";
+import type { DashboardMetrics, Notification, Page, User } from "~/lib/api/types";
 
 const mockNavigate = vi.fn();
 
@@ -16,11 +16,27 @@ const mockSignout = vi.fn();
 let mockAuthState: {
   user: User | null;
   signout: ReturnType<typeof vi.fn>;
-  metrics: { current_streak: number; xp_total: number };
 };
+let mockMetrics: DashboardMetrics;
+let mockNotifications: Page<Notification>;
+const mockMarkRead = vi.fn();
+const mockMarkAllRead = vi.fn();
 
 vi.mock("~/lib/auth", () => ({
   useAuth: () => mockAuthState,
+}));
+
+vi.mock("~/lib/api/queries", () => ({
+  useMetrics: () => ({ data: mockMetrics }),
+  useNotifications: () => ({ data: mockNotifications }),
+  useMarkNotificationRead: () => ({
+    mutate: mockMarkRead,
+    isPending: false,
+  }),
+  useMarkAllNotificationsRead: () => ({
+    mutate: mockMarkAllRead,
+    isPending: false,
+  }),
 }));
 
 const user: User = {
@@ -61,8 +77,17 @@ beforeEach(() => {
   mockAuthState = {
     user,
     signout: mockSignout,
-    metrics: { current_streak: 5, xp_total: 1234 },
   };
+  mockMetrics = {
+    tasks_completed: 4,
+    current_streak: 5,
+    longest_streak: 7,
+    avg_score: 82,
+    xp_total: 1234,
+    level: 2,
+    level_label: "Builder",
+  };
+  mockNotifications = { items: [], next_cursor: null };
 });
 
 describe("Shell", () => {
@@ -104,6 +129,31 @@ describe("Shell", () => {
 
     expect(mockSignout).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith("/");
+  });
+
+  it("opens notifications and marks an unread item", async () => {
+    mockNotifications = {
+      items: [
+        {
+          id: "notif-1",
+          kind: "task_completed",
+          payload: { title: "Writing scored", detail: "Your story is ready." },
+          read_at: null,
+          created_at: "2024-01-02T00:00:00Z",
+        },
+      ],
+      next_cursor: null,
+    };
+    renderShell();
+    const eventUser = userEvent.setup();
+
+    await eventUser.click(
+      screen.getByRole("button", { name: /1 unread notifications/i })
+    );
+    await eventUser.click(screen.getByRole("button", { name: /writing scored/i }));
+
+    expect(screen.getByRole("dialog", { name: /notifications/i })).toBeInTheDocument();
+    expect(mockMarkRead).toHaveBeenCalledWith("notif-1");
   });
 
   it("renders nothing when user state is absent", () => {

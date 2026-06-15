@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, File, Response, UploadFile, status
 from sqlalchemy import delete, select
 
 from app.api.v1.schemas.auth import PasswordChangeRequest
@@ -19,6 +20,7 @@ from app.api.v1.schemas.dashboard import (
     NotificationOut,
 )
 from app.api.v1.schemas.user import (
+    AvatarUploadResponse,
     CompleteOnboardingRequest,
     DeleteAccountRequest,
     UpdateInterestsRequest,
@@ -31,10 +33,17 @@ from app.db.models._helpers import utcnow
 from app.db.models.interest import Interest, UserInterest
 from app.db.models.task import Task
 from app.deps import CurrentUser, DbSession
-from app.services import auth_service, dashboard_service, task_service
+from app.services import auth_service, avatar_service, dashboard_service, task_service
 from app.services.user_service import to_user_out
 
 router = APIRouter(prefix="/me", tags=["me"])
+
+
+async def _read_avatar_upload(file: UploadFile) -> bytes:
+    content = await file.read(avatar_service.MAX_AVATAR_BYTES + 1)
+    await file.close()
+    avatar_service.validate_avatar_size(content)
+    return content
 
 
 async def _replace_interests(
@@ -125,10 +134,58 @@ async def change_password(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/avatar", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-async def upload_avatar() -> None:
-    raise AppError(
-        status_code=501, code="not_implemented", title="Avatar upload not implemented in v1"
+@router.post("/avatar", response_model=AvatarUploadResponse)
+async def upload_avatar(
+    file: Annotated[UploadFile, File()],
+    current_user: CurrentUser,
+    db: DbSession,
+) -> AvatarUploadResponse:
+    try:
+        content_type = avatar_service.normalize_avatar_content_type(file.content_type)
+        content = await _read_avatar_upload(file)
+        current_user.avatar_url = await avatar_service.upload_user_avatar(
+            current_user.id, content, content_type
+        )
+    except avatar_service.AvatarValidationError as exc:
+        status_code = 413 if "2 MiB" in str(exc) else 422
+        raise AppError(
+            status_code=status_code,
+            code="validation_error",
+            title="Validation failed",
+            detail=str(exc),
+            errors=[{"field": "file", "message": str(exc)}],
+        ) from exc
+    except avatar_service.AvatarStorageError as exc:
+        raise AppError(
+            status_code=503,
+            code="unavailable",
+            title="Service unavailable",
+            detail="Avatar storage is unavailable.",
+        ) from exc
+    await db.commit()
+    await db.refresh(current_user)
+    return AvatarUploadResponse(avatar_url=current_user.avatar_url or "")
+
+
+@router.get("/avatar")
+async def get_avatar(current_user: CurrentUser) -> Response:
+    if current_user.avatar_url is None:
+        raise AppError(status_code=404, code="not_found", title="Avatar not found")
+    try:
+        avatar = await avatar_service.get_user_avatar(current_user.id)
+    except avatar_service.AvatarStorageError as exc:
+        raise AppError(
+            status_code=503,
+            code="unavailable",
+            title="Service unavailable",
+            detail="Avatar storage is unavailable.",
+        ) from exc
+    if avatar is None:
+        raise AppError(status_code=404, code="not_found", title="Avatar not found")
+    return Response(
+        content=avatar.content,
+        media_type=avatar.content_type,
+        headers={"Cache-Control": "private, max-age=300"},
     )
 
 

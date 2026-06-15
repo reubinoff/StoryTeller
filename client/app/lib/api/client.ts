@@ -6,7 +6,7 @@
 
 import type { Problem } from "./types";
 
-const ACCESS_TOKEN_KEY = "storyteller.auth.accessToken";
+const CSRF_COOKIE = "st_csrf";
 export const UNAUTHORIZED_EVENT = "storyteller:auth:unauthorized";
 
 export interface UnauthorizedEventDetail {
@@ -28,25 +28,18 @@ export class ApiError extends Error {
   }
 }
 
-export function getAccessToken(): string | null {
+export function getCookie(name: string): string | null {
   if (typeof window === "undefined") return null;
+  const prefix = `${name}=`;
+  const raw = window.document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  if (!raw) return null;
   try {
-    return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    return decodeURIComponent(raw.slice(prefix.length));
   } catch {
-    return null;
-  }
-}
-
-export function setAccessToken(token: string | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (token) {
-      window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    } else {
-      window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    }
-  } catch {
-    /* Storage can be unavailable in private or embedded browser contexts. */
+    return raw.slice(prefix.length);
   }
 }
 
@@ -62,7 +55,7 @@ export function notifyUnauthorized(path: string): void {
 export interface RequestOptions<TBody = unknown> {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: TBody;
-  /** Skips auth header attachment (used for /auth/* endpoints). */
+  /** Skips 401 refresh retry (used for /auth/* endpoints). */
   noAuth?: boolean;
   query?: Record<string, string | number | undefined | null>;
   /** When true, doesn't throw on non-2xx; returns the typed Problem. */
@@ -89,6 +82,89 @@ export function apiUrl(path: string, query?: RequestOptions["query"]): string {
   return `${apiBase}${buildUrl(path, query)}`;
 }
 
+function isUnsafeMethod(method: string): boolean {
+  return !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase());
+}
+
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
+function requestHeaders(method: string, body: unknown): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+  if (!isFormData(body)) headers["Content-Type"] = "application/json";
+  const csrf = getCookie(CSRF_COOKIE);
+  if (csrf && isUnsafeMethod(method)) headers["X-CSRF-Token"] = csrf;
+  return headers;
+}
+
+function requestBody(body: unknown): BodyInit | undefined {
+  if (body === undefined) return undefined;
+  if (isFormData(body)) return body;
+  return JSON.stringify(body);
+}
+
+function fallbackProblem(res: Response, code = "request_failed"): Problem {
+  return {
+    type: "about:blank",
+    title: res.statusText || "Request failed",
+    status: res.status,
+    code,
+  };
+}
+
+async function readJsonOrNull(res: Response): Promise<unknown | null> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return fallbackProblem(res, "invalid_response");
+  }
+}
+
+function asProblem(res: Response, json: unknown | null): Problem {
+  if (
+    json &&
+    typeof json === "object" &&
+    "status" in json &&
+    "title" in json &&
+    "code" in json
+  ) {
+    return json as Problem;
+  }
+  return fallbackProblem(res);
+}
+
+async function refreshCookies(): Promise<boolean> {
+  const res = await fetch(`${apiBase}/auth/refresh`, {
+    method: "POST",
+    headers: requestHeaders("POST", undefined),
+    credentials: "include",
+  });
+  return res.ok;
+}
+
+async function fetchOnce<TBody>(
+  path: string,
+  {
+    method,
+    body,
+    query,
+  }: Pick<Required<RequestOptions<TBody>>, "method"> &
+    Pick<RequestOptions<TBody>, "body" | "query">
+): Promise<Response> {
+  const url = buildUrl(path, query);
+  return fetch(`${apiBase}${url}`, {
+    method,
+    headers: requestHeaders(method, body),
+    body: requestBody(body),
+    credentials: "include",
+  });
+}
+
 export async function request<TResponse, TBody = unknown>(
   path: string,
   options: RequestOptions<TBody> = {}
@@ -102,34 +178,25 @@ export async function request<TResponse, TBody = unknown>(
   } = options;
   const url = buildUrl(path, query);
 
-  const token = noAuth ? null : getAccessToken();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${apiBase}${url}`, {
+  let res = await fetchOnce(path, {
     method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: "include",
+    body,
+    query,
   });
+
+  if (!noAuth && res.status === 401) {
+    const refreshed = await refreshCookies();
+    if (refreshed) {
+      res = await fetchOnce(path, { method, body, query });
+    }
+  }
 
   if (res.status === 204) return undefined as unknown as TResponse;
 
-  const text = await res.text();
-  const json = text ? (JSON.parse(text) as unknown) : null;
+  const json = await readJsonOrNull(res);
 
   if (!res.ok) {
-    const problem =
-      (json as Problem | null) || {
-        type: "about:blank",
-        title: res.statusText || "Request failed",
-        status: res.status,
-        code: "request_failed",
-      };
+    const problem = asProblem(res, json);
     if (!noAuth && res.status === 401) notifyUnauthorized(url);
     if (throwOnError) throw new ApiError(problem);
     return problem as unknown as TResponse;

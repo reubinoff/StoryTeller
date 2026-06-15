@@ -59,12 +59,18 @@ export default function TaskRoute() {
     return <Navigate to={`/tasks/${task.id}/result`} replace />;
   }
   if (task.status === "processing") {
-    return <WritingProcessing task={task} />;
+    return <WritingProcessing key={task.id} task={task} />;
   }
   if (task.course_type === "unseen_text") {
-    return <ReadingTask task={task} onCompleted={() => navigate(`/tasks/${task.id}/result`)} />;
+    return (
+      <ReadingTask
+        key={task.id}
+        task={task}
+        onCompleted={() => navigate(`/tasks/${task.id}/result`)}
+      />
+    );
   }
-  return <WritingTask task={task} />;
+  return <WritingTask key={task.id} task={task} />;
 }
 
 // ---------------- Reading ----------------
@@ -79,20 +85,13 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
   const [phase, setPhase] = useState<"passage" | "questions">("passage");
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [answerSaveError, setAnswerSaveError] = useState<string | null>(null);
   const [fontStep, setFontStep] = useState(1);
   const [showPassage, setShowPassage] = useState(true);
   const submitTask = useSubmitTask();
   const answerQ = useAnswerQuestion(task.id);
   const ttsRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-
-  if (!task.reading) return null;
-  const reading = task.reading;
-  const fontSize = [16, 19, 22][fontStep];
-  const total = reading.questions.length;
-  const q: TaskQuestion = reading.questions[qIndex];
-  const hasAnswer =
-    answers[q?.id] !== undefined && String(answers[q?.id] ?? "") !== "";
 
   useEffect(() => {
     return () => {
@@ -102,8 +101,19 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
     };
   }, []);
 
-  const setAnswer = (val: string | number) =>
+  if (!task.reading) return null;
+  const reading = task.reading;
+  const fontSize = [16, 19, 22][fontStep];
+  const total = reading.questions.length;
+  const q: TaskQuestion = reading.questions[qIndex];
+  const hasAnswer =
+    answers[q?.id] !== undefined && String(answers[q?.id] ?? "") !== "";
+  const isAdvancing = answerQ.isPending || submitTask.isPending;
+
+  const setAnswer = (val: string | number) => {
+    setAnswerSaveError(null);
     setAnswers((prev) => ({ ...prev, [q.id]: val }));
+  };
 
   const speakPassage = () => {
     if (typeof window === "undefined") return;
@@ -125,20 +135,32 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
   };
 
   const handleNext = async () => {
-    void answerQ.mutateAsync({ question_id: q.id, answer: answers[q.id] });
+    setAnswerSaveError(null);
+    const currentAnswer = answers[q.id];
+    const nextAnswers = { ...answers, [q.id]: currentAnswer };
+    try {
+      await answerQ.mutateAsync({ question_id: q.id, answer: currentAnswer });
+    } catch {
+      setAnswerSaveError("We couldn't save that answer. Please try Next again.");
+      return;
+    }
     if (qIndex + 1 < total) {
       setQIndex((i) => i + 1);
       return;
     }
-    const payload = Object.entries(answers).map(([question_id, answer]) => ({
+    const payload = Object.entries(nextAnswers).map(([question_id, answer]) => ({
       question_id,
       answer,
     }));
-    await submitTask.mutateAsync({
-      taskId: task.id,
-      body: { answers: payload },
-    });
-    onCompleted();
+    try {
+      await submitTask.mutateAsync({
+        taskId: task.id,
+        body: { answers: payload },
+      });
+      onCompleted();
+    } catch {
+      setAnswerSaveError("Your answer was saved, but finishing failed. Please try again.");
+    }
   };
 
   if (phase === "passage") {
@@ -443,7 +465,6 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
                     fontFamily: "var(--font-display)",
                     padding: "16px 18px",
                   }}
-                  autoFocus
                 />
                 <div className="field-help">One word or short phrase.</div>
               </div>
@@ -467,10 +488,15 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
             </div>
             <button
               className="btn btn-accent btn-lg"
-              disabled={!hasAnswer || submitTask.isPending}
+              disabled={!hasAnswer || isAdvancing}
               onClick={handleNext}
+              aria-busy={isAdvancing}
             >
-              {qIndex + 1 < total ? (
+              {isAdvancing ? (
+                <>
+                  <span className="spinner" /> Saving...
+                </>
+              ) : qIndex + 1 < total ? (
                 <>
                   Next <IconArrowRight size={16} />
                 </>
@@ -481,6 +507,15 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               )}
             </button>
           </div>
+          {answerSaveError && (
+            <div
+              className="field-error"
+              role="alert"
+              style={{ marginTop: 10, textAlign: "right" }}
+            >
+              {answerSaveError}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -500,7 +535,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   const navigate = useNavigate();
   const writing = task.writing;
   const [text, setText] = useState(writing?.draft ?? "");
-  const lastSavedTextRef = useRef(writing?.draft ?? "");
+  const [lastSavedText, setLastSavedText] = useState(writing?.draft ?? "");
   const [draftStatus, setDraftStatus] = useState<
     "idle" | "dirty" | "saving" | "saved" | "error"
   >("idle");
@@ -512,7 +547,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   const submitTask = useSubmitTask({
     onSuccess: () => navigate(`/tasks/${task.id}`),
   });
-  const saveDraft = useSaveDraft(task.id);
+  const { mutateAsync: saveDraftMutateAsync } = useSaveDraft(task.id);
 
   const minWords = writing?.min_words ?? 60;
   const maxWords = writing?.max_words ?? 120;
@@ -521,7 +556,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     [text]
   );
   const okLen = words >= minWords && words <= maxWords;
-  const isDirty = text !== lastSavedTextRef.current;
+  const isDirty = text !== lastSavedText;
   const submitGuidance =
     words < minWords
       ? `Need ${minWords - words} more ${minWords - words === 1 ? "word" : "words"}`
@@ -535,8 +570,8 @@ const WritingTask = ({ task }: WritingTaskProps) => {
       setDraftStatus("saving");
       setDraftError(null);
       try {
-        await saveDraft.mutateAsync(nextText);
-        lastSavedTextRef.current = nextText;
+        await saveDraftMutateAsync(nextText);
+        setLastSavedText(nextText);
         setDraftStatus("saved");
         return true;
       } catch {
@@ -546,7 +581,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
         return false;
       }
     },
-    [saveDraft.mutateAsync]
+    [saveDraftMutateAsync]
   );
 
   useEffect(() => {
@@ -556,8 +591,6 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   // Auto-save every 10s when text changes (PRD §7.2).
   useEffect(() => {
     if (!isDirty || submitTask.isPending) return;
-    setDraftStatus("dirty");
-    setDraftError(null);
     const t = setTimeout(async () => {
       void saveCurrentDraft(text);
     }, 10_000);
@@ -581,13 +614,13 @@ const WritingTask = ({ task }: WritingTaskProps) => {
         taskId: task.id,
         body: { full_text: text },
       });
-      lastSavedTextRef.current = text;
+      setLastSavedText(text);
       setDraftStatus("saved");
       setConfirmOpen(false);
     } catch {
       submitInFlightRef.current = false;
       setConfirmOpen(false);
-      if (text !== lastSavedTextRef.current) setDraftStatus("dirty");
+      if (text !== lastSavedText) setDraftStatus("dirty");
       setSubmitError("We couldn't submit your answer. Please try again.");
     }
   };
@@ -679,6 +712,8 @@ const WritingTask = ({ task }: WritingTaskProps) => {
             value={text}
             onChange={(e) => {
               setText(e.target.value);
+              setDraftStatus("dirty");
+              setDraftError(null);
               setSubmitError(null);
             }}
             style={{

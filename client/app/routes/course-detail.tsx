@@ -132,7 +132,9 @@ export default function CourseDetailRoute() {
                     </>
                   )}
                 </button>
-                <button className="btn btn-ghost btn-lg">See an example</button>
+                <a className="btn btn-ghost btn-lg" href="#course-example">
+                  See an example
+                </a>
               </div>
               {rollingCourse && <RollTaskProgress courseId={rollingCourse} />}
             </div>
@@ -170,6 +172,7 @@ export default function CourseDetailRoute() {
             </div>
           </div>
           <div
+            id="course-example"
             className="card"
             style={{
               background: accentSoft,
