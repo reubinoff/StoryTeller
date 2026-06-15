@@ -34,6 +34,20 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - uses: astral-sh/setup-uv@v5
+      - name: Smoke test Azure Functions requirements
+        working-directory: backend-serverless
+        run: |
+          python -m venv "$RUNNER_TEMP/backend-functions-requirements"
+          source "$RUNNER_TEMP/backend-functions-requirements/bin/activate"
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python - <<'PY'
+          from azure.core.pipeline.transport import AioHttpTransport
+          import aiohttp
+
+          assert AioHttpTransport
+          assert aiohttp.__version__
+          PY
       - name: Run serverless pytest
         working-directory: backend-serverless
         env:

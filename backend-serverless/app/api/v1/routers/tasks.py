@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Annotated
 
@@ -31,6 +32,7 @@ from app.services import task_service
 from app.services.evaluation_queue import EvaluationQueueError, enqueue_writing_evaluation
 
 router = APIRouter(tags=["tasks"])
+LOGGER = logging.getLogger(__name__)
 
 
 def _model_validate_submit_body[SubmitBody: (ReadingSubmitRequest, WritingSubmitRequest)](
@@ -95,6 +97,7 @@ async def _enqueue_evaluation_or_fail(db: AsyncSession, task: Task) -> None:
     try:
         await enqueue_writing_evaluation(task.id)
     except EvaluationQueueError as exc:
+        LOGGER.exception("writing evaluation enqueue failed task_id=%s", task.id)
         await task_service.mark_writing_evaluation_failed(
             db,
             task=task,

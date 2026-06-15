@@ -79,6 +79,7 @@ Partial pytest runs often fail coverage thresholds; that is expected until the f
 
 - Minimize diff scope — change only what the task requires.
 - Match existing naming, types, and patterns in the touched package.
+- When fixing a bug observed in production, use TDD: first add a test that reproduces the bug, verify the test fails, then fix the bug and verify the test passes.
 - Do not commit unless the user explicitly asks.
 - Do not create markdown docs the user did not request.
 
