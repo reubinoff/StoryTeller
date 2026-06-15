@@ -55,7 +55,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
     #   uvicorn
-cryptography==48.0.1
+cryptography==49.0.0
     # via
     #   azure-storage-blob
     #   azure-storage-queue
