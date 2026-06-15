@@ -147,18 +147,27 @@ export function useSubmitTask(
   >
 ) {
   const qc = useQueryClient();
-  const { onSuccess: callerOnSuccess, ...rest } = options ?? {};
+  const {
+    onSuccess: callerOnSuccess,
+    onSettled: callerOnSettled,
+    ...rest
+  } = options ?? {};
   return useMutation({
     mutationFn: ({ taskId, body }) => api.tasks.submit(taskId, body),
     onSuccess: (data, vars, onMutateResult, ctx) => {
       if ("course_type" in data) {
         qc.setQueryData(queryKeys.task(data.id), data);
-      } else {
-        void qc.invalidateQueries({ queryKey: queryKeys.task(vars.taskId) });
+      }
+      callerOnSuccess?.(data, vars, onMutateResult, ctx);
+    },
+    onSettled: (data, error, vars, onMutateResult, ctx) => {
+      const taskId = data?.id ?? vars?.taskId;
+      if (taskId) {
+        void qc.invalidateQueries({ queryKey: queryKeys.task(taskId) });
       }
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
-      callerOnSuccess?.(data, vars, onMutateResult, ctx);
+      callerOnSettled?.(data, error, vars, onMutateResult, ctx);
     },
     ...rest,
   });

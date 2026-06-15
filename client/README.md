@@ -52,28 +52,6 @@ The Azure Static Web Apps workflow uses the default Azure hostname when
 `VITE_PUBLIC_SITE_URL` is not set. Set the variable when switching to a custom
 domain.
 
-## Mock implementation
-
-A localStorage-backed mock implementation remains in
-[`app/lib/api/mock/`](app/lib/api/mock/):
-
-- `db.ts` — typed in-memory store, persisted to localStorage. Seed content
-  (Saturn rings reading passage, Kyoto writing prompt, sample evaluation,
-  achievement set) is taken verbatim from the design's `data.jsx`.
-- `router.ts` — pattern-matches `${method} ${path}` against handlers, sleeps
-  ~300 ms to feel real, and returns either `{ kind: 'ok', data }` or an RFC
-  7807 `{ kind: 'error', problem }`.
-- `handlers/{auth,me,catalog,tasks}.ts` — one file per resource; covers the
-  full lifecycle from sign-up → onboarding → dashboard → roll task → submit →
-  (writing) processing 8s → completed + toast.
-
-To wipe the mock and start fresh, run this in DevTools console:
-
-```js
-localStorage.clear();
-location.reload();
-```
-
 ## Project layout
 
 ```
@@ -107,7 +85,6 @@ app/
         ├── endpoints.ts          # Strongly-typed API surface
         ├── queries.ts            # TanStack Query hooks
         ├── types.ts              # Wire types (snake_case)
-        └── mock/                 # localStorage-backed mock backend
 ```
 
 ## API contract
@@ -134,9 +111,6 @@ backend contract and local development should use
    answer (red grammar / amber word-choice / blue suggestion underlines).
 5. **Settings** with theme / text-size / reduce-motion controls that apply
    live via `data-*` attributes on `<body>` (see `lib/auth.tsx`).
-6. **Async writing notifications** — the mock backend dispatches a
-   `storyteller:task-completed` event 8 s after submit; the `_authed` layout listens
-   and pushes a toast with a "View result" CTA (PRD §7.3).
 
 ## Accessibility & responsive
 

@@ -33,7 +33,7 @@ Start the backend Function App before running the frontend dev server.
 | Routes | `app/routes/` | Pages; `_authed.tsx` is the protected layout |
 | Components | `app/components/` | Shell, Modal, design primitives |
 | Auth | `app/lib/auth.tsx` | AuthContext, display prefs on `<body>` |
-| API | `app/lib/api/` | client, endpoints, queries, types, mock |
+| API | `app/lib/api/` | client, endpoints, queries, types |
 | Styles | `app/app.css` | Tokens + atoms (`btn-*`, `card`, `chip-*`, …) |
 
 Path alias: `~` → `app/`.
@@ -42,7 +42,6 @@ Path alias: `~` → `app/`.
 
 - TypeScript strict; wire types in `types.ts` use snake_case per `API_CONTRACT.md`.
 - TanStack Query hooks live in `app/lib/api/queries.ts`.
-- Mock implementation: `app/lib/api/mock/` — persists to localStorage, ~300ms simulated delay.
 - Reuse existing CSS atoms; do not invent parallel styling systems.
 - Responsive: sidebar collapses below 900px; mobile tab bar uses 44×44px targets.
 - **UI tasks:** verify mobile and desktop widths before finishing.

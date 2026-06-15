@@ -410,6 +410,44 @@ describe("TaskRoute", () => {
     });
   });
 
+  it("does not auto-save a dirty draft while writing submit is in flight", async () => {
+    vi.useFakeTimers();
+    mockTaskId = "task-writing";
+    mockTask = writingTask();
+    mockSubmitResult = writingTask({ status: "processing" });
+    let resolveSubmit!: (value: Task) => void;
+    mockSubmit.mockReturnValue(
+      new Promise<Task>((resolve) => {
+        resolveSubmit = resolve;
+      })
+    );
+
+    render(<TaskRoute />);
+
+    fireEvent.change(screen.getByPlaceholderText(/start writing here/i), {
+      target: { value: "one two three four five" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^submit$/i }));
+    const dialog = screen.getByRole("dialog", { name: /confirm submit/i });
+    fireEvent.click(within(dialog).getByRole("button", { name: /submit answer/i }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+      await Promise.resolve();
+    });
+
+    expect(mockSubmit).toHaveBeenCalledWith({
+      taskId: "task-writing",
+      body: { full_text: "one two three four five" },
+    });
+    expect(mockSaveDraft).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveSubmit(mockSubmitResult);
+      await Promise.resolve();
+    });
+  });
+
   it("shows a recovery message when writing submit fails", async () => {
     mockTaskId = "task-writing";
     mockTask = writingTask();

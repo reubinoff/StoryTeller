@@ -39,7 +39,7 @@ Start the backend Function App at `http://localhost:7071/api/v1` before running 
 | Routes | `app/routes/` | Pages; loader/action via React Router |
 | Components | `app/components/` | Shared UI primitives |
 | Auth | `app/lib/auth.tsx` | `AuthContext` — user, metrics, auth actions, display prefs |
-| API | `app/lib/api/` | Typed client, TanStack Query hooks, mock backend |
+| API | `app/lib/api/` | Typed client, TanStack Query hooks |
 | Design system | `app/app.css` | CSS variables, utility atoms (`btn-*`, `card`, `chip-*`, `field-*`, `app-shell`) |
 
 ### API / Transport
@@ -50,20 +50,13 @@ Start the backend Function App at `http://localhost:7071/api/v1` before running 
 - **`queries.ts`** — TanStack Query hooks (`useMe`, `useInterests`, `useTask`, etc.)
 - **`types.ts`** — wire types (snake_case) matching the API contract
 
-### Mock Implementation
-
-`app/lib/api/mock/` is a complete in-memory backend:
-- `db.ts` — typed store + localStorage persistence
-- `router.ts` — pattern matcher `${method} ${path}` → handlers
-- `handlers/` — auth, catalog, me, tasks
-
 ### Auth & Protected Routes
 
-`AuthContext` stores user + metrics; tokens in localStorage. `app/routes/_authed.tsx` is the protected layout (auth guard + toast event listener). Display preferences (theme, text-size, reduce-motion) are applied to `<body>` dataset attributes in a `useEffect`.
+`AuthContext` stores user + metrics; tokens in localStorage. `app/routes/_authed.tsx` is the protected layout and auth guard. Display preferences (theme, text-size, reduce-motion) are applied to `<body>` dataset attributes in a `useEffect`.
 
 ### Async Task Completion
 
-Writing tasks have an 8-second processing phase. The mock backend dispatches a custom `storyteller:task-completed` event; `_authed.tsx` listens and fires a toast with a "View result" CTA.
+Writing tasks enter a processing state after submit. Task and result queries poll while the backend is evaluating the answer.
 
 ### Shell & Responsive Layout
 

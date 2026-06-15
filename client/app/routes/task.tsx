@@ -508,6 +508,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showExample, setShowExample] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const submitInFlightRef = useRef(false);
   const submitTask = useSubmitTask({
     onSuccess: () => navigate(`/tasks/${task.id}`),
   });
@@ -530,6 +531,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
 
   const saveCurrentDraft = useCallback(
     async (nextText: string) => {
+      if (submitInFlightRef.current) return false;
       setDraftStatus("saving");
       setDraftError(null);
       try {
@@ -538,6 +540,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
         setDraftStatus("saved");
         return true;
       } catch {
+        if (submitInFlightRef.current) return false;
         setDraftStatus("error");
         setDraftError("Draft could not be saved. Please try again.");
         return false;
@@ -546,16 +549,20 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     [saveDraft.mutateAsync]
   );
 
+  useEffect(() => {
+    submitInFlightRef.current = submitTask.isPending;
+  }, [submitTask.isPending]);
+
   // Auto-save every 10s when text changes (PRD §7.2).
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || submitTask.isPending) return;
     setDraftStatus("dirty");
     setDraftError(null);
     const t = setTimeout(async () => {
       void saveCurrentDraft(text);
     }, 10_000);
     return () => clearTimeout(t);
-  }, [isDirty, saveCurrentDraft, text]);
+  }, [isDirty, saveCurrentDraft, submitTask.isPending, text]);
 
   const handleLeave = async () => {
     if (isDirty) {
@@ -566,15 +573,21 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   };
 
   const handleSubmit = async () => {
+    submitInFlightRef.current = true;
+    setDraftError(null);
     setSubmitError(null);
     try {
       await submitTask.mutateAsync({
         taskId: task.id,
         body: { full_text: text },
       });
+      lastSavedTextRef.current = text;
+      setDraftStatus("saved");
       setConfirmOpen(false);
     } catch {
+      submitInFlightRef.current = false;
       setConfirmOpen(false);
+      if (text !== lastSavedTextRef.current) setDraftStatus("dirty");
       setSubmitError("We couldn't submit your answer. Please try again.");
     }
   };
@@ -696,7 +709,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               <button
                 className="btn btn-ghost"
                 onClick={() => void saveCurrentDraft(text)}
-                disabled={draftStatus === "saving" || !isDirty}
+                disabled={submitTask.isPending || draftStatus === "saving" || !isDirty}
                 aria-busy={draftStatus === "saving"}
               >
                 {draftStatus === "saving" ? "Saving..." : "Save draft"}

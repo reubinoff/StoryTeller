@@ -128,6 +128,30 @@ describe("useSubmitTask", () => {
       queryKey: queryKeys.task("task-1"),
     });
   });
+
+  it("invalidates task state when submit fails after changing server state", async () => {
+    const queryClient = makeClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    endpointMocks.submit.mockRejectedValue(new Error("queue down"));
+    const { result } = renderHook(() => useSubmitTask(), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          taskId: "task-1",
+          body: { full_text: "A complete answer." },
+        })
+      ).rejects.toThrow("queue down");
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.task("task-1"),
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
+  });
 });
 
 describe("useTaskResult", () => {
