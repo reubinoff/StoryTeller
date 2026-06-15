@@ -27,7 +27,7 @@ export function TopicSticker({ topic, selected = false, size = "md" }: TopicStic
       }}
       aria-hidden="true"
     >
-      <span className="topic-sticker-shape">{sticker.symbol}</span>
+      <span className="topic-sticker-shape" />
       <span className="topic-sticker-emoji">{topic.emoji}</span>
     </span>
   );
