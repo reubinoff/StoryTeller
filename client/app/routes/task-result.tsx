@@ -98,6 +98,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
           </div>
         )}
         <div
+          className="reading-result-hero"
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0,1fr) auto",
@@ -125,6 +126,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
                 margin: "14px 0 8px",
                 letterSpacing: 0,
               }}
+              className="reading-score-title"
             >
               <span className="tabnum">{result.score}</span>
               <span style={{ opacity: 0.55 }}> / {result.total}</span>
@@ -140,6 +142,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
       </div>
 
       <div
+        className="result-stats-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0,1fr))",
@@ -234,6 +237,7 @@ const ReadingResultView = ({ result }: { result: ReadingResult }) => {
                 {q.prompt}
               </div>
               <div
+                className="answer-compare-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",

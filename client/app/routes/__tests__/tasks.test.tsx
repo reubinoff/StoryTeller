@@ -93,6 +93,59 @@ describe("TasksRoute", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-done/result");
   });
 
+  it("routes writing processing, retry, and failed statuses to the right screens", () => {
+    mockTaskList.data = {
+      items: [
+        task({
+          id: "writing-processing",
+          course_id: "writing",
+          course_type: "short_writing",
+          title: "Feedback Pending",
+          status: "processing",
+        }),
+        task({
+          id: "writing-retry",
+          course_id: "writing",
+          course_type: "short_writing",
+          title: "Needs More Detail",
+          status: "needs_retry",
+        }),
+        task({
+          id: "writing-failed",
+          course_id: "writing",
+          course_type: "short_writing",
+          title: "Feedback Failed",
+          status: "failed",
+          failed_at: "2026-06-02T10:00:00Z",
+        }),
+      ],
+      next_cursor: null,
+    };
+
+    render(<TasksRoute />);
+
+    const processingRow = screen.getByText("Feedback Pending").closest("article");
+    const retryRow = screen.getByText("Needs More Detail").closest("article");
+    const failedRow = screen.getByText("Feedback Failed").closest("article");
+
+    fireEvent.click(
+      within(processingRow as HTMLElement).getByRole("button", {
+        name: /check status/i,
+      }),
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/writing-processing");
+
+    fireEvent.click(
+      within(retryRow as HTMLElement).getByRole("button", { name: /try again/i }),
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/writing-retry/result");
+
+    fireEvent.click(
+      within(failedRow as HTMLElement).getByRole("button", { name: /review/i }),
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/writing-failed/result");
+  });
+
   it("shows loading, error, and empty states", () => {
     mockTaskList = {
       isLoading: true,

@@ -9,11 +9,14 @@ export default function AchievementsRoute() {
   const q = useAchievements();
   return (
     <div style={{ maxWidth: 880, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 42, marginBottom: 8 }}>Achievements</h1>
+      <h1 className="page-title" style={{ fontSize: 42, marginBottom: 8 }}>
+        Achievements
+      </h1>
       <p style={{ color: "var(--ink-3)", marginBottom: 24 }}>
         Badges you've earned, and what's next.
       </p>
       <div
+        className="achievements-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",

@@ -110,6 +110,7 @@ export const Shell = ({ children }: ShellProps) => {
                   key={id}
                   to={to}
                   className={`nav-item ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
                 >
                   <Icon size={18} className="nav-icon" />
                   <span>{label}</span>
@@ -126,6 +127,7 @@ export const Shell = ({ children }: ShellProps) => {
                     key={id}
                     to={to}
                     className={`nav-item ${active ? "active" : ""}`}
+                    aria-current={active ? "page" : undefined}
                   >
                     <Icon size={18} className="nav-icon" />
                     <span>{label}</span>
@@ -169,16 +171,24 @@ export const Shell = ({ children }: ShellProps) => {
               <IconSearch size={16} />
               <span>Search courses, tasks…</span>
             </div>
-            <div
-              className="row gap-12"
-              style={{ marginLeft: "auto" }}
-            >
+            <div className="row gap-12 topbar-actions" style={{ marginLeft: "auto" }}>
               <span className="streak-pill">
-                <IconFlame size={14} /> {metrics.current_streak} day streak
+                <IconFlame size={14} />{" "}
+                <span className="pill-value">{metrics.current_streak}</span>
+                <span className="pill-label"> day streak</span>
               </span>
               <span className="xp-pill">
-                <IconSparkle size={14} /> {metrics.xp_total.toLocaleString()} XP
+                <IconSparkle size={14} />{" "}
+                <span className="pill-value">{metrics.xp_total.toLocaleString()}</span>
+                <span className="pill-label"> XP</span>
               </span>
+              <button
+                className="icon-btn"
+                aria-label="Help"
+                onClick={() => navigate("/help")}
+              >
+                <IconHelp size={18} />
+              </button>
               <button className="icon-btn" aria-label="Notifications">
                 <IconBell size={18} />
               </button>
@@ -222,8 +232,14 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
       match: (p) => p.startsWith("/courses"),
     },
     {
+      to: "/tasks",
+      label: "Tasks",
+      Icon: IconDoc,
+      match: (p) => p.startsWith("/tasks"),
+    },
+    {
       to: "/courses",
-      label: "Roll",
+      label: "New task",
       Icon: IconPlus,
       match: () => false,
       center: true,
@@ -247,9 +263,15 @@ const MobileTabbar = ({ pathname }: { pathname: string }) => {
         const active = t.match(pathname);
         const cls = `tab${active ? " active" : ""}${t.center ? " center" : ""}`;
         return (
-          <Link key={i} to={t.to} className={cls}>
+          <Link
+            key={i}
+            to={t.to}
+            className={cls}
+            aria-current={active ? "page" : undefined}
+            aria-label={t.center ? "Choose a course to roll a new task" : undefined}
+          >
             <t.Icon size={t.center ? 22 : 18} />
-            {!t.center && <span>{t.label}</span>}
+            {t.center ? <span className="sr">{t.label}</span> : <span>{t.label}</span>}
           </Link>
         );
       })}

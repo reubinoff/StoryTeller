@@ -107,7 +107,9 @@ async def test_dashboard_writing_progress_caps_at_one_hundred_percent(
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["travel"])
     rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
-    task_id = rolled.json()["id"]
+    task = rolled.json()
+    task_id = task["id"]
+    target = task["writing"]["min_words"]
     draft = " ".join(f"word{i}" for i in range(75))
     saved = await client.post(
         f"/tasks/{task_id}/draft",
@@ -123,9 +125,9 @@ async def test_dashboard_writing_progress_caps_at_one_hundred_percent(
     assert item["status"] == "in_progress"
     assert item["progress"] == {
         "current": 75,
-        "total": 60,
+        "total": target,
         "percentage": 100,
-        "label": "75 / 60 words",
+        "label": f"75 / {target} words",
     }
 
 

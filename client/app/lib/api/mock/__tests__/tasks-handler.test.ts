@@ -181,6 +181,53 @@ describe("mock task handler contract", () => {
     expect("course_type" in retry).toBe(false);
   });
 
+  it("rejects empty writing submits and draft changes after submit", () => {
+    const auth = createUser("strict-writer@example.com", ["travel"]);
+    const task = roll(auth.access_token, "writing");
+
+    const empty = handleTasks(
+      req("POST", `/tasks/${task.id}/submit`, { full_text: "   " }, auth.access_token)
+    );
+    expect(problem(empty)).toMatchObject({
+      status: 422,
+      code: "validation_error",
+    });
+
+    const submit = data<WritingSubmitAccepted>(
+      handleTasks(
+        req(
+          "POST",
+          `/tasks/${task.id}/submit`,
+          { full_text: "A complete enough answer for the mock." },
+          auth.access_token
+        )
+      )
+    );
+    expect(submit.status).toBe("processing");
+
+    const resubmit = handleTasks(
+      req("POST", `/tasks/${task.id}/submit`, { full_text: "Again." }, auth.access_token)
+    );
+    expect(problem(resubmit)).toMatchObject({
+      status: 400,
+      code: "invalid_state",
+    });
+
+    const draft = handleTasks(
+      req("POST", `/tasks/${task.id}/draft`, { text: "too late" }, auth.access_token)
+    );
+    expect(problem(draft)).toMatchObject({
+      status: 400,
+      code: "invalid_state",
+    });
+
+    const result = data<{ answer_text: string; fail_reason: string | null }>(
+      handleTasks(req("GET", `/tasks/${task.id}/result`, undefined, auth.access_token))
+    );
+    expect(result.answer_text).toBe("A complete enough answer for the mock.");
+    expect(result.fail_reason).toBeNull();
+  });
+
   it("only retries failed writing tasks", () => {
     const auth = createUser("retry@example.com", ["space"]);
     const task = roll(auth.access_token, "reading");

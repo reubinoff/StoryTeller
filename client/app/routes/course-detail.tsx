@@ -96,7 +96,7 @@ export default function CourseDetailRoute() {
             >
               {course.subtitle}
             </span>
-            <h1 style={{ fontSize: 48, margin: "14px 0 12px" }}>
+            <h1 className="course-title" style={{ fontSize: 48, margin: "14px 0 12px" }}>
               {course.title}
             </h1>
             <p
@@ -221,7 +221,7 @@ export default function CourseDetailRoute() {
           {myTasks.map((t) => (
             <div
               key={t.id}
-              className="card"
+              className="card course-task-row"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr auto auto auto",

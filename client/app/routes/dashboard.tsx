@@ -514,6 +514,7 @@ const Metric = ({
       </span>
     </div>
     <div
+      className="metrics-row"
       style={{
         fontFamily: "var(--font-display)",
         fontSize: 34,
@@ -618,6 +619,7 @@ const DashboardLoading = () => (
   <div className="col gap-32">
     <Skeleton height={220} radius={22} />
     <div
+      className="dashboard-body"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",

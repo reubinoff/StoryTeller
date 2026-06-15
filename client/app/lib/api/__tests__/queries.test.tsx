@@ -1,22 +1,34 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReadingSubmitResponse, WritingSubmitAccepted } from "../types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+  ReadingSubmitResponse,
+  WritingResult,
+  WritingSubmitAccepted,
+} from "../types";
 
 const endpointMocks = vi.hoisted(() => ({
+  result: vi.fn(),
+  retry: vi.fn(),
   submit: vi.fn(),
 }));
 
 vi.mock("../endpoints", () => ({
   api: {
     tasks: {
+      result: endpointMocks.result,
+      retry: endpointMocks.retry,
       submit: endpointMocks.submit,
     },
   },
 }));
 
-import { queryKeys, useSubmitTask } from "../queries";
+import { queryKeys, useRetryTask, useSubmitTask, useTaskResult } from "../queries";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function makeClient() {
   return new QueryClient({
@@ -62,6 +74,8 @@ const readingSubmitResponse: ReadingSubmitResponse = {
 
 describe("useSubmitTask", () => {
   beforeEach(() => {
+    endpointMocks.result.mockReset();
+    endpointMocks.retry.mockReset();
     endpointMocks.submit.mockReset();
   });
 
@@ -108,5 +122,100 @@ describe("useSubmitTask", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: queryKeys.task("task-1"),
     });
+  });
+});
+
+describe("useTaskResult", () => {
+  beforeEach(() => {
+    endpointMocks.result.mockReset();
+  });
+
+  it("polls while a writing result is still processing", async () => {
+    vi.useFakeTimers();
+    const queryClient = makeClient();
+    const processing: WritingResult = {
+      task_id: "task-1",
+      mode: "writing",
+      status: "processing",
+      answer_text: "Draft",
+      evaluation: null,
+      fail_reason: null,
+      xp_earned: 0,
+      passed: null,
+      passing_score: 70,
+      submitted_at: "2026-06-01T10:05:00Z",
+      completed_at: null,
+    };
+    const completed: WritingResult = {
+      ...processing,
+      status: "completed",
+      evaluation: {
+        score_overall: 84,
+        score_grammar: 80,
+        score_vocabulary: 82,
+        score_structure: 88,
+        score_relevance: 86,
+        feedback_summary: "Nice work.",
+        feedback_detail: [],
+        focus_next: [],
+        highlights: [],
+      },
+      passed: true,
+      completed_at: "2026-06-01T10:06:00Z",
+    };
+    endpointMocks.result
+      .mockResolvedValueOnce(processing)
+      .mockResolvedValueOnce(completed);
+
+    const { result } = renderHook(() => useTaskResult("task-1"), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.data?.status).toBe("processing"));
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(endpointMocks.result).toHaveBeenCalledTimes(2);
+      expect(result.current.data?.status).toBe("completed");
+    });
+  });
+});
+
+describe("useRetryTask", () => {
+  beforeEach(() => {
+    endpointMocks.retry.mockReset();
+  });
+
+  it("invalidates task, result, list, and dashboard queries", async () => {
+    const queryClient = makeClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    endpointMocks.retry.mockResolvedValue({
+      id: "task-1",
+      status: "processing",
+      submitted_at: "2026-06-01T10:05:00Z",
+    });
+    const { result } = renderHook(() => useRetryTask(), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync("task-1");
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.task("task-1"),
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.result("task-1"),
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
   });
 });

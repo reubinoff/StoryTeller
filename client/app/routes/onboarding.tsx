@@ -68,6 +68,7 @@ export default function OnboardingRoute() {
       style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
     >
       <div
+        className="onboarding-header"
         style={{
           padding: "20px 32px",
           borderBottom: "1px solid var(--line)",
@@ -111,6 +112,7 @@ export default function OnboardingRoute() {
       </div>
 
       <div
+        className="onboarding-body"
         style={{
           flex: 1,
           display: "flex",
@@ -133,6 +135,7 @@ export default function OnboardingRoute() {
               </div>
               <span className="chip chip-rust">Welcome aboard</span>
               <h1
+                className="onboarding-title"
                 style={{
                   fontSize: 52,
                   margin: "14px 0 10px",
@@ -164,7 +167,7 @@ export default function OnboardingRoute() {
           {step === 1 && (
             <div className="page-fadein">
               <div style={{ textAlign: "center", marginBottom: 32 }}>
-                <h1 style={{ fontSize: 44, marginBottom: 10 }}>
+                <h1 className="onboarding-title-sm" style={{ fontSize: 44, marginBottom: 10 }}>
                   Pick your starting level
                 </h1>
                 <p
@@ -193,6 +196,7 @@ export default function OnboardingRoute() {
               >
                 <label className="field-label">Starting grade</label>
                 <div
+                  className="onboarding-grade-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(6, 1fr)",
@@ -283,7 +287,7 @@ export default function OnboardingRoute() {
           {step === 2 && (
             <div className="page-fadein">
               <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <h1 style={{ fontSize: 42, marginBottom: 8 }}>
+                <h1 className="onboarding-title-sm" style={{ fontSize: 42, marginBottom: 8 }}>
                   What do you love?
                 </h1>
                 <p style={{ color: "var(--ink-3)", fontSize: 16 }}>

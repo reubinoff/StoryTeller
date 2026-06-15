@@ -151,7 +151,7 @@ export default function SignupRoute() {
       </div>
 
       <form onSubmit={onSubmit} className="col gap-16" noValidate>
-        <div className="row gap-12">
+        <div className="row gap-12 auth-name-row">
           <div style={{ flex: 1 }}>
             <label className="field-label" htmlFor="fn">
               First name

@@ -251,14 +251,16 @@ describe("TaskRoute", () => {
       target: { value: "one two three four five" },
     });
     expect(submit).toBeEnabled();
+    expect(screen.getByText(/ready to submit/i)).toBeInTheDocument();
 
     fireEvent.change(textarea, {
       target: { value: "one two three four five six seven eight nine" },
     });
     expect(submit).toBeDisabled();
+    expect(screen.getByText(/1 word over limit/i)).toBeInTheDocument();
   });
 
-  it("fills the writing editor with the sample answer", () => {
+  it("shows a read-only writing example without overwriting the draft", () => {
     mockTaskId = "task-writing";
     mockTask = writingTask({
       writing: {
@@ -274,11 +276,14 @@ describe("TaskRoute", () => {
     render(<TaskRoute />);
 
     const textarea = screen.getByPlaceholderText(/start writing here/i) as HTMLTextAreaElement;
-    fireEvent.click(screen.getByRole("button", { name: /use sample answer/i }));
+    fireEvent.change(textarea, {
+      target: { value: "my own draft" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /show example/i }));
 
-    expect(textarea.value).toContain("Kyoto");
-    expect(textarea.value.split(/\s+/).length).toBeGreaterThanOrEqual(60);
-    expect(screen.getByRole("button", { name: /^submit$/i })).toBeEnabled();
+    expect(screen.getByRole("heading", { name: /example answer/i })).toBeInTheDocument();
+    expect(screen.getByText(/Kyoto, the old capital of Japan/i)).toBeInTheDocument();
+    expect(textarea.value).toBe("my own draft");
   });
 
   it("saves writing drafts manually and automatically", async () => {
@@ -294,7 +299,10 @@ describe("TaskRoute", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
-    expect(mockSaveDraft).toHaveBeenCalledWith("one two three four five");
+    await waitFor(() => {
+      expect(mockSaveDraft).toHaveBeenCalledWith("one two three four five");
+      expect(screen.getByText(/^saved$/i)).toBeInTheDocument();
+    });
 
     fireEvent.change(textarea, {
       target: { value: "six seven eight nine ten" },
@@ -306,6 +314,66 @@ describe("TaskRoute", () => {
     });
 
     expect(mockSaveDraft).toHaveBeenLastCalledWith("six seven eight nine ten");
+  });
+
+  it("saves an empty writing draft when the learner clears existing text", async () => {
+    mockTaskId = "task-writing";
+    mockTask = writingTask({
+      writing: {
+        title: "A place I want to visit",
+        prompt: "Write about a place you would like to visit and explain why.",
+        hints: ["Name the place."],
+        min_words: 5,
+        max_words: 8,
+        draft: "one two three four five",
+      },
+    });
+
+    render(<TaskRoute />);
+
+    fireEvent.change(screen.getByPlaceholderText(/start writing here/i), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => {
+      expect(mockSaveDraft).toHaveBeenCalledWith("");
+    });
+  });
+
+  it("flushes the latest writing draft before leaving the task", async () => {
+    mockTaskId = "task-writing";
+    mockTask = writingTask();
+
+    render(<TaskRoute />);
+
+    fireEvent.change(screen.getByPlaceholderText(/start writing here/i), {
+      target: { value: "one two three four five" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /writing practice/i }));
+    const dialog = screen.getByRole("dialog", { name: /leave task/i });
+    fireEvent.click(within(dialog).getByRole("button", { name: /leave & save/i }));
+
+    await waitFor(() => {
+      expect(mockSaveDraft).toHaveBeenCalledWith("one two three four five");
+      expect(mockNavigate).toHaveBeenCalledWith("/courses/writing");
+    });
+  });
+
+  it("keeps the learner on the page when a manual draft save fails", async () => {
+    mockTaskId = "task-writing";
+    mockTask = writingTask();
+    mockSaveDraft.mockRejectedValueOnce(new Error("network"));
+
+    render(<TaskRoute />);
+
+    fireEvent.change(screen.getByPlaceholderText(/start writing here/i), {
+      target: { value: "one two three four five" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findByText(/draft could not be saved/i)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("submits writing through the confirmation modal with the full text payload", async () => {
@@ -339,6 +407,24 @@ describe("TaskRoute", () => {
       });
       expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing");
     });
+  });
+
+  it("shows a recovery message when writing submit fails", async () => {
+    mockTaskId = "task-writing";
+    mockTask = writingTask();
+    mockSubmit.mockRejectedValueOnce(new Error("queue down"));
+
+    render(<TaskRoute />);
+
+    fireEvent.change(screen.getByPlaceholderText(/start writing here/i), {
+      target: { value: "one two three four five" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^submit$/i }));
+    const dialog = screen.getByRole("dialog", { name: /confirm submit/i });
+    fireEvent.click(within(dialog).getByRole("button", { name: /submit answer/i }));
+
+    expect(await screen.findByText(/couldn't submit your answer/i)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("shows the writing processing state and lets the user return to the dashboard", () => {

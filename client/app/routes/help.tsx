@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { BrandLogo } from "~/components/Mascot";
+import { useAuth } from "~/lib/auth";
 import { HELP_DESCRIPTION, HELP_TITLE, faqJsonLd, pageMeta } from "~/lib/seo";
 
 const FAQS: Array<[string, string]> = [
@@ -31,17 +32,27 @@ export function meta() {
 }
 
 export default function HelpRoute() {
+  const { user } = useAuth();
+  const homeTo = user ? "/dashboard" : "/";
+
   return (
-    <div className="fullbleed-shell" style={{ padding: "32px 48px" }}>
+    <div className="fullbleed-shell help-shell" style={{ padding: "32px 48px" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <Link
-          to="/"
-          className="brand-logo-link"
-          style={{ color: "inherit", marginBottom: 32 }}
-        >
-          <BrandLogo width={160} />
-        </Link>
-        <h1 style={{ fontSize: 42, marginBottom: 8 }}>Help & FAQ</h1>
+        <div className="help-header">
+          <Link
+            to={homeTo}
+            className="brand-logo-link"
+            style={{ color: "inherit" }}
+          >
+            <BrandLogo width={160} />
+          </Link>
+          <Link to={homeTo} className="btn btn-soft btn-sm">
+            {user ? "Back to app" : "Home"}
+          </Link>
+        </div>
+        <h1 className="page-title" style={{ fontSize: 42, marginBottom: 8 }}>
+          Help & FAQ
+        </h1>
         <p style={{ color: "var(--ink-3)", marginBottom: 24 }}>
           Common questions about Storyteller.
         </p>

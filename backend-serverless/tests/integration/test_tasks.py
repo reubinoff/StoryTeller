@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -675,6 +676,60 @@ async def test_writing_draft_save_returns_saved_at(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_writing_draft_save_rejects_after_submission_and_results(
+    client: AsyncClient,
+    claude_stub,
+) -> None:
+    from app.services.evaluation_service import run_writing_evaluation
+
+    async def roll_and_submit(email: str) -> tuple[dict[str, str], str]:
+        _user, headers = await signup_and_login(client, email=email)
+        await set_interests(client, headers, ["travel"])
+        rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+        task_id = rolled.json()["id"]
+        submit = await client.post(
+            f"/tasks/{task_id}/submit",
+            headers=headers,
+            json={"full_text": "Kyoto is amazing because of bamboo and tea."},
+        )
+        assert submit.status_code == 202
+        return headers, task_id
+
+    processing_headers, processing_id = await roll_and_submit("processing@example.com")
+    draft_processing = await client.post(
+        f"/tasks/{processing_id}/draft",
+        headers=processing_headers,
+        json={"text": "too late"},
+    )
+    _assert_problem_response(draft_processing, status_code=400, code="invalid_state")
+
+    await run_writing_evaluation(uuid.UUID(processing_id))
+    draft_completed = await client.post(
+        f"/tasks/{processing_id}/draft",
+        headers=processing_headers,
+        json={"text": "too late again"},
+    )
+    _assert_problem_response(draft_completed, status_code=400, code="invalid_state")
+
+    retry_headers, retry_id = await roll_and_submit("needs-retry@example.com")
+    claude_stub.next_response = {
+        **WRITING_EVAL_RESPONSE,
+        "score_overall": 62,
+        "score_grammar": 60,
+        "score_vocabulary": 64,
+        "score_structure": 62,
+        "score_relevance": 63,
+    }
+    await run_writing_evaluation(uuid.UUID(retry_id))
+    draft_retry = await client.post(
+        f"/tasks/{retry_id}/draft",
+        headers=retry_headers,
+        json={"text": "too late after retry result"},
+    )
+    _assert_problem_response(draft_retry, status_code=400, code="invalid_state")
+
+
+@pytest.mark.asyncio
 async def test_retry_only_works_on_failed_tasks(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["travel"])
@@ -817,6 +872,18 @@ async def test_writing_submit_marks_failed_when_queue_enqueue_fails(
     assert fetched.json()["status"] == "failed"
     assert fetched.json()["fail_reason"] == "Evaluation queue unavailable"
 
+    result = await client.get(f"/tasks/{task_id}/result", headers=headers)
+    assert result.status_code == 200
+    assert result.json()["status"] == "failed"
+    assert result.json()["fail_reason"] == "Evaluation queue unavailable"
+
+    draft = await client.post(
+        f"/tasks/{task_id}/draft",
+        headers=headers,
+        json={"text": "too late"},
+    )
+    _assert_problem_response(draft, status_code=400, code="invalid_state")
+
 
 @pytest.mark.asyncio
 async def test_mark_single_notification_read(client: AsyncClient) -> None:
@@ -911,6 +978,45 @@ async def test_duplicate_worker_message_is_idempotent(client: AsyncClient) -> No
     assert writing_tasks.status_code == 200
     assert len(writing_tasks.json()["items"]) == 2
     assert sum(1 for t in writing_tasks.json()["items"] if t["status"] == "not_started") == 1
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        count = await db.scalar(
+            select(func.count()).select_from(TaskEvaluation).where(
+                TaskEvaluation.task_id == task_id
+            )
+        )
+    assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_duplicate_worker_messages_are_idempotent(
+    client: AsyncClient,
+) -> None:
+    from sqlalchemy import func, select
+
+    from app.db.models.task_evaluation import TaskEvaluation
+    from app.db.session import get_sessionmaker
+    from app.services.evaluation_service import run_writing_evaluation
+
+    _user, headers = await signup_and_login(client)
+    await set_interests(client, headers, ["travel"])
+    rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
+    task_id = uuid.UUID(rolled.json()["id"])
+    submit = await client.post(
+        f"/tasks/{task_id}/submit",
+        headers=headers,
+        json={"full_text": "Kyoto is amazing because of bamboo and tea."},
+    )
+    assert submit.status_code == 202
+
+    await asyncio.gather(
+        run_writing_evaluation(task_id),
+        run_writing_evaluation(task_id),
+    )
+
+    fetched = await client.get(f"/tasks/{task_id}", headers=headers)
+    assert fetched.json()["status"] == "completed"
 
     sm = get_sessionmaker()
     async with sm() as db:

@@ -217,3 +217,23 @@ async def test_worker_uses_persisted_answer_when_draft_is_empty(
     assert "Israeli school English learner" in prompt
     assert "School grade: **3**" in prompt
     assert "English difficulty grade: **2**" in prompt
+
+
+@pytest.mark.asyncio
+async def test_worker_prefers_persisted_answer_over_mutable_draft(
+    db_engine,
+    claude_stub,
+) -> None:
+    _engine, sm = db_engine
+    task_id = await _create_writing_task(
+        sm,
+        draft="This later draft should not be evaluated.",
+        answer_text="Submitted answer should be evaluated.",
+    )
+
+    await run_writing_evaluation(task_id)
+
+    assert len(claude_stub.calls) == 1
+    prompt = claude_stub.calls[0]["prompt"]
+    assert "Submitted answer should be evaluated." in prompt
+    assert "This later draft should not be evaluated." not in prompt

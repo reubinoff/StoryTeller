@@ -36,10 +36,11 @@ export default function Landing() {
 
   return (
     <div
-      className="fullbleed-shell"
+      className="fullbleed-shell landing-shell"
       style={{ position: "relative", overflow: "hidden" }}
     >
       <div
+        className="landing-nav"
         style={{
           display: "flex",
           alignItems: "center",
@@ -93,6 +94,7 @@ export default function Landing() {
             <IconSparkle size={12} /> English learning through stories
           </span>
           <h1
+            className="landing-title"
             style={{
               fontSize: 68,
               lineHeight: 1.02,
@@ -149,9 +151,9 @@ export default function Landing() {
             </div>
           </div>
         </div>
-        <div style={{ position: "relative" }}>
+        <div className="landing-demo" style={{ position: "relative" }}>
           <div
-            className="card"
+            className="card landing-demo-card"
             style={{
               background: "var(--paper-2)",
               padding: 24,
@@ -231,7 +233,7 @@ export default function Landing() {
             </div>
           </div>
           <div
-            className="card"
+            className="card landing-streak-card"
             style={{
               position: "absolute",
               right: -30,
@@ -278,13 +280,17 @@ export default function Landing() {
               ))}
             </div>
           </div>
-          <div style={{ position: "absolute", right: -10, bottom: -30, zIndex: 3 }}>
+          <div
+            className="landing-hero-mascot"
+            style={{ position: "absolute", right: -10, bottom: -30, zIndex: 3 }}
+          >
             <Mascot size={140} pose="cheer" kind="ferret" />
           </div>
         </div>
       </div>
 
       <div
+        className="landing-features-band"
         style={{
           borderTop: "1px solid var(--line)",
           background: "var(--paper-2)",
@@ -345,6 +351,7 @@ export default function Landing() {
       </div>
 
       <footer
+        className="landing-footer"
         style={{
           borderTop: "1px solid var(--line)",
           padding: "24px 48px",

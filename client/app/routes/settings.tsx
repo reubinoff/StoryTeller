@@ -100,13 +100,15 @@ export default function SettingsRoute() {
 
   return (
     <div style={{ maxWidth: 880, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 42, marginBottom: 8 }}>Settings</h1>
+      <h1 className="page-title" style={{ fontSize: 42, marginBottom: 8 }}>
+        Settings
+      </h1>
       <p style={{ color: "var(--ink-3)", fontSize: 15, marginBottom: 32 }}>
         Manage your profile, interests, and how the app feels.
       </p>
 
       <SettingsSection title="Profile" subtitle="Used across the app">
-        <div className="row gap-16" style={{ marginBottom: 14, paddingTop: 6 }}>
+        <div className="row gap-16 settings-profile-row" style={{ marginBottom: 14, paddingTop: 6 }}>
           <div
             style={{
               width: 64,
@@ -136,7 +138,7 @@ export default function SettingsRoute() {
             </button>
           </div>
         </div>
-        <div className="row gap-16">
+        <div className="row gap-16 settings-form-row">
           <div style={{ flex: 1 }}>
             <label className="field-label">First name</label>
             <input
@@ -154,7 +156,7 @@ export default function SettingsRoute() {
             />
           </div>
         </div>
-        <div className="row gap-16" style={{ marginTop: 14, paddingBottom: 14 }}>
+        <div className="row gap-16 settings-form-row" style={{ marginTop: 14, paddingBottom: 14 }}>
           <div style={{ flex: 1 }}>
             <label className="field-label">Year of birth</label>
             <input
@@ -182,6 +184,7 @@ export default function SettingsRoute() {
         subtitle="Pick up to 6. We mix these into every task."
       >
         <div
+          className="settings-interests-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(5, minmax(0,1fr))",
@@ -366,7 +369,7 @@ interface SegmentedProps {
 
 const Segmented = ({ value, onChange, options }: SegmentedProps) => (
   <div
-    className="row gap-4"
+    className="row gap-4 settings-segmented"
     style={{ background: "var(--paper-2)", borderRadius: 999, padding: 3 }}
   >
     {options.map((o) => (

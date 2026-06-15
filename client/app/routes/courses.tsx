@@ -16,7 +16,9 @@ export default function CoursesRoute() {
   return (
     <div>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 44, marginBottom: 8 }}>Courses</h1>
+        <h1 className="page-title" style={{ fontSize: 44, marginBottom: 8 }}>
+          Courses
+        </h1>
         <p
           style={{
             color: "var(--ink-3)",
@@ -63,6 +65,7 @@ export default function CoursesRoute() {
           subtitle="We're working on speaking practice, vocabulary builders, and group challenges."
         />
         <div
+          className="courses-coming-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0,1fr))",

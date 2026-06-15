@@ -11,15 +11,15 @@ export const Toggle = ({ on, onChange, ariaLabel }: ToggleProps) => (
     aria-pressed={on}
     aria-label={ariaLabel}
     style={{
-      width: 46,
-      height: 26,
+      width: 50,
+      height: 30,
       borderRadius: 999,
       background: on ? "var(--teal)" : "var(--line-strong)",
       position: "relative",
       transition: "background .15s",
       cursor: "pointer",
       border: "none",
-      flex: "0 0 46px",
+      flex: "0 0 50px",
     }}
   >
     <span
@@ -27,8 +27,8 @@ export const Toggle = ({ on, onChange, ariaLabel }: ToggleProps) => (
         position: "absolute",
         top: 3,
         left: on ? 23 : 3,
-        width: 20,
-        height: 20,
+        width: 24,
+        height: 24,
         borderRadius: "50%",
         background: "#fff",
         boxShadow: "0 1px 2px rgba(0,0,0,0.2)",

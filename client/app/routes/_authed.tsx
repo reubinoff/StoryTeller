@@ -41,7 +41,7 @@ export default function AuthedLayout() {
     return () => window.removeEventListener("storyteller:task-completed", handler);
   }, [push, navigate]);
 
-  if (!ready || !user) {
+  if (!ready || !user || !user.onboarding_completed) {
     return (
       <div className="fullbleed-shell" style={{ display: "grid", placeItems: "center" }}>
         <div className="row gap-8" style={{ color: "var(--ink-3)", fontSize: 14 }}>

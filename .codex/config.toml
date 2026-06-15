@@ -1,0 +1,8 @@
+# Repo-specific Codex configuration.
+# Personal defaults belong in ~/.codex/config.toml
+
+# Load supplemental instruction files when working in subdirectories.
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+# Room for root AGENTS.md + nested overrides + linked instructions.
+project_doc_max_bytes = 65536

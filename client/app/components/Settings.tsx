@@ -18,7 +18,7 @@ export const SettingsSection = ({
         <div style={{ fontSize: 13, color: "var(--ink-3)" }}>{subtitle}</div>
       )}
     </div>
-    <div className="card" style={{ padding: "8px 24px" }}>
+    <div className="card settings-section-card" style={{ padding: "8px 24px" }}>
       {children}
     </div>
   </div>
@@ -33,7 +33,7 @@ interface SettingsRowProps {
 
 export const SettingsRow = ({ label, desc, action, last }: SettingsRowProps) => (
   <div
-    className="row"
+    className="row settings-row"
     style={{
       justifyContent: "space-between",
       alignItems: "center",
@@ -46,6 +46,6 @@ export const SettingsRow = ({ label, desc, action, last }: SettingsRowProps) => 
       <div style={{ fontWeight: 600, fontSize: 14.5 }}>{label}</div>
       {desc && <div style={{ fontSize: 13, color: "var(--ink-3)" }}>{desc}</div>}
     </div>
-    <div>{action}</div>
+    <div className="settings-row-action">{action}</div>
   </div>
 );

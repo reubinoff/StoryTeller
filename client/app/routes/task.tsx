@@ -274,7 +274,7 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
               </button>
             </div>
             <div
-              className="card"
+              className="card reading-passage-panel"
               style={{
                 padding: "24px 28px",
                 maxHeight: "calc(100vh - 220px)",
@@ -391,7 +391,7 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
             )}
 
             {q.question_type === "true_false" && q.options && (
-              <div className="row gap-12">
+              <div className="row gap-12 true-false-options">
                 {q.options.map((opt, i) => {
                   const sel = answers[q.id] === i;
                   const isTrue = i === 0;
@@ -692,7 +692,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
             >
               {submitGuidance}
             </span>
-            <div className="row gap-12">
+            <div className="row gap-12 writing-task-actions">
               <button
                 className="btn btn-ghost"
                 onClick={() => void saveCurrentDraft(text)}

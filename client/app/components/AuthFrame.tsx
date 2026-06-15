@@ -18,6 +18,7 @@ export const AuthFrame = ({ side, children }: AuthFrameProps) => (
   >
     {side}
     <div
+      className="auth-panel"
       style={{
         display: "flex",
         alignItems: "center",
