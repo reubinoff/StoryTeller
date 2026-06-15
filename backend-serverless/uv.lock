@@ -1306,7 +1306,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.6.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.0" },
     { name = "python-multipart", specifier = ">=0.0.18" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.50" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
 
