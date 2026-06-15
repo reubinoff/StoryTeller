@@ -638,13 +638,11 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     () => (text.trim() ? text.trim().split(/\s+/).length : 0),
     [text]
   );
-  const okLen = words >= minWords && words <= maxWords;
+  const canSubmit = words >= minWords;
   const isDirty = text !== lastSavedText;
   const submitGuidance =
     words < minWords
       ? `Need ${minWords - words} more ${minWords - words === 1 ? "word" : "words"}`
-      : words > maxWords
-      ? `${words - maxWords} ${words - maxWords === 1 ? "word" : "words"} over limit`
       : "Ready to submit";
 
   const saveCurrentDraft = useCallback(
@@ -775,10 +773,8 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               className="chip"
               style={{
                 marginLeft: "auto",
-                color: okLen
+                color: canSubmit
                   ? "var(--good)"
-                  : words > maxWords
-                  ? "var(--bad)"
                   : "var(--ink-3)",
               }}
             >
@@ -828,7 +824,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
             </button>
             <span
               className={`writing-submit-guidance ${
-                okLen ? "ready" : words > maxWords ? "error" : ""
+                canSubmit ? "ready" : ""
               }`}
             >
               {submitGuidance}
@@ -844,7 +840,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               </button>
               <button
                 className="btn btn-accent"
-                disabled={!okLen || submitTask.isPending}
+                disabled={!canSubmit || submitTask.isPending}
                 onClick={() => setConfirmOpen(true)}
               >
                 Submit <IconArrowRight size={14} />
@@ -997,18 +993,6 @@ const WritingScaffoldCards = ({
 
 const WritingProcessing = ({ task }: { task: Task }) => {
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const total = 8000;
-    const id = setInterval(() => {
-      const p = Math.min(100, ((Date.now() - start) / total) * 100);
-      setProgress(p);
-      if (p >= 100) clearInterval(id);
-    }, 80);
-    return () => clearInterval(id);
-  }, []);
 
   // When polling observes a completed task, navigate to the result page.
   useEffect(() => {
@@ -1018,71 +1002,41 @@ const WritingProcessing = ({ task }: { task: Task }) => {
   }, [task.status, task.id, navigate]);
 
   return (
-    <div style={{ maxWidth: 560, margin: "40px auto 0", textAlign: "center" }}>
+    <div className="writing-processing-page">
       <BackBar onBack={() => navigate("/dashboard")} label="Writing Practice" />
-      <div className="card" style={{ padding: 48 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: 18,
-          }}
-        >
+      <div className="card writing-processing-card">
+        <div className="writing-processing-mascot">
           <Mascot size={120} pose="thinking" mood="thinking" kind="ferret" />
         </div>
-        <span className="chip chip-sky">
-          <span
-            className="status-dot processing"
-            style={{ display: "inline-block", marginRight: 4 }}
-          />{" "}
-          Processing
+        <span className="chip chip-sky writing-processing-chip">
+          <span className="spinner" aria-hidden="true" />
+          Checking
         </span>
-        <h2 style={{ fontSize: 30, margin: "14px 0 8px" }}>
+        <h2 className="writing-processing-title">
           hafuyfay is reading your answer…
         </h2>
-        <p style={{ color: "var(--ink-3)", fontSize: 15, marginBottom: 24 }}>
-          We're looking at grammar, vocabulary, structure, and topic relevance.
-          Usually under a minute.
+        <p className="writing-processing-copy">
+          We're checking grammar, vocabulary, structure, and topic relevance.
+          This page updates when the result is ready.
         </p>
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{ width: `${progress}%`, background: "var(--sky)" }}
-          />
-        </div>
         <div
-          className="tabnum"
-          style={{
-            marginTop: 8,
-            fontSize: 12,
-            color: "var(--ink-3)",
-          }}
+          className="writing-processing-loader"
+          role="progressbar"
+          aria-label="Writing evaluation in progress"
         >
-          {Math.round(progress)}% · checking your work
+          <div className="writing-processing-loader-fill" />
         </div>
-        <div
-          style={{
-            marginTop: 28,
-            padding: "14px 18px",
-            background: "var(--paper-2)",
-            borderRadius: 14,
-            fontSize: 13,
-            color: "var(--ink-2)",
-            textAlign: "left",
-            display: "flex",
-            gap: 12,
-          }}
-        >
-          <span style={{ color: "var(--rust)" }}>💡</span>
+        <p className="writing-processing-status" aria-live="polite">
+          Checking your work
+        </p>
+        <div className="writing-processing-note">
+          <IconClock size={16} />
           <span>
             <strong>You can leave this page.</strong> We'll notify you when it's
-            done — your task will appear on the dashboard.
+            done, and your task will appear on the dashboard.
           </span>
         </div>
-        <div
-          className="row gap-12"
-          style={{ marginTop: 24, justifyContent: "center" }}
-        >
+        <div className="row gap-12 writing-processing-actions">
           <button
             className="btn btn-ghost"
             onClick={() => navigate("/dashboard")}

@@ -267,7 +267,7 @@ describe("TaskRoute", () => {
     expect(mockSubmit).not.toHaveBeenCalled();
   });
 
-  it("gates writing submission by the configured word count", () => {
+  it("gates writing submission only by the minimum word count", () => {
     mockTaskId = "task-writing";
     mockTask = writingTask();
 
@@ -287,8 +287,8 @@ describe("TaskRoute", () => {
     fireEvent.change(textarea, {
       target: { value: "one two three four five six seven eight nine" },
     });
-    expect(submit).toBeDisabled();
-    expect(screen.getByText(/1 word over limit/i)).toBeInTheDocument();
+    expect(submit).toBeEnabled();
+    expect(screen.getByText(/ready to submit/i)).toBeInTheDocument();
   });
 
   it("shows a read-only writing example without overwriting the draft", () => {
@@ -521,6 +521,14 @@ describe("TaskRoute", () => {
       screen.getByRole("heading", { name: /hafuyfay is reading your answer/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/checking your work/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/this page updates when the result is ready/i)
+    ).toBeInTheDocument();
+    const loader = screen.getByRole("progressbar", {
+      name: /writing evaluation in progress/i,
+    });
+    expect(loader).not.toHaveAttribute("aria-valuenow");
+    expect(screen.queryByText(/% · checking your work/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /go to dashboard/i }));
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard");

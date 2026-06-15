@@ -134,6 +134,21 @@ describe("Shell", () => {
     );
   });
 
+  it("renders the uploaded profile avatar in the sidebar", () => {
+    mockAuthState.user = {
+      ...user,
+      avatar_url: "/api/v1/me/avatar?version=1",
+    };
+
+    renderShell("/settings");
+
+    expect(document.querySelector(".sidebar .avatar")).toHaveAttribute(
+      "src",
+      "/api/v1/me/avatar?version=1"
+    );
+    expect(screen.queryByText("M")).not.toBeInTheDocument();
+  });
+
   it("signs out and returns to the public landing page", async () => {
     renderShell();
     const eventUser = userEvent.setup();

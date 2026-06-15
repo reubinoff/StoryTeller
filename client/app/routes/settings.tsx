@@ -24,6 +24,7 @@ import type {
   TextSizePreference,
   ThemePreference,
 } from "~/lib/api/types";
+import { avatarImageUrl } from "~/lib/avatar";
 import { useAuth } from "~/lib/auth";
 import {
   applyDisplayPreferences,
@@ -579,14 +580,6 @@ export default function SettingsRoute() {
       </Modal>
     </div>
   );
-}
-
-function avatarImageUrl(value: string | null): string | null {
-  if (!value) return null;
-  if (value.startsWith("/api/v1/me/avatar")) {
-    return `${api.me.avatarUrl()}${value.slice("/api/v1/me/avatar".length)}`;
-  }
-  return value;
 }
 
 function InfoModal({

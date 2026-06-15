@@ -669,6 +669,8 @@ select:focus-visible {
   font-size: 14px;
   border: 2px solid var(--paper);
   box-shadow: 0 0 0 1.5px var(--line);
+  flex: 0 0 36px;
+  object-fit: cover;
 }
 .notification-anchor {
   position: relative;
@@ -1354,6 +1356,109 @@ select:focus-visible {
   background: var(--teal);
   border-radius: 999px;
   transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.writing-processing-page {
+  width: min(100%, 560px);
+  margin: 40px auto 0;
+  text-align: center;
+}
+.writing-processing-card {
+  padding: 48px;
+}
+.writing-processing-mascot {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.writing-processing-chip {
+  gap: 8px;
+}
+.writing-processing-chip .spinner {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+}
+.writing-processing-title {
+  font-size: 30px;
+  margin: 14px 0 8px;
+}
+.writing-processing-copy {
+  max-width: 480px;
+  margin: 0 auto 24px;
+  color: var(--ink-3);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.writing-processing-loader {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+}
+.writing-processing-loader-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  min-width: 72px;
+  border-radius: 999px;
+  background: var(--sky);
+  animation: writingProcessingSlide 1.35s ease-in-out infinite;
+  will-change: transform;
+}
+.writing-processing-status {
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.writing-processing-note {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 28px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.writing-processing-note svg {
+  flex: 0 0 16px;
+  margin-top: 3px;
+  color: var(--rust);
+}
+.writing-processing-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+@keyframes writingProcessingSlide {
+  0% {
+    transform: translateX(-115%);
+  }
+  50% {
+    transform: translateX(70%);
+  }
+  100% {
+    transform: translateX(245%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .writing-processing-loader-fill {
+    width: 100%;
+    animation: none !important;
+    opacity: 0.65;
+    transform: none;
+  }
+}
+[data-reduce-motion="true"] .writing-processing-loader-fill {
+  width: 100%;
+  animation: none !important;
+  opacity: 0.65;
+  transform: none;
 }
 
 .roll-task-progress {
@@ -2212,6 +2317,24 @@ select:focus-visible {
   }
   .true-false-options > button,
   .writing-task-actions .btn {
+    width: 100%;
+  }
+  .writing-processing-page {
+    margin-top: 24px;
+  }
+  .writing-processing-card {
+    padding: 28px 20px;
+  }
+  .writing-processing-title {
+    font-size: 26px;
+  }
+  .writing-processing-copy {
+    font-size: 14px;
+  }
+  .writing-processing-note {
+    padding: 14px;
+  }
+  .writing-processing-actions .btn {
     width: 100%;
   }
   .btn-lg {

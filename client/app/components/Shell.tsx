@@ -23,6 +23,7 @@ import {
   useNotifications,
 } from "~/lib/api/queries";
 import type { DashboardMetrics, Notification } from "~/lib/api/types";
+import { avatarImageUrl } from "~/lib/avatar";
 
 interface NavItem {
   id: string;
@@ -105,6 +106,7 @@ export const Shell = ({ children }: ShellProps) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pathname = location.pathname;
   const metrics = metricsQuery.data ?? DEFAULT_METRICS;
+  const avatarSrc = avatarImageUrl(user?.avatar_url ?? null);
   const notificationItems = useMemo(
     () => notifications.data?.items ?? [],
     [notifications.data?.items]
@@ -175,7 +177,11 @@ export const Shell = ({ children }: ShellProps) => {
                 gap: 10,
               }}
             >
-              <div className="avatar">{user.first_name[0]}</div>
+              {avatarSrc ? (
+                <img className="avatar" src={avatarSrc} alt="" />
+              ) : (
+                <div className="avatar">{user.first_name[0]}</div>
+              )}
               <div style={{ minWidth: 0 }}>
                 <div
                   style={{
