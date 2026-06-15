@@ -740,10 +740,120 @@ select:focus-visible {
 
 /* Underline annotation marks for writing feedback */
 .anno {
+  appearance: none;
+  border: 0;
   background-image: linear-gradient(transparent 60%, var(--c) 60%);
-  padding-bottom: 1px;
-  cursor: help;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0 1px 1px;
+  margin: 0;
+  cursor: pointer;
   border-bottom: 2px dotted var(--c-strong);
+}
+.anno.active,
+.anno:hover {
+  background-image: linear-gradient(transparent 35%, var(--c) 35%);
+}
+.annotation-notes {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+}
+.annotation-notes h4 {
+  font-size: 14px;
+  margin: 0;
+}
+.annotation-notes button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--ink-2);
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+.annotation-notes button.active {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px var(--teal-soft);
+}
+.annotation-notes span {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.annotation-notes strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.annotation-notes em {
+  color: var(--ink-2);
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Writing task controls */
+.writing-save-status {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.writing-save-status.saving {
+  color: var(--sky);
+}
+.writing-save-status.saved {
+  color: var(--good);
+}
+.writing-save-status.error {
+  color: var(--bad);
+}
+.writing-action-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.writing-submit-guidance {
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.writing-submit-guidance.ready {
+  color: var(--good);
+}
+.writing-submit-guidance.error {
+  color: var(--bad);
+}
+.writing-example {
+  margin-top: 12px;
+  padding: 20px 22px;
+  background: var(--paper-2);
+}
+.writing-example h4 {
+  margin-bottom: 8px;
+}
+.writing-example p {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 /* Progress */
@@ -1111,10 +1221,15 @@ select:focus-visible {
   }
 }
 .toast .toast-cta {
+  appearance: none;
+  border: 0;
+  background: transparent;
   color: var(--amber);
+  font: inherit;
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
+  padding: 0;
 }
 
 /* Modal */
@@ -1122,12 +1237,16 @@ select:focus-visible {
   position: fixed;
   inset: 0;
   background: rgba(38, 35, 63, 0.55);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
   animation: fadein 0.2s;
-  padding: 40px;
+  padding: max(24px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .modal {
   background: var(--paper);
@@ -1135,7 +1254,19 @@ select:focus-visible {
   padding: 28px;
   max-width: 460px;
   width: 100%;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   box-shadow: var(--shadow-lg);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.modal-actions-center {
+  justify-content: center;
 }
 
 /* SVG brand mark renders as text-color */
@@ -1286,6 +1417,20 @@ select:focus-visible {
   .writing-side {
     grid-template-columns: 1fr;
   }
+  .writing-action-bar {
+    bottom: 86px;
+    align-items: stretch;
+  }
+  .writing-action-bar > .btn,
+  .writing-action-bar > .row {
+    width: 100%;
+  }
+  .writing-action-bar > .row .btn {
+    flex: 1;
+  }
+  .writing-submit-guidance {
+    width: 100%;
+  }
   .dashboard-body,
   .dashboard-body > *,
   .dashboard-body .card {
@@ -1357,6 +1502,21 @@ select:focus-visible {
   }
   .onboarding-topics {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .modal-backdrop {
+    padding: 16px;
+  }
+  .modal {
+    border-radius: var(--radius-lg);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    padding: 22px;
+  }
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+  .modal-actions .btn {
+    width: 100%;
   }
 }
 

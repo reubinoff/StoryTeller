@@ -161,6 +161,7 @@ class WritingResultOut(ApiModel):
     status: TaskStatus
     answer_text: str
     evaluation: WritingEvaluationOut | None
+    fail_reason: str | None = None
     xp_earned: int
     passed: bool | None
     passing_score: int = PASSING_SCORE

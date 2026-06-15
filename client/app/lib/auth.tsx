@@ -14,7 +14,13 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ApiError, getAccessToken, isUsingMock, setAccessToken } from "./api/client";
+import {
+  ApiError,
+  UNAUTHORIZED_EVENT,
+  getAccessToken,
+  isUsingMock,
+  setAccessToken,
+} from "./api/client";
 import { api } from "./api/endpoints";
 import {
   applyDisplayPreferences,
@@ -97,6 +103,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     void api.auth.logout().catch(() => {
       /* ignore */
     });
+  }, [clearLocalSession]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onUnauthorized = () => clearLocalSession();
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, [clearLocalSession]);
 
   // Hydrate from localStorage on mount.

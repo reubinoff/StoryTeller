@@ -21,6 +21,7 @@ from app.api.v1.schemas.task import PASSING_SCORE
 from app.db.models.achievement import Achievement, UserAchievement
 from app.db.models.course import Course
 from app.db.models.notification import Notification
+from app.db.models.content import WritingPrompt
 from app.db.models.streak import Streak
 from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
@@ -111,6 +112,10 @@ async def _compute_progress(
         text = task.writing_draft or ""
         words = len(text.split()) if text.strip() else 0
         target = 60
+        if task.writing_prompt_id is not None:
+            prompt = await db.get(WritingPrompt, task.writing_prompt_id)
+            if prompt is not None:
+                target = prompt.min_words
         return TaskProgress(
             current=words,
             total=target,

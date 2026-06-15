@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { BackBar } from "~/components/BackBar";
 import {
@@ -12,10 +13,17 @@ import { RollTaskProgress } from "~/components/RollTaskProgress";
 import { SectionHeader } from "~/components/SectionHeader";
 import { Skeleton } from "~/components/Skeleton";
 import { useToast } from "~/components/Toast";
-import { useRedoTask, useRollTask, useTask, useTaskResult } from "~/lib/api/queries";
+import {
+  useRedoTask,
+  useRetryTask,
+  useRollTask,
+  useTask,
+  useTaskResult,
+} from "~/lib/api/queries";
 import type {
   HighlightKind,
   ReadingResult,
+  WritingHighlight,
   WritingResult,
 } from "~/lib/api/types";
 import { useAuth } from "~/lib/auth";
@@ -356,33 +364,40 @@ const HIGHLIGHT_COLORS: Record<HighlightKind, { bg: string; line: string }> = {
   suggestion: { bg: "var(--sky-soft)", line: "var(--sky)" },
 };
 
+const HIGHLIGHT_LABELS: Record<HighlightKind, string> = {
+  grammar: "Grammar",
+  word_choice: "Word choice",
+  suggestion: "Suggestion",
+};
+
 const renderAnnotatedAnswer = (
   text: string,
-  highlights: WritingResult["evaluation"] extends infer T
-    ? T extends { highlights: infer H }
-      ? H
-      : never
-    : never
+  highlights: WritingHighlight[],
+  selectedIndex: number | null,
+  onSelect: (index: number) => void
 ) => {
   if (!highlights || highlights.length === 0) return <span>{text}</span>;
-  const sorted = [...highlights].sort((a, b) => a.start - b.start);
   const parts: React.ReactNode[] = [];
   let cursor = 0;
-  sorted.forEach((h, i) => {
+  highlights.forEach((h, i) => {
     if (h.start > cursor) parts.push(<span key={`p${i}`}>{text.slice(cursor, h.start)}</span>);
     const colors = HIGHLIGHT_COLORS[h.kind];
     parts.push(
-      <span
+      <button
+        type="button"
         key={`h${i}`}
-        className="anno"
-        title={h.message}
+        className={`anno ${selectedIndex === i ? "active" : ""}`}
+        aria-pressed={selectedIndex === i}
+        aria-label={`${HIGHLIGHT_LABELS[h.kind]} note: ${h.message}`}
+        onClick={() => onSelect(i)}
+        onFocus={() => onSelect(i)}
         style={{
           ["--c" as never]: colors.bg,
           ["--c-strong" as never]: colors.line,
         }}
       >
         {text.slice(h.start, h.end)}
-      </span>
+      </button>
     );
     cursor = h.end;
   });
@@ -395,12 +410,17 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
   const { user } = useAuth();
   const rollTask = useRollTask();
   const redoTask = useRedoTask();
+  const retryTask = useRetryTask();
   const { push } = useToast();
+  const [selectedHighlightIndex, setSelectedHighlightIndex] = useState<number | null>(null);
   const rollingCourse = rollTask.isPending
     ? rollTask.variables?.courseId ?? "writing"
     : undefined;
 
   const evalData = result.evaluation;
+  const highlights = evalData
+    ? [...evalData.highlights].sort((a, b) => a.start - b.start)
+    : [];
 
   const onNext = async () => {
     try {
@@ -418,6 +438,55 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
       push({ icon: "⚠️", title: "Couldn't reset this task." });
     }
   };
+  const onRetryFeedback = async () => {
+    try {
+      const t = await retryTask.mutateAsync(result.task_id);
+      navigate(taskTarget(t));
+    } catch {
+      push({ icon: "⚠️", title: "Couldn't retry feedback." });
+    }
+  };
+
+  if (result.status === "failed") {
+    return (
+      <div style={{ maxWidth: 720, margin: "40px auto", textAlign: "center" }}>
+        <BackBar onBack={() => navigate("/dashboard")} label="Writing Practice" />
+        <div className="card" style={{ padding: 40 }}>
+          <Mascot size={120} pose="wave" kind="ferret" />
+          <span className="chip chip-bad" style={{ marginTop: 12 }}>
+            Feedback failed
+          </span>
+          <h2 style={{ margin: "14px 0 8px" }}>We couldn't finish the feedback.</h2>
+          <p style={{ color: "var(--ink-3)", margin: "0 auto 22px", maxWidth: 480 }}>
+            {result.fail_reason
+              ? `${result.fail_reason}. Your answer is still saved.`
+              : "Your answer is still saved. Try sending it for feedback again."}
+          </p>
+          <div className="modal-actions modal-actions-center">
+            <button className="btn btn-ghost" onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </button>
+            <button
+              className={`btn btn-accent ${retryTask.isPending ? "btn-loading" : ""}`}
+              onClick={onRetryFeedback}
+              disabled={retryTask.isPending}
+              aria-busy={retryTask.isPending}
+            >
+              {retryTask.isPending ? (
+                <>
+                  <span className="spinner" /> Retrying...
+                </>
+              ) : (
+                <>
+                  <IconRefresh size={14} /> Retry feedback
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!evalData) {
     return (
@@ -621,7 +690,7 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
 
       <SectionHeader
         title="Your answer, with notes"
-        subtitle="Hover any underlined phrase for the suggestion"
+        subtitle="Select an underlined phrase for the suggestion"
       />
       <div
         style={{
@@ -640,7 +709,12 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
               color: "var(--ink-2)",
             }}
           >
-            {renderAnnotatedAnswer(result.answer_text, evalData.highlights)}
+            {renderAnnotatedAnswer(
+              result.answer_text,
+              highlights,
+              selectedHighlightIndex,
+              setSelectedHighlightIndex
+            )}
           </p>
           <div
             className="row gap-12"
@@ -687,6 +761,23 @@ const WritingResultView = ({ result }: { result: WritingResult }) => {
               Suggestion
             </span>
           </div>
+          {highlights.length > 0 && (
+            <div className="annotation-notes" aria-label="Writing notes">
+              <h4>Notes</h4>
+              {highlights.map((h, i) => (
+                <button
+                  key={`${h.start}-${h.end}-${h.kind}`}
+                  type="button"
+                  className={selectedHighlightIndex === i ? "active" : ""}
+                  onClick={() => setSelectedHighlightIndex(i)}
+                >
+                  <span>{HIGHLIGHT_LABELS[h.kind]}</span>
+                  <strong>{result.answer_text.slice(h.start, h.end)}</strong>
+                  <em>{h.message}</em>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="col gap-12">

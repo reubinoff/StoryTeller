@@ -12,6 +12,12 @@ import type { Problem } from "./types";
 import { mockHandle } from "./mock/router";
 
 const ACCESS_TOKEN_KEY = "storyteller.auth.accessToken";
+export const UNAUTHORIZED_EVENT = "storyteller:auth:unauthorized";
+
+export interface UnauthorizedEventDetail {
+  path: string;
+  status: 401;
+}
 
 export const isUsingMock =
   typeof import.meta !== "undefined" &&
@@ -42,6 +48,15 @@ export function setAccessToken(token: string | null): void {
   } else {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   }
+}
+
+export function notifyUnauthorized(path: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<UnauthorizedEventDetail>(UNAUTHORIZED_EVENT, {
+      detail: { path, status: 401 },
+    })
+  );
 }
 
 export interface RequestOptions<TBody = unknown> {
@@ -97,6 +112,7 @@ export async function request<TResponse, TBody = unknown>(
       token,
     });
     if (result.kind === "ok") return result.data;
+    if (!noAuth && result.problem.status === 401) notifyUnauthorized(url);
     if (throwOnError) throw new ApiError(result.problem);
     return result.problem as unknown as TResponse;
   }
@@ -127,6 +143,7 @@ export async function request<TResponse, TBody = unknown>(
         status: res.status,
         code: "request_failed",
       };
+    if (!noAuth && res.status === 401) notifyUnauthorized(url);
     if (throwOnError) throw new ApiError(problem);
     return problem as unknown as TResponse;
   }

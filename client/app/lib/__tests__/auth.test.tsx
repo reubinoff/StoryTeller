@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ToastProvider } from "~/components/Toast";
 import { AuthProvider, useAuth } from "../auth";
+import { UNAUTHORIZED_EVENT } from "../api/client";
 import type { AuthResponse, DashboardResponse, User } from "../api/types";
 
 // ---------------------------------------------------------------------------
@@ -299,6 +300,24 @@ describe("signout", () => {
     expect(document.body.dataset.themePreference).toBe("auto");
     expect(document.body.dataset.textSize).toBe("md");
     expect(document.body.dataset.reduceMotion).toBe("false");
+  });
+
+  it("clears the session when an authenticated API request returns 401", async () => {
+    localStorage.setItem("storyteller.auth.accessToken", "tok-test");
+    localStorage.setItem("storyteller.auth.user", JSON.stringify(mockUser));
+    vi.mocked(api.me.get).mockResolvedValue(mockUser);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.user?.id).toBe("user-1"));
+
+    window.dispatchEvent(
+      new CustomEvent(UNAUTHORIZED_EVENT, {
+        detail: { path: "/tasks", status: 401 },
+      })
+    );
+
+    await waitFor(() => expect(result.current.user).toBeNull());
+    expect(localStorage.getItem("storyteller.auth.accessToken")).toBeNull();
   });
 });
 

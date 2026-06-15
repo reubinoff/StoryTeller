@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { ApiError, buildUrl, getAccessToken, setAccessToken } from "../client";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import {
+  ApiError,
+  UNAUTHORIZED_EVENT,
+  buildUrl,
+  getAccessToken,
+  notifyUnauthorized,
+  request,
+  setAccessToken,
+} from "../client";
 
 describe("getAccessToken / setAccessToken", () => {
   beforeEach(() => {
@@ -90,5 +98,58 @@ describe("buildUrl", () => {
         ignored: undefined,
       })
     ).toBe("/tasks?status=completed&limit=10");
+  });
+});
+
+describe("unauthorized notifications", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("dispatches the unauthorized event with request context", () => {
+    const listener = vi.fn();
+    window.addEventListener(UNAUTHORIZED_EVENT, listener);
+
+    notifyUnauthorized("/tasks?status=in_progress");
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      path: "/tasks?status=in_progress",
+      status: 401,
+    });
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener);
+  });
+
+  it("notifies when an authenticated request receives a 401", async () => {
+    const listener = vi.fn();
+    window.addEventListener(UNAUTHORIZED_EVENT, listener);
+
+    await expect(request("/me")).rejects.toMatchObject({ status: 401 });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect((listener.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      path: "/me",
+      status: 401,
+    });
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener);
+  });
+
+  it("does not notify for noAuth 401s like failed login", async () => {
+    const listener = vi.fn();
+    window.addEventListener(UNAUTHORIZED_EVENT, listener);
+
+    await expect(
+      request("/auth/login", {
+        method: "POST",
+        body: { email: "nobody@example.com", password: "wrong" },
+        noAuth: true,
+      })
+    ).rejects.toMatchObject({ status: 401 });
+
+    expect(listener).not.toHaveBeenCalled();
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener);
   });
 });

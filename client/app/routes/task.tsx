@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { BackBar } from "~/components/BackBar";
 import {
@@ -500,7 +500,13 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   const navigate = useNavigate();
   const writing = task.writing;
   const [text, setText] = useState(writing?.draft ?? "");
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const lastSavedTextRef = useRef(writing?.draft ?? "");
+  const [draftStatus, setDraftStatus] = useState<
+    "idle" | "dirty" | "saving" | "saved" | "error"
+  >("idle");
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showExample, setShowExample] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const submitTask = useSubmitTask({
     onSuccess: () => navigate(`/tasks/${task.id}`),
@@ -514,28 +520,63 @@ const WritingTask = ({ task }: WritingTaskProps) => {
     [text]
   );
   const okLen = words >= minWords && words <= maxWords;
+  const isDirty = text !== lastSavedTextRef.current;
+  const submitGuidance =
+    words < minWords
+      ? `Need ${minWords - words} more ${minWords - words === 1 ? "word" : "words"}`
+      : words > maxWords
+      ? `${words - maxWords} ${words - maxWords === 1 ? "word" : "words"} over limit`
+      : "Ready to submit";
+
+  const saveCurrentDraft = useCallback(
+    async (nextText: string) => {
+      setDraftStatus("saving");
+      setDraftError(null);
+      try {
+        await saveDraft.mutateAsync(nextText);
+        lastSavedTextRef.current = nextText;
+        setDraftStatus("saved");
+        return true;
+      } catch {
+        setDraftStatus("error");
+        setDraftError("Draft could not be saved. Please try again.");
+        return false;
+      }
+    },
+    [saveDraft.mutateAsync]
+  );
 
   // Auto-save every 10s when text changes (PRD §7.2).
   useEffect(() => {
-    if (!text) return;
+    if (!isDirty) return;
+    setDraftStatus("dirty");
+    setDraftError(null);
     const t = setTimeout(async () => {
-      try {
-        await saveDraft.mutateAsync(text);
-        setSavedAt(new Date());
-      } catch {
-        /* ignore */
-      }
+      void saveCurrentDraft(text);
     }, 10_000);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
+  }, [isDirty, saveCurrentDraft, text]);
+
+  const handleLeave = async () => {
+    if (isDirty) {
+      const saved = await saveCurrentDraft(text);
+      if (!saved) throw new Error("draft_save_failed");
+    }
+    navigate("/courses/writing");
+  };
 
   const handleSubmit = async () => {
-    setConfirmOpen(false);
-    await submitTask.mutateAsync({
-      taskId: task.id,
-      body: { full_text: text },
-    });
+    setSubmitError(null);
+    try {
+      await submitTask.mutateAsync({
+        taskId: task.id,
+        body: { full_text: text },
+      });
+      setConfirmOpen(false);
+    } catch {
+      setConfirmOpen(false);
+      setSubmitError("We couldn't submit your answer. Please try again.");
+    }
   };
 
   if (!writing) return null;
@@ -543,7 +584,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
   return (
     <div>
       <BackBar
-        onBack={() => navigate("/courses/writing")}
+        onBack={handleLeave}
         label="Writing Practice"
         exitGuard
       />
@@ -607,17 +648,26 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               </span>{" "}
               / {minWords}–{maxWords} words
             </span>
-            {savedAt && (
-              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                Draft saved · auto
-              </span>
-            )}
+            <span className={`writing-save-status ${draftStatus}`}>
+              {draftStatus === "saving"
+                ? "Saving..."
+                : draftStatus === "saved"
+                ? "Saved"
+                : draftStatus === "error"
+                ? "Could not save"
+                : isDirty
+                ? "Unsaved changes"
+                : "Draft ready"}
+            </span>
           </div>
           <textarea
             className="field-textarea"
             placeholder="Start writing here…"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setSubmitError(null);
+            }}
             style={{
               minHeight: 340,
               fontFamily: "var(--font-display)",
@@ -627,32 +677,29 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               borderRadius: 18,
             }}
           />
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
+          <div className="writing-action-bar">
             <button
               className="btn btn-soft btn-sm"
-              onClick={() => setText(SAMPLE_WRITING_TEXT)}
+              onClick={() => setShowExample((s) => !s)}
+              aria-expanded={showExample}
             >
-              Use sample answer
+              {showExample ? "Hide example" : "Show example"}
             </button>
+            <span
+              className={`writing-submit-guidance ${
+                okLen ? "ready" : words > maxWords ? "error" : ""
+              }`}
+            >
+              {submitGuidance}
+            </span>
             <div className="row gap-12">
               <button
                 className="btn btn-ghost"
-                onClick={async () => {
-                  await saveDraft.mutateAsync(text);
-                  setSavedAt(new Date());
-                }}
-                disabled={saveDraft.isPending || !text}
+                onClick={() => void saveCurrentDraft(text)}
+                disabled={draftStatus === "saving" || !isDirty}
+                aria-busy={draftStatus === "saving"}
               >
-                Save draft
+                {draftStatus === "saving" ? "Saving..." : "Save draft"}
               </button>
               <button
                 className="btn btn-accent"
@@ -663,6 +710,17 @@ const WritingTask = ({ task }: WritingTaskProps) => {
               </button>
             </div>
           </div>
+          {(draftError || submitError) && (
+            <div className="field-error" style={{ marginTop: 10 }}>
+              {draftError || submitError}
+            </div>
+          )}
+          {showExample && (
+            <div className="card writing-example">
+              <h4>Example answer</h4>
+              <p>{SAMPLE_WRITING_TEXT}</p>
+            </div>
+          )}
         </div>
 
         <div className="writing-side">
@@ -717,7 +775,7 @@ const WritingTask = ({ task }: WritingTaskProps) => {
             Once submitted, you can't change your answer. We'll send a
             notification when feedback is ready (usually under a minute).
           </p>
-          <div className="row gap-12" style={{ justifyContent: "center" }}>
+          <div className="modal-actions modal-actions-center">
             <button
               className="btn btn-ghost"
               onClick={() => setConfirmOpen(false)}

@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
 
-from tests.__conftest_helpers__ import WRITING_EVAL_RESPONSE
+from tests.__conftest_helpers__ import READING_RESPONSE, WRITING_EVAL_RESPONSE
 from tests.integration._helpers import set_interests, signup_and_login
+
+
+def _year_of_birth_for_school_grade(school_grade: int) -> int:
+    return datetime.now(UTC).year - (school_grade + 5)
 
 
 def _assert_problem_response(resp, *, status_code: int, code: str) -> dict[str, object]:
@@ -24,6 +29,8 @@ def _assert_problem_response(resp, *, status_code: int, code: str) -> dict[str, 
 async def test_roll_reading_task_with_empty_cache_calls_claude(
     client: AsyncClient, claude_stub
 ) -> None:
+    from app.services.content_service import content_grade_for_school_grade
+
     _user, headers = await signup_and_login(client)
     await set_interests(client, headers, ["space"])
 
@@ -34,6 +41,7 @@ async def test_roll_reading_task_with_empty_cache_calls_claude(
     assert body["course_type"] == "unseen_text"
     assert body["interest_id"] == "space"
     assert body["status"] == "not_started"
+    assert body["grade_level_at_roll"] == _user["grade_level"]
     assert body["reading"] is not None
     assert len(body["reading"]["questions"]) == 3
     # While not_started, questions must NOT include correct_answer
@@ -41,6 +49,11 @@ async def test_roll_reading_task_with_empty_cache_calls_claude(
         assert "correct_answer" not in q
         assert "explanation" not in q
     assert len(claude_stub.calls) == 1
+    prompt = claude_stub.calls[0]["prompt"]
+    content_grade = content_grade_for_school_grade(_user["grade_level"])
+    assert "Israeli school English learner" in prompt
+    assert f"School grade: **{_user['grade_level']}**" in prompt
+    assert f"English difficulty grade: **{content_grade}**" in prompt
 
 
 @pytest.mark.asyncio
@@ -65,6 +78,88 @@ async def test_roll_reading_task_reuses_cache_for_second_user(
     # Same cached passage shared across users → no second Claude call.
     assert len(claude_stub.calls) == 1
     assert rA.json()["title"] == rB.json()["title"]
+
+
+@pytest.mark.asyncio
+async def test_roll_reading_task_reuses_adjusted_content_grade_cache(
+    client: AsyncClient, claude_stub
+) -> None:
+    from app.db.models.content import ContentPassage
+    from app.db.session import get_sessionmaker
+    from app.services.content_service import content_grade_for_school_grade
+
+    school_grade = 5
+    content_grade = content_grade_for_school_grade(school_grade)
+    _user, headers = await signup_and_login(
+        client,
+        email="cached-reader@example.com",
+        year_of_birth=_year_of_birth_for_school_grade(school_grade),
+    )
+    await set_interests(client, headers, ["space"])
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        db.add(
+            ContentPassage(
+                interest_slug="space",
+                grade_level=content_grade,
+                title="Cached Easier Space Story",
+                paragraphs=READING_RESPONSE["paragraphs"],
+                questions=READING_RESPONSE["questions"],
+                word_count=24,
+                model="test",
+            )
+        )
+        await db.commit()
+
+    resp = await client.post("/courses/reading/tasks", headers=headers, json={})
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["grade_level_at_roll"] == school_grade
+    assert body["title"] == "Cached Easier Space Story"
+    assert len(claude_stub.calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_roll_writing_task_reuses_adjusted_content_grade_cache(
+    client: AsyncClient, claude_stub
+) -> None:
+    from app.db.models.content import WritingPrompt
+    from app.db.session import get_sessionmaker
+    from app.services.content_service import content_grade_for_school_grade
+
+    school_grade = 5
+    content_grade = content_grade_for_school_grade(school_grade)
+    _user, headers = await signup_and_login(
+        client,
+        email="cached-writer@example.com",
+        year_of_birth=_year_of_birth_for_school_grade(school_grade),
+    )
+    await set_interests(client, headers, ["travel"])
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        db.add(
+            WritingPrompt(
+                interest_slug="travel",
+                grade_level=content_grade,
+                title="Cached Easier Travel Prompt",
+                prompt="Write about a trip you would like to take.",
+                hints=["Name the place", "Give one reason"],
+                min_words=30,
+                max_words=80,
+                model="test",
+            )
+        )
+        await db.commit()
+
+    resp = await client.post("/courses/writing/tasks", headers=headers, json={})
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["grade_level_at_roll"] == school_grade
+    assert body["title"] == "Cached Easier Travel Prompt"
+    assert body["writing"]["min_words"] == 30
+    assert len(claude_stub.calls) == 0
 
 
 @pytest.mark.asyncio
@@ -415,8 +510,10 @@ async def test_get_result_for_in_progress_reading_returns_400(
 @pytest.mark.asyncio
 async def test_writing_submit_queues_eval_and_worker_completes(
     client: AsyncClient,
+    claude_stub,
     evaluation_queue,
 ) -> None:
+    from app.services.content_service import content_grade_for_school_grade
     from app.services.evaluation_service import run_writing_evaluation
 
     _user, headers = await signup_and_login(client)
@@ -425,8 +522,14 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rolled.status_code == 201
     task = rolled.json()
     assert task["course_type"] == "short_writing"
+    assert task["grade_level_at_roll"] == _user["grade_level"]
     assert task["writing"] is not None
     assert task["writing"]["min_words"] >= 10
+    content_grade = content_grade_for_school_grade(_user["grade_level"])
+    prompt = claude_stub.calls[0]["prompt"]
+    assert "Israeli school English learner" in prompt
+    assert f"School grade: **{_user['grade_level']}**" in prompt
+    assert f"English difficulty grade: **{content_grade}**" in prompt
 
     submit = await client.post(
         f"/tasks/{task['id']}/submit",
@@ -456,6 +559,9 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rbody["evaluation"] is not None
     assert rbody["evaluation"]["score_overall"] == 84
     assert rbody["answer_text"].startswith("I would love")
+    eval_prompt = claude_stub.calls[1]["prompt"]
+    assert f"School grade: **{_user['grade_level']}**" in eval_prompt
+    assert f"English difficulty grade: **{content_grade}**" in eval_prompt
 
 
 @pytest.mark.asyncio

@@ -505,7 +505,15 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
         "full_text" in body && typeof body.full_text === "string"
           ? body.full_text
           : "";
+      if (!fullText.trim()) {
+        return err(422, "validation_error", "full_text required");
+      }
+      if (task.status !== "not_started" && task.status !== "in_progress") {
+        return err(400, "invalid_state", `Task is already ${task.status}`);
+      }
       task.writing.draft = fullText;
+      (task as unknown as { _submitted_answer: string })._submitted_answer =
+        fullText;
       task.status = "processing";
       task.submitted_at = new Date().toISOString();
       task.updated_at = task.submitted_at;
@@ -525,6 +533,9 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
     if (!userId) return err(401, "unauthenticated", "Sign in required");
     const task = getOwnedTask(userId, draftMatch[1]);
     if (!task || !task.writing) return err(404, "not_found", "Task not found");
+    if (task.status !== "not_started" && task.status !== "in_progress") {
+      return err(400, "invalid_state", "Drafts can only be saved before submission");
+    }
     const body = req.body as { text: string };
     task.writing.draft = body.text ?? "";
     task.status = task.status === "not_started" ? "in_progress" : task.status;
@@ -638,8 +649,12 @@ export function handleTasks(req: MockRequest): MockResponse<unknown> | null {
         task_id: task.id,
         mode: "writing",
         status: task.status,
-        answer_text: task.writing.draft || SAMPLE_WRITING_TEXT,
+        answer_text:
+          (task as unknown as { _submitted_answer?: string })._submitted_answer ??
+          task.writing.draft ??
+          "",
         evaluation: evalData ?? null,
+        fail_reason: task.fail_reason,
         xp_earned: task.xp_awarded,
         passed: taskPassed(task),
         passing_score: PASSING_SCORE,

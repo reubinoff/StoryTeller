@@ -364,6 +364,7 @@ Returns a `TaskResult` (reading or writing — discriminated by `mode`). Reading
 results unmask the correct answer and explanation for `completed` and
 `needs_retry` tasks. Writing results return the full `WritingEvaluation` once
 feedback is available; `evaluation` is `null` while still `processing`.
+Failed writing results include `fail_reason` so the client can offer a retry.
 
 ---
 
@@ -747,8 +748,8 @@ interface Problem {
 
 ## 11. Front-end behaviour notes (for backend planning)
 
-- The client polls `GET /tasks/{id}` every 5 s while a writing task is `processing`. Worker SLA: complete within 30 s p95.
-- The client auto-saves writing drafts every 10 s via `POST /tasks/{id}/draft`. Backend should idempotently overwrite the latest draft.
+- The client polls `GET /tasks/{id}` and `GET /tasks/{id}/result` every 5 s while a writing task is `processing`. Worker SLA: complete within 30 s p95.
+- The client auto-saves writing drafts every 10 s via `POST /tasks/{id}/draft`. Backend should idempotently overwrite the latest draft only before submission.
 - The dashboard fetches `/me/dashboard` on every visit. Aim for p95 < 300 ms.
 - The catalog (`/interests`, `/courses`) is treated as immutable for the session; the frontend caches it for an hour.
 - The shell topbar shows `current_streak` and `xp_total` from `/me/metrics`; both must be returned as a single integer (no localisation on the wire).

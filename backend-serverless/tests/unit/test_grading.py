@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from app.core.grading import is_correct_answer, normalize_answer, reading_xp
+from app.services.content_service import content_grade_for_school_grade, writing_word_bounds
 from app.services.user_service import derive_grade_level
-from app.services.content_service import writing_word_bounds
 
 
 def test_normalize_answer_lowercases_and_strips() -> None:
@@ -92,6 +92,21 @@ def test_derive_grade_level_clamps_to_1_12() -> None:
     assert derive_grade_level(yob_for_grade12) == 12
     assert derive_grade_level(yob_too_young) == 1
     assert derive_grade_level(yob_too_old) == 12
+
+
+@pytest.mark.parametrize(
+    ("school_grade", "content_grade"),
+    [
+        (1, 1),
+        (2, 1),
+        (5, 4),
+        (12, 11),
+    ],
+)
+def test_content_grade_for_school_grade_steps_back_for_israeli_english(
+    school_grade: int, content_grade: int
+) -> None:
+    assert content_grade_for_school_grade(school_grade) == content_grade
 
 
 def test_writing_word_bounds_scale_with_grade() -> None:

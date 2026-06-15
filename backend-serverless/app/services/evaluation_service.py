@@ -10,6 +10,8 @@ import logging
 import uuid
 from typing import cast
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.task import PASSING_SCORE
@@ -49,19 +51,20 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         await _mark_failed(db, task, "Missing writing prompt")
         return
 
-    answer_text = task.writing_draft or ""
-    if not answer_text:
-        full = await _load_full_text_answer(db, task_id)
-        if full:
-            answer_text = full
+    submitted_answer = await _load_full_text_answer(db, task_id)
+    answer_text = submitted_answer if submitted_answer is not None else task.writing_draft or ""
 
     if not answer_text.strip():
         await _mark_failed(db, task, "No submission text")
         return
 
     try:
+        content_grade_level = content_service.content_grade_for_school_grade(
+            task.grade_level_at_roll
+        )
         evaluation, latency_ms, model_name = await content_service.evaluate_writing(
-            grade_level=task.grade_level_at_roll,
+            school_grade_level=task.grade_level_at_roll,
+            content_grade_level=content_grade_level,
             topic_label=task.topic_label,
             prompt_text=prompt.prompt,
             student_answer=answer_text,
@@ -69,6 +72,13 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
     except Exception:
         LOGGER.exception("LLM evaluation failed for task %s", task_id)
         await _mark_failed(db, task, "Evaluation failed")
+        return
+
+    existing_eval = await db.scalar(
+        select(TaskEvaluation.id).where(TaskEvaluation.task_id == task.id)
+    )
+    if existing_eval is not None:
+        LOGGER.info("evaluate_writing_task: evaluation already exists id=%s", task_id)
         return
 
     task_eval = TaskEvaluation(
@@ -108,7 +118,12 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         )
     )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        LOGGER.info("evaluate_writing_task: duplicate evaluation skipped id=%s", task_id)
+        return
     if passed:
         await task_service.ensure_next_task_ready(
             db,
@@ -119,8 +134,6 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
 
 
 async def _load_full_text_answer(db: AsyncSession, task_id: uuid.UUID) -> str | None:
-    from sqlalchemy import select
-
     rows = await db.execute(
         select(TaskAnswer).where(
             TaskAnswer.task_id == task_id, TaskAnswer.question_id.is_(None)

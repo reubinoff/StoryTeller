@@ -15,6 +15,7 @@ from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_evaluation import TaskEvaluation
 from app.db.models.user import User
+from app.services.content_service import content_grade_for_school_grade
 from app.services.evaluation_service import run_writing_evaluation
 
 
@@ -26,13 +27,15 @@ async def _create_writing_task(
     draft: str | None = "Kyoto is amazing because of bamboo and tea.",
     answer_text: str | None = None,
 ) -> uuid.UUID:
+    school_grade = 3
+    content_grade = content_grade_for_school_grade(school_grade)
     async with sm() as db:
         user = User(
             email=f"{uuid.uuid4()}@example.com",
             first_name="Maya",
             last_name="Patel",
             year_of_birth=2017,
-            grade_level=3,
+            grade_level=school_grade,
         )
         db.add(user)
         await db.flush()
@@ -42,7 +45,7 @@ async def _create_writing_task(
         if with_prompt:
             prompt = WritingPrompt(
                 interest_slug="travel",
-                grade_level=3,
+                grade_level=content_grade,
                 title="A Place You Would Love to Visit",
                 prompt="Write about a place you would love to visit.",
                 hints=[],
@@ -52,7 +55,7 @@ async def _create_writing_task(
             )
             spare_prompt = WritingPrompt(
                 interest_slug="travel",
-                grade_level=3,
+                grade_level=content_grade,
                 title="Another Place You Would Love to Visit",
                 prompt="Write about another place you would love to visit.",
                 hints=[],
@@ -69,7 +72,7 @@ async def _create_writing_task(
             course_slug="writing",
             course_type="short_writing",
             interest_slug="travel",
-            grade_level_at_roll=3,
+            grade_level_at_roll=school_grade,
             status=status,
             title="A Place You Would Love to Visit",
             topic_label="Travel",
@@ -210,3 +213,7 @@ async def test_worker_uses_persisted_answer_when_draft_is_empty(
     assert evaluation.score_overall == 84
     assert notification.kind == "task_completed"
     assert len(claude_stub.calls) == 1
+    prompt = claude_stub.calls[0]["prompt"]
+    assert "Israeli school English learner" in prompt
+    assert "School grade: **3**" in prompt
+    assert "English difficulty grade: **2**" in prompt

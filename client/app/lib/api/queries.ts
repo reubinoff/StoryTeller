@@ -12,6 +12,7 @@ import type {
   SubmitTaskRequest,
   SubmitTaskResponse,
   Task,
+  TaskResult,
   TaskStatus,
   UpdateUserRequest,
 } from "./types";
@@ -84,6 +85,13 @@ export function useTaskResult(id: string | undefined) {
     queryKey: id ? queryKeys.result(id) : ["tasks", "_", "result"],
     enabled: Boolean(id),
     queryFn: () => api.tasks.result(id as string),
+    refetchInterval: (q) => {
+      const data = q.state.data as TaskResult | undefined;
+      if (data?.mode !== "writing") return false;
+      return data.status === "processing" || data.status === "submitted"
+        ? 5000
+        : false;
+    },
   });
 }
 
@@ -165,6 +173,19 @@ export function useRedoTask() {
     mutationFn: (id: string) => api.tasks.redo(id),
     onSuccess: (data) => {
       qc.setQueryData(queryKeys.task(data.id), data);
+      void qc.invalidateQueries({ queryKey: queryKeys.result(data.id) });
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
+export function useRetryTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.tasks.retry(id),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.task(data.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.result(data.id) });
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });

@@ -215,13 +215,14 @@ async def _create_new_task(
     override_interest: str | None = None,
 ) -> Task:
     interest_slug, interest_label = await _resolve_interest(db, user, override_interest)
+    content_grade_level = content_service.content_grade_for_school_grade(user.grade_level)
 
     if course.type == "unseen_text":
         passage = await _find_unused_passage(
             db,
             user_id=user.id,
             interest_slug=interest_slug,
-            grade_level=user.grade_level,
+            grade_level=content_grade_level,
         )
         if passage is None:
             try:
@@ -229,7 +230,8 @@ async def _create_new_task(
                     db,
                     interest_slug=interest_slug,
                     interest_label=interest_label,
-                    grade_level=user.grade_level,
+                    school_grade_level=user.grade_level,
+                    content_grade_level=content_grade_level,
                 )
             except Exception as exc:
                 LOGGER.exception("reading content generation failed")
@@ -261,7 +263,7 @@ async def _create_new_task(
         db,
         user_id=user.id,
         interest_slug=interest_slug,
-        grade_level=user.grade_level,
+        grade_level=content_grade_level,
     )
     if prompt is None:
         try:
@@ -269,7 +271,8 @@ async def _create_new_task(
                 db,
                 interest_slug=interest_slug,
                 interest_label=interest_label,
-                grade_level=user.grade_level,
+                school_grade_level=user.grade_level,
+                content_grade_level=content_grade_level,
             )
         except Exception as exc:
             LOGGER.exception("writing prompt generation failed")
@@ -604,6 +607,12 @@ async def save_writing_draft(
         raise AppError(
             status_code=400, code="invalid_state", title="Drafts only apply to writing tasks"
         )
+    if task.status not in ("not_started", "in_progress"):
+        raise AppError(
+            status_code=400,
+            code="invalid_state",
+            title="Drafts can only be saved before submission",
+        )
     task.writing_draft = text
     if task.status == "not_started":
         task.status = "in_progress"
@@ -829,6 +838,7 @@ async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
         status=task.status,  # type: ignore[arg-type]
         answer_text=answer_text,
         evaluation=evaluation,
+        fail_reason=task.fail_reason,
         xp_earned=task.xp_awarded,
         passed=_passed(float(task.score) if task.score is not None else None),
         submitted_at=task.submitted_at,

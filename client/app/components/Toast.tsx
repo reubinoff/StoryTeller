@@ -76,7 +76,8 @@ const ToastHost = () => {
             )}
           </div>
           {t.action && (
-            <span
+            <button
+              type="button"
               className="toast-cta"
               onClick={() => {
                 t.onAction?.();
@@ -84,7 +85,7 @@ const ToastHost = () => {
               }}
             >
               {t.action}
-            </span>
+            </button>
           )}
         </div>
       ))}

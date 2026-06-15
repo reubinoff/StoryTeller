@@ -21,6 +21,11 @@ def _word_count(paragraphs: list[str]) -> int:
     return sum(len(p.split()) for p in paragraphs)
 
 
+def content_grade_for_school_grade(grade_level: int) -> int:
+    """Map Israeli school grade to English content difficulty."""
+    return max(1, min(12, grade_level) - 1)
+
+
 def _reading_target_words(grade_level: int) -> int:
     """Per PRD: passage length scales with grade. Grade 1 ~120, Grade 12 ~400."""
     return max(80, min(420, 100 + grade_level * 25))
@@ -54,24 +59,26 @@ async def generate_reading_passage(
     *,
     interest_slug: str,
     interest_label: str,
-    grade_level: int,
+    school_grade_level: int,
+    content_grade_level: int,
     client: ClaudeClient | None = None,
 ) -> ContentPassage:
     """Call Claude, validate, persist a new ContentPassage row. Returns it."""
     cli = client or get_claude_client()
     prompt = render_prompt(
         "reading_passage",
-        grade_level=grade_level,
+        school_grade_level=school_grade_level,
+        content_grade_level=content_grade_level,
         interest_label=interest_label,
-        target_words=_reading_target_words(grade_level),
-        target_paragraphs=_reading_paragraphs_target(grade_level),
-        num_questions=_reading_num_questions(grade_level),
+        target_words=_reading_target_words(content_grade_level),
+        target_paragraphs=_reading_paragraphs_target(content_grade_level),
+        num_questions=_reading_num_questions(content_grade_level),
     )
     raw, _latency = await cli.generate_json(prompt=prompt)
     parsed = GeneratedReadingPassage.model_validate(raw)
     passage = ContentPassage(
         interest_slug=interest_slug,
-        grade_level=grade_level,
+        grade_level=content_grade_level,
         title=parsed.title,
         paragraphs=parsed.paragraphs,
         questions=[q.model_dump() for q in parsed.questions],
@@ -88,14 +95,16 @@ async def generate_writing_prompt(
     *,
     interest_slug: str,
     interest_label: str,
-    grade_level: int,
+    school_grade_level: int,
+    content_grade_level: int,
     client: ClaudeClient | None = None,
 ) -> WritingPrompt:
     cli = client or get_claude_client()
-    min_w, max_w = writing_word_bounds(grade_level)
+    min_w, max_w = writing_word_bounds(content_grade_level)
     prompt = render_prompt(
         "writing_prompt",
-        grade_level=grade_level,
+        school_grade_level=school_grade_level,
+        content_grade_level=content_grade_level,
         interest_label=interest_label,
         min_words=min_w,
         max_words=max_w,
@@ -106,7 +115,7 @@ async def generate_writing_prompt(
         parsed = parsed.model_copy(update={"min_words": min_w, "max_words": max_w})
     record = WritingPrompt(
         interest_slug=interest_slug,
-        grade_level=grade_level,
+        grade_level=content_grade_level,
         title=parsed.title,
         prompt=parsed.prompt,
         hints=parsed.hints,
@@ -121,7 +130,8 @@ async def generate_writing_prompt(
 
 async def evaluate_writing(
     *,
-    grade_level: int,
+    school_grade_level: int,
+    content_grade_level: int,
     topic_label: str,
     prompt_text: str,
     student_answer: str,
@@ -131,7 +141,8 @@ async def evaluate_writing(
     cli = client or get_claude_client()
     prompt = render_prompt(
         "writing_evaluation",
-        grade_level=grade_level,
+        school_grade_level=school_grade_level,
+        content_grade_level=content_grade_level,
         topic_label=topic_label,
         prompt=prompt_text,
         student_answer=student_answer,
