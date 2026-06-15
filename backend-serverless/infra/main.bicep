@@ -48,6 +48,9 @@ param functionSubnetResourceId string
 @description('Queue name for short writing evaluation jobs.')
 param evaluationQueueName string = 'writing-evaluations'
 
+@description('Queue name for ready task prewarm jobs.')
+param taskPrewarmQueueName string = 'task-prewarm'
+
 @description('Maximum Flex Consumption scale-out instance count.')
 @minValue(40)
 @maxValue(1000)
@@ -132,6 +135,11 @@ resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2023-05-0
 resource evaluationQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
   parent: queueService
   name: evaluationQueueName
+}
+
+resource taskPrewarmQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: queueService
+  name: taskPrewarmQueueName
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
@@ -299,7 +307,15 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: evaluationQueueName
         }
         {
+          name: 'TASK_PREWARM_QUEUE_NAME'
+          value: taskPrewarmQueueName
+        }
+        {
           name: 'CREATE_EVALUATION_QUEUE_ON_ENQUEUE'
+          value: 'false'
+        }
+        {
+          name: 'CREATE_TASK_PREWARM_QUEUE_ON_ENQUEUE'
           value: 'false'
         }
         {
@@ -320,6 +336,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   dependsOn: [
     packageContainer
     evaluationQueue
+    taskPrewarmQueue
   ]
 }
 
@@ -347,3 +364,4 @@ output resourceGroupName string = resourceGroup().name
 output keyVaultName string = keyVault.name
 output databaseSecretName string = databaseUrlSecret.name
 output evaluationQueueName string = evaluationQueue.name
+output taskPrewarmQueueName string = taskPrewarmQueue.name
