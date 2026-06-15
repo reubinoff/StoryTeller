@@ -6,6 +6,7 @@ import type { ReadingResult, Task, WritingResult } from "~/lib/api/types";
 const mockNavigate = vi.fn();
 const mockRoll = vi.fn();
 const mockRedo = vi.fn();
+const mockRetry = vi.fn();
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
@@ -39,6 +40,10 @@ vi.mock("~/lib/api/queries", () => ({
   useRedoTask: () => ({
     isPending: false,
     mutateAsync: mockRedo,
+  }),
+  useRetryTask: () => ({
+    isPending: false,
+    mutateAsync: mockRetry,
   }),
 }));
 
@@ -118,6 +123,7 @@ const writingResult = (overrides: Partial<WritingResult> = {}): WritingResult =>
       },
     ],
   },
+  fail_reason: null,
   xp_earned: 62,
   passed: true,
   passing_score: 70,
@@ -137,6 +143,7 @@ describe("TaskResultRoute", () => {
     mockNavigate.mockReset();
     mockRoll.mockReset();
     mockRedo.mockReset();
+    mockRetry.mockReset();
     mockTask = baseTask;
     mockResult = readingResult();
   });
@@ -271,7 +278,17 @@ describe("TaskResultRoute", () => {
     expect(screen.getByText(/nicely done, Maya/i)).toBeInTheDocument();
     expect(screen.getByText("84")).toBeInTheDocument();
     expect(screen.getByText(/clear details/i)).toBeInTheDocument();
-    expect(screen.getByTitle("Use a stronger verb.")).toHaveTextContent("walked");
+    const annotated = screen.getByRole("button", {
+      name: /word choice note: use a stronger verb/i,
+    });
+    expect(annotated).toHaveTextContent("walked");
+    expect(screen.getByText(/select an underlined phrase/i)).toBeInTheDocument();
+    const notes = screen.getByLabelText("Writing notes");
+    expect(within(notes).getByRole("button", { name: /walked/i })).toHaveTextContent(
+      "Use a stronger verb."
+    );
+    fireEvent.click(annotated);
+    expect(annotated).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("sensory details")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /open next task/i }));
@@ -279,6 +296,57 @@ describe("TaskResultRoute", () => {
     await waitFor(() => {
       expect(mockRoll).toHaveBeenCalledWith({ courseId: "writing" });
       expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-writing-next");
+    });
+  });
+
+  it("shows failed writing feedback with retry action instead of processing copy", async () => {
+    mockResult = writingResult({
+      status: "failed",
+      evaluation: null,
+      fail_reason: "Evaluation queue unavailable",
+      passed: null,
+      completed_at: null,
+    });
+    mockRetry.mockResolvedValue({
+      id: "task-1",
+      status: "processing",
+      submitted_at: "2026-06-01T10:05:00Z",
+    });
+
+    render(<TaskResultRoute />);
+
+    expect(screen.getByText(/couldn't finish the feedback/i)).toBeInTheDocument();
+    expect(screen.getByText(/evaluation queue unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/still cooking/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /retry feedback/i }));
+
+    await waitFor(() => {
+      expect(mockRetry).toHaveBeenCalledWith("task-1");
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-1");
+    });
+  });
+
+  it("redos a low-scoring writing result and returns to the draft", async () => {
+    mockResult = writingResult({
+      status: "needs_retry",
+      passed: false,
+      evaluation: {
+        ...writingResult().evaluation!,
+        score_overall: 62,
+        feedback_summary: "You have a clear topic, but need more structure.",
+      },
+    });
+    mockRedo.mockResolvedValue({ id: "task-1", status: "in_progress" });
+
+    render(<TaskResultRoute />);
+
+    expect(screen.getByText(/you need 70% to move on/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+    await waitFor(() => {
+      expect(mockRedo).toHaveBeenCalledWith("task-1");
+      expect(mockNavigate).toHaveBeenCalledWith("/tasks/task-1");
     });
   });
 });

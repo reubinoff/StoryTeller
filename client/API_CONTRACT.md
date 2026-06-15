@@ -673,6 +673,7 @@ interface WritingResult {
   status: TaskStatus;
   answer_text: string;
   evaluation: WritingEvaluation | null;
+  fail_reason: string | null;
   xp_earned: number;
   passed: boolean | null;
   passing_score: number;     // 70
