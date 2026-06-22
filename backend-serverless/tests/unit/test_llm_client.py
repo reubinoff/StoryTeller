@@ -37,6 +37,21 @@ def test_llm_model_overrides_legacy_claude_model() -> None:
     assert client.model == "anthropic:claude-new"
 
 
+def test_llm_api_keys_are_stripped_for_header_safety() -> None:
+    settings = Settings(
+        anthropic_api_key="\n test-anthropic-key \r\n",
+        azure_openai_api_key="\t test-azure-key \n",
+    )
+
+    assert settings.anthropic_api_key == "test-anthropic-key"
+    assert settings.azure_openai_api_key == "test-azure-key"
+
+
+def test_llm_api_keys_reject_embedded_control_characters() -> None:
+    with pytest.raises(ValueError, match="single-line"):
+        Settings(anthropic_api_key="test\nanthropic-key")
+
+
 def test_legacy_claude_max_tokens_used_when_llm_max_tokens_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

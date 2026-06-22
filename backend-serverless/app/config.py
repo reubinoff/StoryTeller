@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LLMProvider = Literal["anthropic", "azure_openai"]
@@ -58,6 +58,18 @@ class Settings(BaseSettings):
     azure_openai_api_key: str = ""
     azure_openai_api_version: str = ""
     llm_token_pricing: dict[str, LLMTokenPrice] = Field(default_factory=dict)
+
+    @field_validator("anthropic_api_key", "azure_openai_api_key", mode="before")
+    @classmethod
+    def _normalize_llm_api_key(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+
+        stripped = value.strip()
+        if any(ord(char) < 32 or ord(char) == 127 for char in stripped):
+            msg = "API keys must be single-line values without control characters"
+            raise ValueError(msg)
+        return stripped
 
     azure_web_jobs_storage: str = Field(
         default="",

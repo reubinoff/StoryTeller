@@ -175,7 +175,7 @@ def main() -> None:
     settings: Settings | None = None
     try:
         settings = Settings()
-        print(f"LLM smoke starting {smoke_description(settings)}")
+        print(f"LLM smoke starting {smoke_description(settings)}", flush=True)
         result = asyncio.run(run_smoke(settings=settings))
     except (LLMConfigError, ValidationError, ValueError) as exc:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
