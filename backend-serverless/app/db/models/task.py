@@ -32,6 +32,7 @@ class Task(Base):
         String(40), ForeignKey("interests.slug", ondelete="RESTRICT"), nullable=False
     )
     grade_level_at_roll: Mapped[int] = mapped_column(Integer, nullable=False)
+    english_level_at_roll: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="not_started")
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     topic_label: Mapped[str] = mapped_column(String(80), nullable=False)

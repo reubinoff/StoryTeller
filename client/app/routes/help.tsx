@@ -5,7 +5,7 @@ import { HELP_DESCRIPTION, HELP_TITLE, faqJsonLd, pageMeta } from "~/lib/seo";
 const FAQS: Array<[string, string]> = [
   [
     "How does the difficulty work?",
-    "We use your year of birth to set a starting grade level (1–12). As you complete tasks, content gets a little harder or easier based on how you do.",
+    "We use your year of birth to set a starting English level from 0–100. You can change the level in Settings, and we still use your age to keep topics appropriate.",
   ],
   [
     'What is a "task"?',

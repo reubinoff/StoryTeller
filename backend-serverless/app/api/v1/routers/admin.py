@@ -14,6 +14,7 @@ from app.api.v1.schemas.admin import (
     AdminSessionOut,
     AdminSetAdminRequest,
     AdminSetStatusRequest,
+    AdminTokenUsageOut,
     AdminUserDetail,
     AdminUserSummary,
 )
@@ -66,6 +67,18 @@ async def admin_overview(
     range_days: Annotated[int, Query()] = 30,
 ) -> AdminOverviewOut:
     return await admin_service.get_overview(
+        db,
+        range_days=_parse_range_days(range_days),
+    )
+
+
+@router.get("/token-usage", response_model=AdminTokenUsageOut)
+async def admin_token_usage(
+    current_admin: CurrentAdminUser,  # noqa: ARG001
+    db: DbSession,
+    range_days: Annotated[int, Query()] = 30,
+) -> AdminTokenUsageOut:
+    return await admin_service.get_token_usage(
         db,
         range_days=_parse_range_days(range_days),
     )

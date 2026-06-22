@@ -429,7 +429,7 @@ export default function DashboardRoute() {
               accent="var(--teal)"
               accentSoft="var(--teal-soft)"
               icon={<IconReadingTask size={20} />}
-              meta="5 min · Grade 1–12"
+              meta="5 min · Level 0–100"
               onClick={() => navigate("/courses/reading")}
             />
             <CourseCard
@@ -438,7 +438,7 @@ export default function DashboardRoute() {
               accent="var(--rust)"
               accentSoft="var(--rust-soft)"
               icon={<IconWritingTask size={20} />}
-              meta="10 min · Grade 1–12"
+              meta="10 min · Level 0–100"
               onClick={() => navigate("/courses/writing")}
             />
           </div>

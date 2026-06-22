@@ -22,6 +22,7 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String(40), nullable=False)
     year_of_birth: Mapped[int] = mapped_column(Integer, nullable=False)
     grade_level: Mapped[int] = mapped_column(Integer, nullable=False)
+    english_level: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     phone_number: Mapped[str | None] = mapped_column(String(20))
     avatar_url: Mapped[str | None] = mapped_column(String(1024))
 

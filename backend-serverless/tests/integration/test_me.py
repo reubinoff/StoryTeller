@@ -45,6 +45,7 @@ async def test_get_me_returns_full_user(client: AsyncClient) -> None:
         "last_name",
         "year_of_birth",
         "grade_level",
+        "english_level",
         "phone_number",
         "avatar_url",
         "display_locale",
@@ -102,6 +103,62 @@ async def test_patch_me_updates_preferences(client: AsyncClient) -> None:
     assert body["reduce_motion"] is True
     assert body["notif_email_enabled"] is False
     assert body["phone_number"] == "+15551234"
+
+
+@pytest.mark.asyncio
+async def test_patch_me_updates_english_level_and_refreshes_ready_tasks(
+    client: AsyncClient, task_prewarm_queue
+) -> None:
+    _user, headers = await signup_and_login(client)
+    onboarded = await client.put(
+        "/me/onboarding",
+        headers=headers,
+        json={"interest_ids": ["space", "travel"]},
+    )
+    assert onboarded.status_code == 200, onboarded.text
+    task_prewarm_queue.jobs.clear()
+
+    reading = await client.post(
+        "/courses/reading/tasks",
+        headers=headers,
+        json={"interest_id": "space"},
+    )
+    assert reading.status_code == 201, reading.text
+    reading_id = reading.json()["id"]
+    started = await client.patch(f"/tasks/{reading_id}/start", headers=headers)
+    assert started.status_code == 200, started.text
+    assert started.json()["status"] == "in_progress"
+
+    writing = await client.post(
+        "/courses/writing/tasks",
+        headers=headers,
+        json={"interest_id": "travel"},
+    )
+    assert writing.status_code == 201, writing.text
+    writing_id = writing.json()["id"]
+    task_prewarm_queue.jobs.clear()
+
+    resp = await client.patch("/me", headers=headers, json={"english_level": 12})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["english_level"] == 12
+
+    kept = await client.get(f"/tasks/{reading_id}", headers=headers)
+    assert kept.status_code == 200
+    assert kept.json()["status"] == "in_progress"
+
+    deleted = await client.get(f"/tasks/{writing_id}", headers=headers)
+    assert deleted.status_code == 404
+    assert task_prewarm_queue.jobs == [
+        (uuid.UUID(onboarded.json()["id"]), "reading"),
+        (uuid.UUID(onboarded.json()["id"]), "writing"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_patch_me_rejects_english_level_out_of_range(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client)
+    resp = await client.patch("/me", headers=headers, json={"english_level": 101})
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -272,7 +329,7 @@ async def test_put_interests_unknown_slug_returns_422(client: AsyncClient) -> No
 async def test_complete_onboarding_updates_profile_and_interests(
     client: AsyncClient,
 ) -> None:
-    _user, headers = await signup_and_login(client)
+    user, headers = await signup_and_login(client)
     resp = await client.put(
         "/me/onboarding",
         headers=headers,
@@ -280,8 +337,9 @@ async def test_complete_onboarding_updates_profile_and_interests(
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["year_of_birth"] == 2012
-    assert body["grade_level"] == 4
+    assert body["year_of_birth"] == user["year_of_birth"]
+    assert body["grade_level"] == user["grade_level"]
+    assert body["english_level"] == user["english_level"]
     assert body["interests"] == ["space", "animals"]
     assert body["onboarding_completed"] is True
 

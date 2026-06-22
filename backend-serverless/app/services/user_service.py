@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,12 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas.user import UserOut
 from app.db.models.interest import UserInterest
 from app.db.models.user import User
-
-
-def derive_grade_level(year_of_birth: int) -> int:
-    """Linear: grade = age − 5, clamped 1..12 (PRD §1.4)."""
-    age = datetime.now(UTC).year - year_of_birth
-    return max(1, min(12, age - 5))
+from app.services.level_service import derive_grade_level
 
 
 async def load_interest_slugs(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
@@ -40,6 +34,7 @@ async def to_user_out(db: AsyncSession, user: User) -> UserOut:
             "last_name": user.last_name,
             "year_of_birth": user.year_of_birth,
             "grade_level": user.grade_level,
+            "english_level": user.english_level,
             "phone_number": user.phone_number,
             "avatar_url": user.avatar_url,
             "display_locale": user.display_locale,

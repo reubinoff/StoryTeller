@@ -54,6 +54,7 @@ const baseTask: Task = {
   course_type: "unseen_text",
   interest_id: "space",
   grade_level_at_roll: 4,
+  english_level_at_roll: 24,
   status: "completed",
   title: "Moon story",
   topic_label: "Space",

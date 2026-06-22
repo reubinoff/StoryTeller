@@ -6,6 +6,7 @@ import type {
   AdminAuditEvent,
   AdminOverview,
   AdminSession,
+  AdminTokenUsage,
   AdminUserDetail,
   AdminUserSummary,
   Page,
@@ -79,6 +80,7 @@ const learnerDetail: AdminUserDetail = {
   ...learnerSummary,
   email_verified: true,
   grade_level: 6,
+  english_level: 37,
   year_of_birth: 2014,
   onboarding_completed: true,
   interests: ["books"],
@@ -120,6 +122,91 @@ const overview: AdminOverview = {
   course_metrics: [{ course_type: "short_writing", completed_count: 2, avg_score: 82 }],
 };
 
+const tokenUsage: AdminTokenUsage = {
+  range_days: 30,
+  generated_at: "2026-06-15T09:30:00Z",
+  totals: {
+    input_tokens: 1800,
+    output_tokens: 520,
+    cache_write_tokens: 0,
+    cache_read_tokens: 0,
+    total_tokens: 2320,
+    requests: 2,
+    cost_usd: 0.00284,
+    unknown_cost_events: 0,
+  },
+  daily: [
+    {
+      date: "2026-06-14",
+      input_tokens: 800,
+      output_tokens: 200,
+      cache_write_tokens: 0,
+      cache_read_tokens: 0,
+      total_tokens: 1000,
+      requests: 1,
+      cost_usd: 0.0012,
+    },
+    {
+      date: "2026-06-15",
+      input_tokens: 1000,
+      output_tokens: 320,
+      cache_write_tokens: 0,
+      cache_read_tokens: 0,
+      total_tokens: 1320,
+      requests: 1,
+      cost_usd: 0.00164,
+    },
+  ],
+  top_users: [
+    {
+      user_id: "user-1",
+      email: "learner@example.com",
+      first_name: "Mira",
+      last_name: "Stone",
+      total_tokens: 2320,
+      requests: 2,
+      cost_usd: 0.00284,
+    },
+  ],
+  top_tasks: [
+    {
+      task_id: "task-1",
+      title: "A Place You Would Love to Visit",
+      course_type: "short_writing",
+      user_id: "user-1",
+      user_email: "learner@example.com",
+      total_tokens: 1320,
+      requests: 1,
+      cost_usd: 0.00164,
+    },
+  ],
+  by_operation: [
+    {
+      key: "writing_evaluation",
+      label: "Writing evaluation",
+      total_tokens: 1320,
+      requests: 1,
+      cost_usd: 0.00164,
+    },
+  ],
+  by_model: [
+    {
+      key: "test:llm-stub",
+      label: "test:llm-stub",
+      total_tokens: 2320,
+      requests: 2,
+      cost_usd: 0.00284,
+    },
+  ],
+  forecast_30d: {
+    days: 30,
+    total_tokens: 2320,
+    cost_usd: 0.00284,
+    avg_daily_tokens: 77.3,
+    avg_daily_cost_usd: 0.000095,
+  },
+};
+
 const usersPage: Page<AdminUserSummary> = {
   items: [learnerSummary],
   next_cursor: null,
@@ -145,6 +232,7 @@ function queueAdminLoad() {
   fetchMock
     .mockResolvedValueOnce(jsonResponse(session))
     .mockResolvedValueOnce(jsonResponse(overview))
+    .mockResolvedValueOnce(jsonResponse(tokenUsage))
     .mockResolvedValueOnce(jsonResponse(usersPage))
     .mockResolvedValueOnce(jsonResponse(auditPage))
     .mockResolvedValueOnce(jsonResponse(learnerDetail));
@@ -157,8 +245,10 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Operations" })).toBeInTheDocument();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     expect((await screen.findAllByText("learner@example.com")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Token usage" })).toBeInTheDocument();
+    expect(screen.getAllByText("$0.0028").length).toBeGreaterThan(0);
     expect(screen.getByText("Protected admin")).toBeInTheDocument();
   });
 
@@ -178,7 +268,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     fetchMock
       .mockResolvedValueOnce(jsonResponse(usersPage))
       .mockResolvedValueOnce(jsonResponse(promotedDetail))
@@ -214,7 +304,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     fetchMock.mockResolvedValueOnce(
       jsonResponse(
         problem(409, "admin_safety_violation", "Cannot suspend the last active admin"),

@@ -23,7 +23,7 @@ from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_evaluation import TaskEvaluation
 from app.db.session import get_sessionmaker
-from app.services import content_service, task_service
+from app.services import content_service, llm_usage_service, task_service
 
 LOGGER = logging.getLogger(__name__)
 _EVALUATION_LOCKS: dict[uuid.UUID, asyncio.Lock] = {}
@@ -63,12 +63,16 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         return
 
     try:
-        content_grade_level = content_service.content_grade_for_school_grade(
-            task.grade_level_at_roll
+        content_grade_level = content_service.content_grade_for_english_level(
+            task.english_level_at_roll
         )
-        evaluation, latency_ms, model_name = await content_service.evaluate_writing(
+        content_level_label = content_service.content_label_for_english_level_value(
+            task.english_level_at_roll
+        )
+        evaluation, metadata, model_name = await content_service.evaluate_writing(
             school_grade_level=task.grade_level_at_roll,
             content_grade_level=content_grade_level,
+            content_level_label=content_level_label,
             topic_label=task.topic_label,
             prompt_text=prompt.prompt,
             min_words=prompt.min_words,
@@ -102,9 +106,21 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         focus_next=evaluation.focus_next,
         highlights=[h.model_dump() for h in evaluation.highlights],
         raw_response=cast("dict[str, object]", evaluation.model_dump()),
-        latency_ms=latency_ms,
+        latency_ms=metadata.latency_ms,
     )
     db.add(task_eval)
+    await db.flush()
+    usage_event = await llm_usage_service.record_llm_usage(
+        db,
+        operation="writing_evaluation",
+        model_label=model_name,
+        metadata=metadata,
+        user_id=task.user_id,
+        task_id=task.id,
+        resource_type="task_evaluation",
+        resource_id=task_eval.id,
+    )
+    task_eval.cost_usd = usage_event.cost_usd
 
     task.score = float(evaluation.score_overall)
     passed = task.score >= PASSING_SCORE

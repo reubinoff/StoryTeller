@@ -11,6 +11,7 @@ import { TopicSticker } from "~/components/Stickers";
 import { useToast } from "~/components/Toast";
 import { useAuth } from "~/lib/auth";
 import type { InterestId } from "~/lib/api/types";
+import { englishLevelLabel } from "~/lib/english-level";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
@@ -27,12 +28,12 @@ const AGE_BAND_COPY: Record<AgeBand, { welcome: string; level: string; topics: s
   },
   "9-12": {
     welcome: "We'll set up stories that feel playful, clear, and just right for your level.",
-    level: "Choose the grade that feels comfortable. You can stretch later.",
+    level: "You can tune this in Settings later.",
     topics: "Pick topics you like. We'll mix them into reading and writing tasks.",
   },
   "13+": {
-    welcome: "We'll tune your practice around your grade, interests, and pace.",
-    level: "Choose the level that fits your English practice right now.",
+    welcome: "We'll tune your practice around your age, English level, interests, and pace.",
+    level: "You can tune this in Settings later.",
     topics: "Choose up to 6 interests so your tasks feel relevant.",
   },
 };
@@ -55,8 +56,7 @@ export default function OnboardingRoute() {
     if (ready && user?.onboarding_completed) navigate("/dashboard", { replace: true });
   }, [ready, user, navigate]);
 
-  const initialYob = user?.year_of_birth ?? new Date().getFullYear() - 12;
-  const [yob, setYob] = useState<number>(initialYob);
+  const yob = user?.year_of_birth ?? new Date().getFullYear() - 12;
   const [interests, setLocalInterests] = useState<InterestId[]>(
     user?.interests ?? []
   );
@@ -67,6 +67,8 @@ export default function OnboardingRoute() {
   );
   const ageBand = useMemo(() => ageBandForYear(yob), [yob]);
   const ageCopy = AGE_BAND_COPY[ageBand];
+  const startingLevel = user?.english_level ?? 0;
+  const startingLevelLabel = englishLevelLabel(startingLevel);
 
   if (!user) return null;
 
@@ -80,8 +82,6 @@ export default function OnboardingRoute() {
 
   const finish = async () => {
     await completeOnboarding({
-      year_of_birth: yob,
-      grade_level: grade,
       interest_ids: interests,
     });
     push({
@@ -198,7 +198,7 @@ export default function OnboardingRoute() {
             <div className="page-fadein">
               <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <h1 className="onboarding-title-sm" style={{ fontSize: 44, marginBottom: 10 }}>
-                  Pick your starting level
+                  Your starting level
                 </h1>
                 <p
                   style={{
@@ -209,7 +209,9 @@ export default function OnboardingRoute() {
                   }}
                 >
                   Based on your year of birth ({yob}), we suggest{" "}
-                  <strong style={{ color: "var(--ink)" }}>Grade {grade}</strong>
+                  <strong style={{ color: "var(--ink)" }}>
+                    Level {startingLevel}
+                  </strong>
                   . {ageCopy.level}
                 </p>
               </div>
@@ -223,80 +225,23 @@ export default function OnboardingRoute() {
                   padding: 28,
                 }}
               >
-                <div className="field-label" id="starting-grade-label">
-                  Starting grade
+                <div className="field-label">English level</div>
+                <div className="onboarding-level-meter" aria-label="Starting English level">
+                  <div className="onboarding-level-number">{startingLevel}</div>
+                  <div>
+                    <div className="onboarding-level-label">{startingLevelLabel}</div>
+                    <div className="field-help">
+                      This controls English difficulty. Your birth year still helps
+                      keep topics age-appropriate.
+                    </div>
+                  </div>
                 </div>
-                <div
-                  className="onboarding-grade-grid"
-                  role="radiogroup"
-                  aria-labelledby="starting-grade-label"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(6, 1fr)",
-                    gap: 8,
-                    marginTop: 8,
-                  }}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((g) => {
-                    const sel = grade === g;
-                    const suggested =
-                      Math.max(
-                        1,
-                        Math.min(12, new Date().getFullYear() - initialYob - 5)
-                      ) === g;
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setYob(new Date().getFullYear() - 5 - g)}
-                        style={{
-                          padding: "14px 0",
-                          borderRadius: 12,
-                          border:
-                            "1.5px solid " +
-                            (sel ? "var(--teal)" : "var(--line)"),
-                          background: sel ? "var(--teal)" : "var(--paper)",
-                          color: sel ? "#fff" : "var(--ink-2)",
-                          cursor: "pointer",
-                          fontFamily: "var(--font-display)",
-                          fontSize: 18,
-                          fontWeight: 700,
-                          position: "relative",
-                        }}
-                      >
-                        {g}
-                        {suggested && !sel && (
-                          <span
-                            style={{
-                              position: "absolute",
-                              top: -8,
-                              right: -6,
-                              fontSize: 10,
-                              fontWeight: 700,
-                              background: "var(--rust)",
-                              color: "#fff",
-                              padding: "2px 6px",
-                              borderRadius: 999,
-                            }}
-                          >
-                            tip
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                <div className="onboarding-level-track" aria-hidden="true">
+                  <span style={{ width: `${startingLevel}%` }} />
                 </div>
-                <div
-                  style={{
-                    marginTop: 18,
-                    fontSize: 13,
-                    color: "var(--ink-3)",
-                    textAlign: "center",
-                  }}
-                >
-                  You're set to{" "}
-                  <strong style={{ color: "var(--ink)" }}>Grade {grade}</strong>
-                  . Change anytime in Settings.
+                <div className="field-help" style={{ textAlign: "center" }}>
+                  You're in school grade {grade}. Change English level anytime in
+                  Settings.
                 </div>
               </div>
 

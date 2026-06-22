@@ -5,10 +5,17 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LLMProvider = Literal["anthropic", "azure_openai"]
+
+
+class LLMTokenPrice(BaseModel):
+    input_per_million: float = Field(ge=0)
+    output_per_million: float = Field(ge=0)
+    cache_write_per_million: float | None = Field(default=None, ge=0)
+    cache_read_per_million: float | None = Field(default=None, ge=0)
 
 
 class Settings(BaseSettings):
@@ -50,6 +57,7 @@ class Settings(BaseSettings):
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_api_version: str = ""
+    llm_token_pricing: dict[str, LLMTokenPrice] = Field(default_factory=dict)
 
     azure_web_jobs_storage: str = Field(
         default="",

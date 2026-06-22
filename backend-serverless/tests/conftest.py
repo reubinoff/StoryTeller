@@ -21,14 +21,18 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "test")
 os.environ.setdefault("SEED_ON_STARTUP", "false")
 os.environ.setdefault("AUTO_CREATE_SCHEMA", "false")
 os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault(
+    "LLM_TOKEN_PRICING",
+    '{"test:llm-stub":{"input_per_million":1.0,"output_per_million":2.0}}',
+)
 
-from app.db.base import Base  # noqa: E402
 from app.db import models  # noqa: F401, E402  (registers tables)
+from app.db import session as db_session_module  # noqa: E402
+from app.db.base import Base  # noqa: E402
 from app.db.session import get_session  # noqa: E402
-from app.llm.client import LLMClient, set_llm_client  # noqa: E402
+from app.llm.client import LLMClient, LLMRunMetadata, LLMUsage, set_llm_client  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.seed import seed_static_catalog  # noqa: E402
-from app.db import session as db_session_module  # noqa: E402
 from app.services.evaluation_queue import (  # noqa: E402
     InMemoryEvaluationQueueClient,
     set_evaluation_queue_client,
@@ -42,7 +46,6 @@ from tests.__conftest_helpers__ import (  # noqa: E402
     WRITING_EVAL_RESPONSE,
     WRITING_PROMPT_RESPONSE,
 )
-
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -58,6 +61,19 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 
 # ----- LLM stub -----
+
+
+def _stub_metadata(
+    latency_ms: int, *, input_tokens: int, output_tokens: int
+) -> LLMRunMetadata:
+    return LLMRunMetadata(
+        latency_ms=latency_ms,
+        usage=LLMUsage(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            requests=1,
+        ),
+    )
 
 
 class StubClaudeClient(LLMClient):
@@ -81,18 +97,28 @@ class StubClaudeClient(LLMClient):
         output_type: type[OutputT],
         system: str | None = None,
         max_retries: int = 1,
-    ) -> tuple[OutputT, int]:
+    ) -> tuple[OutputT, LLMRunMetadata]:
         self.calls.append({"prompt": prompt, "system": system})
         if self.next_response is not None:
             payload, self.next_response = self.next_response, None
-            return output_type.model_validate(payload), 12
+            return output_type.model_validate(payload), _stub_metadata(
+                12, input_tokens=1000, output_tokens=250
+            )
         if "comprehension questions" in prompt or "reading passage" in prompt:
-            return output_type.model_validate(READING_RESPONSE), 12
+            return output_type.model_validate(READING_RESPONSE), _stub_metadata(
+                12, input_tokens=1200, output_tokens=220
+            )
         if "writing prompt" in prompt or "short-answer writing prompt" in prompt:
-            return output_type.model_validate(WRITING_PROMPT_RESPONSE), 8
+            return output_type.model_validate(WRITING_PROMPT_RESPONSE), _stub_metadata(
+                8, input_tokens=800, output_tokens=160
+            )
         if "evaluating a short writing answer" in prompt or "score the answer" in prompt.lower():
-            return output_type.model_validate(WRITING_EVAL_RESPONSE), 17
-        return output_type.model_validate(READING_RESPONSE), 12
+            return output_type.model_validate(WRITING_EVAL_RESPONSE), _stub_metadata(
+                17, input_tokens=1000, output_tokens=300
+            )
+        return output_type.model_validate(READING_RESPONSE), _stub_metadata(
+            12, input_tokens=1200, output_tokens=220
+        )
 
 
 @pytest_asyncio.fixture

@@ -24,6 +24,7 @@ class UserOut(ApiModel):
     last_name: str
     year_of_birth: int
     grade_level: int
+    english_level: int
     phone_number: str | None
     avatar_url: str | None
     display_locale: str
@@ -48,6 +49,7 @@ class UpdateUserRequest(ApiModel):
     reduce_motion: bool | None = None
     notif_email_enabled: bool | None = None
     notif_inapp_enabled: bool | None = None
+    english_level: int | None = Field(default=None, ge=0, le=100)
 
 
 class AvatarUploadResponse(ApiModel):
@@ -72,18 +74,7 @@ class UpdateInterestsResponse(ApiModel):
 
 
 class CompleteOnboardingRequest(ApiModel):
-    year_of_birth: int
-    grade_level: int = Field(ge=1, le=12)
     interest_ids: list[str] = Field(min_length=1, max_length=6)
-
-    @field_validator("year_of_birth")
-    @classmethod
-    def _year_range(cls, v: int) -> int:
-        current = datetime.now().year
-        if v < current - 100 or v > current - 5:
-            msg = f"Must be between {current - 100} and {current - 5}."
-            raise ValueError(msg)
-        return v
 
     @field_validator("interest_ids")
     @classmethod

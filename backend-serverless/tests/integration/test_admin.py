@@ -7,7 +7,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from tests.integration._helpers import signup_and_login
+from tests.integration._helpers import set_interests, signup_and_login
 
 
 @pytest.mark.asyncio
@@ -24,6 +24,17 @@ async def test_admin_session_rejects_normal_user(client: AsyncClient) -> None:
     _user, headers = await signup_and_login(client, email="learner-admin-denied@example.com")
 
     resp = await client.get("/admin/session", headers=headers)
+
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "admin_required"
+    assert resp.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.asyncio
+async def test_admin_token_usage_rejects_normal_user(client: AsyncClient) -> None:
+    _user, headers = await signup_and_login(client, email="usage-denied@example.com")
+
+    resp = await client.get("/admin/token-usage", headers=headers)
 
     assert resp.status_code == 403
     assert resp.json()["code"] == "admin_required"
@@ -79,6 +90,42 @@ async def test_admin_can_view_overview_and_search_users(client: AsyncClient) -> 
     items = users.json()["items"]
     assert [item["id"] for item in items] == [learner["id"]]
     assert items[0]["email"] == "learner-search@example.com"
+
+
+@pytest.mark.asyncio
+async def test_admin_can_view_token_usage_for_generated_tasks(client: AsyncClient) -> None:
+    _admin, admin_headers = await signup_and_login(client, email="reubinoff@gmail.com")
+    _learner, learner_headers = await signup_and_login(
+        client, email="usage-learner@example.com"
+    )
+    await set_interests(client, learner_headers, ["space"])
+
+    reading = await client.post("/courses/reading/tasks", headers=learner_headers, json={})
+    assert reading.status_code == 201, reading.text
+    writing = await client.post("/courses/writing/tasks", headers=learner_headers, json={})
+    assert writing.status_code == 201, writing.text
+
+    usage = await client.get(
+        "/admin/token-usage",
+        headers=admin_headers,
+        params={"range_days": 30},
+    )
+
+    assert usage.status_code == 200, usage.text
+    assert usage.headers["cache-control"] == "no-store"
+    body = usage.json()
+    assert body["range_days"] == 30
+    assert body["totals"]["total_tokens"] == 2380
+    assert body["totals"]["requests"] == 2
+    assert body["totals"]["cost_usd"] == 0.00276
+    assert body["totals"]["unknown_cost_events"] == 0
+    assert body["top_users"][0]["email"] == "usage-learner@example.com"
+    assert body["top_users"][0]["total_tokens"] == 2380
+    assert {task["task_id"] for task in body["top_tasks"]} == {
+        reading.json()["id"],
+        writing.json()["id"],
+    }
+    assert body["forecast_30d"]["total_tokens"] == 2380
 
 
 @pytest.mark.asyncio

@@ -381,6 +381,7 @@ select:focus,
 }
 
 .content-grid {
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
   gap: 12px;
@@ -388,10 +389,12 @@ select:focus,
 }
 
 .panel {
+  min-width: 0;
   padding: 16px;
 }
 
 .activity-panel,
+.usage-panel,
 .users-panel,
 .audit-panel {
   grid-column: 1;
@@ -451,6 +454,151 @@ select:focus,
   gap: 8px;
 }
 
+.usage-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.usage-kpis .kpi {
+  min-height: 82px;
+  padding: 12px;
+}
+
+.usage-kpis .kpi strong {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.usage-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.usage-chart-card {
+  min-width: 0;
+  min-height: 210px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.usage-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.usage-chart-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.usage-chart-head span,
+.forecast-row small,
+.usage-bar-label small,
+.usage-bar-value small,
+.usage-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.usage-trend {
+  width: 100%;
+  height: 170px;
+  display: block;
+}
+
+.usage-grid-line {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.usage-token-bar {
+  fill: var(--teal);
+  opacity: 0.82;
+}
+
+.usage-cost-line {
+  fill: none;
+  stroke: var(--amber);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.forecast-bars,
+.usage-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.forecast-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 58px 72px;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+}
+
+.forecast-row span,
+.forecast-row strong {
+  font-size: 13px;
+}
+
+.forecast-track,
+.usage-bar-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.forecast-fill,
+.usage-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.usage-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(80px, 0.8fr) 78px;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+}
+
+.usage-bar-label,
+.usage-bar-value {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.usage-bar-label strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-bar-value {
+  text-align: right;
+}
+
+.usage-note {
+  margin-top: 10px;
+}
+
 .metric {
   min-height: 62px;
   display: grid;
@@ -488,6 +636,8 @@ select:focus,
 }
 
 .table-wrap {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -694,6 +844,7 @@ tr.selected td {
 
   .detail-panel,
   .activity-panel,
+  .usage-panel,
   .users-panel,
   .audit-panel {
     grid-column: 1;
@@ -733,12 +884,26 @@ tr.selected td {
   }
 
   .overview-grid,
-  .mini-metrics {
+  .mini-metrics,
+  .usage-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .usage-chart-grid {
+    grid-template-columns: 1fr;
   }
 
   .filters {
     grid-template-columns: 1fr;
+  }
+
+  .forecast-row,
+  .usage-bar-row {
+    grid-template-columns: 1fr;
+  }
+
+  .usage-bar-value {
+    text-align: left;
   }
 
   .detail-list {

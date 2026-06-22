@@ -18,6 +18,13 @@ from app.api.v1.schemas.admin import (
     AdminOverviewKpis,
     AdminOverviewOut,
     AdminTaskStatusCount,
+    AdminTokenUsageBreakdown,
+    AdminTokenUsageDailyBucket,
+    AdminTokenUsageForecast,
+    AdminTokenUsageOut,
+    AdminTokenUsageTaskBreakdown,
+    AdminTokenUsageTotals,
+    AdminTokenUsageUserBreakdown,
     AdminUserDetail,
     AdminUserSummary,
 )
@@ -26,9 +33,9 @@ from app.config import get_settings
 from app.core.errors import AppError
 from app.db.models.admin import AdminAuditEvent
 from app.db.models.interest import UserInterest
+from app.db.models.llm_usage import LLMUsageEvent
 from app.db.models.task import Task
 from app.db.models.user import User
-
 
 ADMIN_ROLE = "admin"
 USER_ROLE = "user"
@@ -317,6 +324,169 @@ async def get_overview(db: AsyncSession, *, range_days: int) -> AdminOverviewOut
     )
 
 
+def _new_usage_bucket() -> dict[str, Any]:
+    return {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_write_tokens": 0,
+        "cache_read_tokens": 0,
+        "total_tokens": 0,
+        "requests": 0,
+        "cost_usd": 0.0,
+    }
+
+
+def _event_cost(event: LLMUsageEvent) -> float:
+    return float(event.cost_usd) if event.cost_usd is not None else 0.0
+
+
+def _add_usage_event(bucket: dict[str, Any], event: LLMUsageEvent) -> None:
+    bucket["input_tokens"] = int(bucket["input_tokens"]) + event.input_tokens
+    bucket["output_tokens"] = int(bucket["output_tokens"]) + event.output_tokens
+    bucket["cache_write_tokens"] = int(bucket["cache_write_tokens"]) + event.cache_write_tokens
+    bucket["cache_read_tokens"] = int(bucket["cache_read_tokens"]) + event.cache_read_tokens
+    bucket["total_tokens"] = int(bucket["total_tokens"]) + event.total_tokens
+    bucket["requests"] = int(bucket["requests"]) + event.requests
+    bucket["cost_usd"] = round(float(bucket["cost_usd"]) + _event_cost(event), 6)
+
+
+def _operation_label(operation: str) -> str:
+    labels = {
+        "reading_passage_generation": "Reading generation",
+        "writing_prompt_generation": "Writing prompt generation",
+        "writing_evaluation": "Writing evaluation",
+    }
+    return labels.get(operation, operation.replace("_", " ").title())
+
+
+def _top_usage_rows(
+    rows: dict[Any, dict[str, Any]], limit: int = 8
+) -> list[dict[str, Any]]:
+    return sorted(
+        rows.values(),
+        key=lambda row: (float(row["cost_usd"]), int(row["total_tokens"])),
+        reverse=True,
+    )[:limit]
+
+
+async def get_token_usage(db: AsyncSession, *, range_days: int) -> AdminTokenUsageOut:
+    now = datetime.now(UTC)
+    window_start = now - timedelta(days=range_days)
+    day_buckets = {
+        (now.date() - timedelta(days=offset)): _new_usage_bucket()
+        for offset in range(range_days - 1, -1, -1)
+    }
+
+    task_user = aliased(User)
+    rows = await db.execute(
+        select(LLMUsageEvent, User, Task, task_user)
+        .outerjoin(User, User.id == LLMUsageEvent.user_id)
+        .outerjoin(Task, Task.id == LLMUsageEvent.task_id)
+        .outerjoin(task_user, task_user.id == Task.user_id)
+        .where(LLMUsageEvent.created_at >= window_start)
+        .order_by(LLMUsageEvent.created_at.desc(), LLMUsageEvent.id.desc())
+    )
+
+    totals = _new_usage_bucket()
+    unknown_cost_events = 0
+    user_rows: dict[uuid.UUID, dict[str, Any]] = {}
+    task_rows: dict[uuid.UUID, dict[str, Any]] = {}
+    operation_rows: dict[str, dict[str, Any]] = {}
+    model_rows: dict[str, dict[str, Any]] = {}
+
+    for event, event_user, task, task_owner in rows.all():
+        _add_usage_event(totals, event)
+        if event.pricing_status != "configured":
+            unknown_cost_events += 1
+
+        created_at = _as_utc(event.created_at)
+        day_bucket = day_buckets.get(created_at.date())
+        if day_bucket is not None:
+            _add_usage_event(day_bucket, event)
+
+        effective_user = event_user or task_owner
+        effective_user_id = event.user_id or (task.user_id if task is not None else None)
+        if effective_user is not None and effective_user_id is not None:
+            user_bucket = user_rows.setdefault(
+                effective_user_id,
+                {
+                    **_new_usage_bucket(),
+                    "user_id": effective_user_id,
+                    "email": effective_user.email,
+                    "first_name": effective_user.first_name,
+                    "last_name": effective_user.last_name,
+                },
+            )
+            _add_usage_event(user_bucket, event)
+
+        if task is not None and event.task_id is not None:
+            task_bucket = task_rows.setdefault(
+                event.task_id,
+                {
+                    **_new_usage_bucket(),
+                    "task_id": event.task_id,
+                    "title": task.title,
+                    "course_type": task.course_type,
+                    "user_id": task.user_id,
+                    "user_email": task_owner.email if task_owner is not None else None,
+                },
+            )
+            _add_usage_event(task_bucket, event)
+
+        operation_bucket = operation_rows.setdefault(
+            event.operation,
+            {
+                **_new_usage_bucket(),
+                "key": event.operation,
+                "label": _operation_label(event.operation),
+            },
+        )
+        _add_usage_event(operation_bucket, event)
+
+        model_key = f"{event.provider}:{event.model}"
+        model_bucket = model_rows.setdefault(
+            model_key,
+            {
+                **_new_usage_bucket(),
+                "key": model_key,
+                "label": model_key,
+            },
+        )
+        _add_usage_event(model_bucket, event)
+
+    avg_daily_tokens = float(totals["total_tokens"]) / range_days
+    avg_daily_cost = float(totals["cost_usd"]) / range_days
+    return AdminTokenUsageOut(
+        range_days=range_days,
+        generated_at=now,
+        totals=AdminTokenUsageTotals(
+            **totals,
+            unknown_cost_events=unknown_cost_events,
+        ),
+        daily=[
+            AdminTokenUsageDailyBucket(date=day, **bucket)
+            for day, bucket in day_buckets.items()
+        ],
+        top_users=[
+            AdminTokenUsageUserBreakdown(**row) for row in _top_usage_rows(user_rows)
+        ],
+        top_tasks=[
+            AdminTokenUsageTaskBreakdown(**row) for row in _top_usage_rows(task_rows)
+        ],
+        by_operation=[
+            AdminTokenUsageBreakdown(**row) for row in _top_usage_rows(operation_rows)
+        ],
+        by_model=[AdminTokenUsageBreakdown(**row) for row in _top_usage_rows(model_rows)],
+        forecast_30d=AdminTokenUsageForecast(
+            days=30,
+            total_tokens=round(avg_daily_tokens * 30),
+            cost_usd=round(avg_daily_cost * 30, 6),
+            avg_daily_tokens=round(avg_daily_tokens, 1),
+            avg_daily_cost_usd=round(avg_daily_cost, 6),
+        ),
+    )
+
+
 async def list_users(
     db: AsyncSession,
     *,
@@ -375,6 +545,7 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> AdminUserDeta
         **summary.model_dump(),
         email_verified=user.email_verified,
         grade_level=user.grade_level,
+        english_level=user.english_level,
         year_of_birth=user.year_of_birth,
         onboarding_completed=user.onboarding_completed,
         interests=[row[0] for row in interests_q.all()],

@@ -227,7 +227,12 @@ async def _create_new_task(
     override_interest: str | None = None,
 ) -> Task:
     interest_slug, interest_label = await _resolve_interest(db, user, override_interest)
-    content_grade_level = content_service.content_grade_for_school_grade(user.grade_level)
+    content_grade_level = content_service.content_grade_for_english_level(
+        user.english_level
+    )
+    content_level_label = content_service.content_label_for_english_level_value(
+        user.english_level
+    )
 
     if course.type == "unseen_text":
         passage = await _find_unused_passage(
@@ -236,14 +241,17 @@ async def _create_new_task(
             interest_slug=interest_slug,
             grade_level=content_grade_level,
         )
+        usage_event = None
         if passage is None:
             try:
-                passage = await content_service.generate_reading_passage(
+                passage, usage_event = await content_service.generate_reading_passage(
                     db,
                     interest_slug=interest_slug,
                     interest_label=interest_label,
                     school_grade_level=user.grade_level,
                     content_grade_level=content_grade_level,
+                    content_level_label=content_level_label,
+                    user_id=user.id,
                 )
             except Exception as exc:
                 LOGGER.exception("reading content generation failed")
@@ -259,6 +267,7 @@ async def _create_new_task(
             course_type=course.type,
             interest_slug=interest_slug,
             grade_level_at_roll=user.grade_level,
+            english_level_at_roll=user.english_level,
             status="not_started",
             title=passage.title,
             topic_label=interest_label,
@@ -266,6 +275,8 @@ async def _create_new_task(
         )
         db.add(task)
         await db.flush()
+        if usage_event is not None:
+            usage_event.task_id = task.id
         await _materialise_reading_questions(db, task=task, passage=passage)
         await db.commit()
         await db.refresh(task)
@@ -277,14 +288,17 @@ async def _create_new_task(
         interest_slug=interest_slug,
         grade_level=content_grade_level,
     )
+    usage_event = None
     if prompt is None:
         try:
-            prompt = await content_service.generate_writing_prompt(
+            prompt, usage_event = await content_service.generate_writing_prompt(
                 db,
                 interest_slug=interest_slug,
                 interest_label=interest_label,
                 school_grade_level=user.grade_level,
                 content_grade_level=content_grade_level,
+                content_level_label=content_level_label,
+                user_id=user.id,
             )
         except Exception as exc:
             LOGGER.exception("writing prompt generation failed")
@@ -300,12 +314,16 @@ async def _create_new_task(
         course_type=course.type,
         interest_slug=interest_slug,
         grade_level_at_roll=user.grade_level,
+        english_level_at_roll=user.english_level,
         status="not_started",
         title=prompt.title,
         topic_label=interest_label,
         writing_prompt_id=prompt.id,
     )
     db.add(task)
+    await db.flush()
+    if usage_event is not None:
+        usage_event.task_id = task.id
     await db.commit()
     await db.refresh(task)
     return task
@@ -517,6 +535,7 @@ async def task_to_out(db: AsyncSession, task: Task) -> TaskOut:
         course_type=task.course_type,  # type: ignore[arg-type]
         interest_id=task.interest_slug,
         grade_level_at_roll=task.grade_level_at_roll,
+        english_level_at_roll=task.english_level_at_roll,
         status=task.status,  # type: ignore[arg-type]
         title=task.title,
         topic_label=task.topic_label,

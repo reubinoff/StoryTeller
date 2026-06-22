@@ -46,6 +46,7 @@ const mockUser: User = {
   last_name: "Smith",
   year_of_birth: 2010,
   grade_level: 6,
+  english_level: 30,
   phone_number: null,
   avatar_url: null,
   display_locale: "en",
@@ -79,7 +80,7 @@ async function navigateToStep(user: ReturnType<typeof userEvent.setup>, step: 2 
     await user.click(screen.getByRole("button", { name: /continue/i }));
     await waitFor(() => expect(screen.getByText("What do you love?")).toBeInTheDocument());
   } else {
-    await waitFor(() => expect(screen.getByText("Pick your starting level")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Your starting level")).toBeInTheDocument());
   }
 }
 
@@ -155,23 +156,22 @@ describe("OnboardingRoute — step 1 (welcome)", () => {
   });
 });
 
-describe("OnboardingRoute — step 2 (grade)", () => {
+describe("OnboardingRoute — step 2 (level)", () => {
   it("advances to step 2 when clicking Let's go", async () => {
     renderOnboarding();
     const user = userEvent.setup();
     await navigateToStep(user, 2);
-    expect(screen.getByText("Pick your starting level")).toBeInTheDocument();
+    expect(screen.getByText("Your starting level")).toBeInTheDocument();
     expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
   });
 
-  it("shows 12 grade buttons", async () => {
+  it("shows the calculated English level without grade buttons", async () => {
     renderOnboarding();
     const user = userEvent.setup();
     await navigateToStep(user, 2);
-    // Grades 1–12 are rendered as buttons
-    for (let g = 1; g <= 12; g++) {
-      expect(screen.getByRole("button", { name: String(g) })).toBeInTheDocument();
-    }
+    expect(screen.getByText("Level 30")).toBeInTheDocument();
+    expect(screen.getByText("Grade 5 English")).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
   });
 
   it("navigates back to step 1 via Back button", async () => {
@@ -272,7 +272,7 @@ describe("OnboardingRoute — step 3 (topics)", () => {
     const user = userEvent.setup();
     await navigateToStep(user, 3);
     await user.click(screen.getByRole("button", { name: /back/i }));
-    await waitFor(() => expect(screen.getByText("Pick your starting level")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Your starting level")).toBeInTheDocument());
   });
 });
 
@@ -291,7 +291,7 @@ describe("OnboardingRoute — finishing onboarding", () => {
     );
   });
 
-  it("persists grade and year of birth", async () => {
+  it("does not submit birth year or grade", async () => {
     renderOnboarding();
     const user = userEvent.setup();
     await navigateToStep(user, 3);
@@ -299,12 +299,11 @@ describe("OnboardingRoute — finishing onboarding", () => {
     await user.click(screen.getByRole("button", { name: /roll my first task/i }));
     await waitFor(() => expect(mockCompleteOnboarding).toHaveBeenCalled());
     const payload = mockCompleteOnboarding.mock.calls[0][0] as {
-      year_of_birth: number;
-      grade_level: number;
       interest_ids: string[];
+      year_of_birth?: number;
+      grade_level?: number;
     };
-    expect(payload.grade_level).toBeGreaterThanOrEqual(1);
-    expect(payload.year_of_birth).toBeGreaterThan(1900);
+    expect(payload).toEqual({ interest_ids: ["animals"] });
   });
 
   it("shows a welcome toast after finishing", async () => {

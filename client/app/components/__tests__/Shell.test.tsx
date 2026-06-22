@@ -47,6 +47,7 @@ const user: User = {
   last_name: "Patel",
   year_of_birth: 2014,
   grade_level: 7,
+  english_level: 44,
   phone_number: null,
   avatar_url: null,
   display_locale: "en",

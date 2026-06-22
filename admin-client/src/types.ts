@@ -25,6 +25,7 @@ export interface User {
   last_name: string;
   year_of_birth: number;
   grade_level: number;
+  english_level: number;
   phone_number: string | null;
   avatar_url: string | null;
   display_locale: string;
@@ -91,6 +92,71 @@ export interface AdminOverview {
   }>;
 }
 
+export interface AdminTokenUsage {
+  range_days: 7 | 30 | 90;
+  generated_at: ISO8601;
+  totals: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_write_tokens: number;
+    cache_read_tokens: number;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+    unknown_cost_events: number;
+  };
+  daily: Array<{
+    date: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_write_tokens: number;
+    cache_read_tokens: number;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  top_users: Array<{
+    user_id: UUID;
+    email: string;
+    first_name: string;
+    last_name: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  top_tasks: Array<{
+    task_id: UUID;
+    title: string;
+    course_type: string;
+    user_id: UUID | null;
+    user_email: string | null;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  by_operation: Array<{
+    key: string;
+    label: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  by_model: Array<{
+    key: string;
+    label: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  forecast_30d: {
+    days: number;
+    total_tokens: number;
+    cost_usd: number;
+    avg_daily_tokens: number;
+    avg_daily_cost_usd: number;
+  };
+}
+
 export interface AdminUserSummary {
   id: UUID;
   email: string;
@@ -110,6 +176,7 @@ export interface AdminUserSummary {
 export interface AdminUserDetail extends AdminUserSummary {
   email_verified: boolean;
   grade_level: number;
+  english_level: number;
   year_of_birth: number;
   onboarding_completed: boolean;
   interests: string[];

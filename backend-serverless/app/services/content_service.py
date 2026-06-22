@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +14,13 @@ from app.api.v1.schemas.content import (
     GeneratedWritingPrompt,
 )
 from app.db.models.content import ContentPassage, WritingPrompt
-from app.llm.client import LLMClient, get_llm_client, render_prompt
+from app.db.models.llm_usage import LLMUsageEvent
+from app.llm.client import LLMClient, LLMRunMetadata, get_llm_client, render_prompt
+from app.services import llm_usage_service
+from app.services.level_service import (
+    content_bucket_for_english_level,
+    content_label_for_english_level,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +32,14 @@ def _word_count(paragraphs: list[str]) -> int:
 def content_grade_for_school_grade(grade_level: int) -> int:
     """Map Israeli school grade to English content difficulty."""
     return max(1, min(12, grade_level) - 1)
+
+
+def content_grade_for_english_level(english_level: int) -> int:
+    return content_bucket_for_english_level(english_level)
+
+
+def content_label_for_english_level_value(english_level: int) -> str:
+    return content_label_for_english_level(english_level)
 
 
 def _reading_target_words(grade_level: int) -> int:
@@ -68,20 +83,23 @@ async def generate_reading_passage(
     interest_label: str,
     school_grade_level: int,
     content_grade_level: int,
+    content_level_label: str,
+    user_id: uuid.UUID | None = None,
     client: LLMClient | None = None,
-) -> ContentPassage:
-    """Call the LLM, validate, persist a new ContentPassage row. Returns it."""
+) -> tuple[ContentPassage, LLMUsageEvent]:
+    """Call the LLM, validate, persist content, and record usage."""
     cli = client or get_llm_client()
     prompt = render_prompt(
         "reading_passage",
         school_grade_level=school_grade_level,
         content_grade_level=content_grade_level,
+        content_level_label=content_level_label,
         interest_label=interest_label,
         target_words=_reading_target_words(content_grade_level),
         target_paragraphs=_reading_paragraphs_target(content_grade_level),
         num_questions=_reading_num_questions(content_grade_level),
     )
-    parsed, _latency = await cli.generate_structured(
+    parsed, metadata = await cli.generate_structured(
         prompt=prompt,
         output_type=GeneratedReadingPassage,
     )
@@ -96,7 +114,16 @@ async def generate_reading_passage(
     )
     db.add(passage)
     await db.flush()
-    return passage
+    usage_event = await llm_usage_service.record_llm_usage(
+        db,
+        operation="reading_passage_generation",
+        model_label=cli.model,
+        metadata=metadata,
+        user_id=user_id,
+        resource_type="content_passage",
+        resource_id=passage.id,
+    )
+    return passage, usage_event
 
 
 async def generate_writing_prompt(
@@ -106,19 +133,22 @@ async def generate_writing_prompt(
     interest_label: str,
     school_grade_level: int,
     content_grade_level: int,
+    content_level_label: str,
+    user_id: uuid.UUID | None = None,
     client: LLMClient | None = None,
-) -> WritingPrompt:
+) -> tuple[WritingPrompt, LLMUsageEvent]:
     cli = client or get_llm_client()
     min_w, max_w = writing_word_bounds(content_grade_level)
     prompt = render_prompt(
         "writing_prompt",
         school_grade_level=school_grade_level,
         content_grade_level=content_grade_level,
+        content_level_label=content_level_label,
         interest_label=interest_label,
         min_words=min_w,
         max_words=max_w,
     )
-    parsed, _latency = await cli.generate_structured(
+    parsed, metadata = await cli.generate_structured(
         prompt=prompt,
         output_type=GeneratedWritingPrompt,
     )
@@ -136,13 +166,23 @@ async def generate_writing_prompt(
     )
     db.add(record)
     await db.flush()
-    return record
+    usage_event = await llm_usage_service.record_llm_usage(
+        db,
+        operation="writing_prompt_generation",
+        model_label=cli.model,
+        metadata=metadata,
+        user_id=user_id,
+        resource_type="writing_prompt",
+        resource_id=record.id,
+    )
+    return record, usage_event
 
 
 async def evaluate_writing(
     *,
     school_grade_level: int,
     content_grade_level: int,
+    content_level_label: str,
     topic_label: str,
     prompt_text: str,
     min_words: int,
@@ -150,13 +190,14 @@ async def evaluate_writing(
     submitted_word_count: int,
     student_answer: str,
     client: LLMClient | None = None,
-) -> tuple[GeneratedWritingEvaluation, int, str]:
+) -> tuple[GeneratedWritingEvaluation, LLMRunMetadata, str]:
     """Call the LLM to score a student writing answer."""
     cli = client or get_llm_client()
     prompt = render_prompt(
         "writing_evaluation",
         school_grade_level=school_grade_level,
         content_grade_level=content_grade_level,
+        content_level_label=content_level_label,
         topic_label=topic_label,
         prompt=prompt_text,
         min_words=min_words,
@@ -164,8 +205,8 @@ async def evaluate_writing(
         submitted_word_count=submitted_word_count,
         student_answer=student_answer,
     )
-    evaluation, latency = await cli.generate_structured(
+    evaluation, metadata = await cli.generate_structured(
         prompt=prompt,
         output_type=GeneratedWritingEvaluation,
     )
-    return evaluation, latency, cli.model
+    return evaluation, metadata, cli.model

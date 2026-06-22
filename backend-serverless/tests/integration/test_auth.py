@@ -72,6 +72,8 @@ async def test_signup_returns_201_with_user_and_cookies(client: AsyncClient) -> 
     assert user["first_name"] == "Maya"
     assert user["grade_level"] >= 1
     assert user["grade_level"] <= 12
+    assert user["english_level"] >= 0
+    assert user["english_level"] <= 100
     assert user["interests"] == []
     assert user["status"] == "active"
     assert user["theme_preference"] == "light"

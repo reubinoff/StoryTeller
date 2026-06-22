@@ -5,6 +5,7 @@ import {
   Ban,
   BarChart3,
   CheckCircle2,
+  Coins,
   Filter,
   LogOut,
   RefreshCw,
@@ -19,6 +20,7 @@ import type {
   AdminAuditEvent,
   AdminOverview,
   AdminSession,
+  AdminTokenUsage,
   AdminUserDetail,
   AdminUserSummary,
   Page,
@@ -50,6 +52,22 @@ function formatDate(value: string | null): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat().format(value);
+}
+
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: value > 0 && value < 1 ? 4 : 2,
+    maximumFractionDigits: value > 0 && value < 1 ? 4 : 2,
+  }).format(value);
 }
 
 function initials(user: Pick<AdminUserSummary, "first_name" | "last_name" | "email">) {
@@ -234,6 +252,7 @@ function AdminWorkspace({
 }) {
   const [rangeDays, setRangeDays] = useState<RangeDays>(30);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<AdminTokenUsage | null>(null);
   const [users, setUsers] = useState<Page<AdminUserSummary>>(EMPTY_USERS);
   const [audit, setAudit] = useState<Page<AdminAuditEvent>>(EMPTY_AUDIT);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
@@ -272,12 +291,14 @@ function AdminWorkspace({
     setLoading(true);
     setActionError(null);
     try {
-      const [nextOverview, nextUsers, nextAudit] = await Promise.all([
+      const [nextOverview, nextTokenUsage, nextUsers, nextAudit] = await Promise.all([
         api.admin.overview(rangeDays),
+        api.admin.tokenUsage(rangeDays),
         api.admin.users({ query, role, status, limit: 50 }),
         api.admin.audit({ limit: 25 }),
       ]);
       setOverview(nextOverview);
+      setTokenUsage(nextTokenUsage);
       setUsers(nextUsers);
       setAudit(nextAudit);
       if (nextUsers.items[0]) {
@@ -340,6 +361,10 @@ function AdminWorkspace({
           <a href="#overview" className="rail-link active">
             <BarChart3 size={18} />
             <span>Overview</span>
+          </a>
+          <a href="#usage" className="rail-link">
+            <Coins size={18} />
+            <span>Usage</span>
           </a>
           <a href="#users" className="rail-link">
             <Users size={18} />
@@ -429,6 +454,66 @@ function AdminWorkspace({
               />
             </div>
           </div>
+
+          <section id="usage" className="panel usage-panel">
+            <div className="panel-head">
+              <h2>Token usage</h2>
+              <span>{tokenUsage?.range_days ?? rangeDays} days</span>
+            </div>
+            <div className="usage-kpis">
+              <KpiCard
+                label="Tokens"
+                value={tokenUsage?.totals.total_tokens ?? 0}
+                tone="blue"
+              />
+              <KpiCard
+                label="Cost"
+                value={formatCurrency(tokenUsage?.totals.cost_usd ?? 0)}
+                tone="green"
+              />
+              <KpiCard
+                label="Requests"
+                value={tokenUsage?.totals.requests ?? 0}
+                tone="amber"
+              />
+              <KpiCard
+                label="Avg daily"
+                value={Math.round(tokenUsage?.forecast_30d.avg_daily_tokens ?? 0)}
+                tone="violet"
+              />
+            </div>
+            <div className="usage-chart-grid">
+              <UsageTrendChart usage={tokenUsage} />
+              <ForecastChart usage={tokenUsage} />
+              <HorizontalUsageBars
+                title="Top users"
+                rows={(tokenUsage?.top_users ?? []).map((user) => ({
+                  key: user.user_id,
+                  label: user.email,
+                  total_tokens: user.total_tokens,
+                  requests: user.requests,
+                  cost_usd: user.cost_usd,
+                }))}
+              />
+              <HorizontalUsageBars
+                title="Top tasks"
+                rows={(tokenUsage?.top_tasks ?? []).map((task) => ({
+                  key: task.task_id,
+                  label: task.title,
+                  meta: task.user_email ?? task.course_type,
+                  total_tokens: task.total_tokens,
+                  requests: task.requests,
+                  cost_usd: task.cost_usd,
+                }))}
+              />
+            </div>
+            {tokenUsage && tokenUsage.totals.unknown_cost_events > 0 && (
+              <div className="usage-note">
+                {formatNumber(tokenUsage.totals.unknown_cost_events)} events have unknown
+                pricing.
+              </div>
+            )}
+          </section>
 
           <section id="users" className="panel users-panel">
             <div className="panel-head">
@@ -535,7 +620,7 @@ function KpiCard({
   tone,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   suffix?: string;
   tone: "blue" | "green" | "amber" | "violet";
 }) {
@@ -543,7 +628,7 @@ function KpiCard({
     <div className={`kpi ${tone}`}>
       <span>{label}</span>
       <strong>
-        {formatNumber(value)}
+        {typeof value === "number" ? formatNumber(value) : value}
         {suffix}
       </strong>
     </div>
@@ -586,6 +671,154 @@ function ActivityChart({ overview }: { overview: AdminOverview | null }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function UsageTrendChart({ usage }: { usage: AdminTokenUsage | null }) {
+  const days = (usage?.daily ?? []).slice(-30);
+  const width = 420;
+  const height = 180;
+  const padding = 18;
+  const innerWidth = width - padding * 2;
+  const innerHeight = height - padding * 2;
+  const maxTokens = Math.max(1, ...days.map((day) => day.total_tokens));
+  const maxCost = Math.max(0.000001, ...days.map((day) => day.cost_usd));
+  const pointX = (index: number) =>
+    days.length <= 1 ? width / 2 : padding + (index / (days.length - 1)) * innerWidth;
+  const tokenY = (value: number) =>
+    padding + innerHeight - (value / maxTokens) * innerHeight;
+  const costY = (value: number) => padding + innerHeight - (value / maxCost) * innerHeight;
+  const costPoints = days.map((day, index) => `${pointX(index)},${costY(day.cost_usd)}`);
+
+  return (
+    <div className="usage-chart-card">
+      <div className="usage-chart-head">
+        <h3>Daily trend</h3>
+        <span>{formatCompactNumber(usage?.totals.total_tokens ?? 0)} tokens</span>
+      </div>
+      {days.length ? (
+        <svg className="usage-trend" viewBox={`0 0 ${width} ${height}`} role="img">
+          <title>Daily token and cost trend</title>
+          {[0, 1, 2].map((line) => (
+            <line
+              key={line}
+              x1={padding}
+              x2={width - padding}
+              y1={padding + (innerHeight / 2) * line}
+              y2={padding + (innerHeight / 2) * line}
+              className="usage-grid-line"
+            />
+          ))}
+          {days.map((day, index) => {
+            const barWidth = Math.max(3, innerWidth / Math.max(days.length, 1) - 4);
+            const x = pointX(index) - barWidth / 2;
+            const y = tokenY(day.total_tokens);
+            return (
+              <rect
+                key={day.date}
+                x={x}
+                y={y}
+                width={barWidth}
+                height={height - padding - y}
+                rx={3}
+                className="usage-token-bar"
+              />
+            );
+          })}
+          {costPoints.length > 1 && (
+            <polyline points={costPoints.join(" ")} className="usage-cost-line" />
+          )}
+        </svg>
+      ) : (
+        <div className="empty-state">No usage yet</div>
+      )}
+    </div>
+  );
+}
+
+function ForecastChart({ usage }: { usage: AdminTokenUsage | null }) {
+  const selectedTokens = usage?.totals.total_tokens ?? 0;
+  const forecastTokens = usage?.forecast_30d.total_tokens ?? 0;
+  const selectedCost = usage?.totals.cost_usd ?? 0;
+  const forecastCost = usage?.forecast_30d.cost_usd ?? 0;
+  const maxTokens = Math.max(1, selectedTokens, forecastTokens);
+  const rows = [
+    { label: "Selected", tokens: selectedTokens, cost: selectedCost },
+    { label: "Next 30d", tokens: forecastTokens, cost: forecastCost },
+  ];
+
+  return (
+    <div className="usage-chart-card">
+      <div className="usage-chart-head">
+        <h3>Forecast</h3>
+        <span>{formatCurrency(forecastCost)}</span>
+      </div>
+      <div className="forecast-bars">
+        {rows.map((row) => (
+          <div className="forecast-row" key={row.label}>
+            <span>{row.label}</span>
+            <div className="forecast-track">
+              <div
+                className="forecast-fill"
+                style={{ width: `${Math.max(4, (row.tokens / maxTokens) * 100)}%` }}
+              />
+            </div>
+            <strong>{formatCompactNumber(row.tokens)}</strong>
+            <small>{formatCurrency(row.cost)}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HorizontalUsageBars({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{
+    key: string;
+    label: string;
+    meta?: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+}) {
+  const maxTokens = Math.max(1, ...rows.map((row) => row.total_tokens));
+
+  return (
+    <div className="usage-chart-card">
+      <div className="usage-chart-head">
+        <h3>{title}</h3>
+        <span>{rows.length} rows</span>
+      </div>
+      {rows.length ? (
+        <div className="usage-bars">
+          {rows.map((row) => (
+            <div className="usage-bar-row" key={row.key}>
+              <div className="usage-bar-label">
+                <strong>{row.label}</strong>
+                <small>{row.meta ?? `${formatNumber(row.requests)} requests`}</small>
+              </div>
+              <div className="usage-bar-track">
+                <span
+                  className="usage-bar-fill"
+                  style={{ width: `${Math.max(4, (row.total_tokens / maxTokens) * 100)}%` }}
+                />
+              </div>
+              <div className="usage-bar-value">
+                <strong>{formatCompactNumber(row.total_tokens)}</strong>
+                <small>{formatCurrency(row.cost_usd)}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">No usage yet</div>
+      )}
     </div>
   );
 }
@@ -747,7 +980,11 @@ function UserDetailPanel({
       </div>
       <dl className="detail-list">
         <div>
-          <dt>Grade</dt>
+          <dt>Level</dt>
+          <dd>{user.english_level}</dd>
+        </div>
+        <div>
+          <dt>School grade</dt>
           <dd>{user.grade_level}</dd>
         </div>
         <div>

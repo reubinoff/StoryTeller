@@ -31,6 +31,10 @@ def _assert_problem_response(resp, *, status_code: int, code: str) -> dict[str, 
 async def test_roll_reading_task_with_empty_cache_calls_claude(
     client: AsyncClient, claude_stub
 ) -> None:
+    from sqlalchemy import select
+
+    from app.db.models.llm_usage import LLMUsageEvent
+    from app.db.session import get_sessionmaker
     from app.services.content_service import content_grade_for_school_grade
 
     _user, headers = await signup_and_login(client)
@@ -44,6 +48,7 @@ async def test_roll_reading_task_with_empty_cache_calls_claude(
     assert body["interest_id"] == "space"
     assert body["status"] == "not_started"
     assert body["grade_level_at_roll"] == _user["grade_level"]
+    assert body["english_level_at_roll"] == _user["english_level"]
     assert body["reading"] is not None
     assert len(body["reading"]["questions"]) == 10
     # While not_started, questions must NOT include correct_answer
@@ -55,7 +60,21 @@ async def test_roll_reading_task_with_empty_cache_calls_claude(
     content_grade = content_grade_for_school_grade(_user["grade_level"])
     assert "Israeli school English learner" in prompt
     assert f"School grade: **{_user['grade_level']}**" in prompt
-    assert f"English difficulty grade: **{content_grade}**" in prompt
+    assert f"English difficulty: **Grade {content_grade}**" in prompt
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        usage_event = (
+            await db.execute(
+                select(LLMUsageEvent).where(
+                    LLMUsageEvent.task_id == uuid.UUID(body["id"])
+                )
+            )
+        ).scalar_one()
+    assert usage_event.operation == "reading_passage_generation"
+    assert usage_event.user_id == uuid.UUID(_user["id"])
+    assert usage_event.total_tokens == 1420
+    assert float(usage_event.cost_usd) == 0.00164
 
 
 @pytest.mark.asyncio
@@ -118,6 +137,7 @@ async def test_roll_reading_task_reuses_adjusted_content_grade_cache(
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["grade_level_at_roll"] == school_grade
+    assert body["english_level_at_roll"] == _user["english_level"]
     assert body["title"] == "Cached Easier Space Story"
     assert len(claude_stub.calls) == 0
 
@@ -199,6 +219,7 @@ async def test_roll_writing_task_reuses_adjusted_content_grade_cache(
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["grade_level_at_roll"] == school_grade
+    assert body["english_level_at_roll"] == _user["english_level"]
     assert body["title"] == "Cached Easier Travel Prompt"
     assert body["writing"]["min_words"] == 30
     assert len(claude_stub.calls) == 0
@@ -230,11 +251,7 @@ async def test_onboarding_enqueues_ready_task_prewarm(
     resp = await client.put(
         "/me/onboarding",
         headers=headers,
-        json={
-            "year_of_birth": user["year_of_birth"],
-            "grade_level": user["grade_level"],
-            "interest_ids": ["space", "travel"],
-        },
+        json={"interest_ids": ["space", "travel"]},
     )
 
     assert resp.status_code == 200, resp.text
@@ -251,11 +268,7 @@ async def test_interest_change_for_onboarded_user_enqueues_ready_task_prewarm(
     onboarded = await client.put(
         "/me/onboarding",
         headers=headers,
-        json={
-            "year_of_birth": user["year_of_birth"],
-            "grade_level": user["grade_level"],
-            "interest_ids": ["space"],
-        },
+        json={"interest_ids": ["space"]},
     )
     assert onboarded.status_code == 200, onboarded.text
     task_prewarm_queue.jobs.clear()
@@ -338,11 +351,7 @@ async def test_dashboard_returns_ready_tasks_and_enqueues_missing_buffers(
     onboarded = await client.put(
         "/me/onboarding",
         headers=headers,
-        json={
-            "year_of_birth": user["year_of_birth"],
-            "grade_level": user["grade_level"],
-            "interest_ids": ["space", "travel"],
-        },
+        json={"interest_ids": ["space", "travel"]},
     )
     assert onboarded.status_code == 200, onboarded.text
     task_prewarm_queue.jobs.clear()
@@ -697,6 +706,11 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     claude_stub,
     evaluation_queue,
 ) -> None:
+    from sqlalchemy import select
+
+    from app.db.models.llm_usage import LLMUsageEvent
+    from app.db.models.task_evaluation import TaskEvaluation
+    from app.db.session import get_sessionmaker
     from app.services.content_service import content_grade_for_school_grade
     from app.services.evaluation_service import run_writing_evaluation
 
@@ -707,13 +721,14 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     task = rolled.json()
     assert task["course_type"] == "short_writing"
     assert task["grade_level_at_roll"] == _user["grade_level"]
+    assert task["english_level_at_roll"] == _user["english_level"]
     assert task["writing"] is not None
     assert task["writing"]["min_words"] >= 10
     content_grade = content_grade_for_school_grade(_user["grade_level"])
     prompt = claude_stub.calls[0]["prompt"]
     assert "Israeli school English learner" in prompt
     assert f"School grade: **{_user['grade_level']}**" in prompt
-    assert f"English difficulty grade: **{content_grade}**" in prompt
+    assert f"English difficulty: **Grade {content_grade}**" in prompt
 
     submit = await client.post(
         f"/tasks/{task['id']}/submit",
@@ -746,7 +761,31 @@ async def test_writing_submit_queues_eval_and_worker_completes(
     assert rbody["next_task"]["course_id"] == "writing"
     eval_prompt = claude_stub.calls[1]["prompt"]
     assert f"School grade: **{_user['grade_level']}**" in eval_prompt
-    assert f"English difficulty grade: **{content_grade}**" in eval_prompt
+    assert f"English difficulty: **Grade {content_grade}**" in eval_prompt
+
+    sm = get_sessionmaker()
+    async with sm() as db:
+        usage_events = (
+            await db.execute(
+                select(LLMUsageEvent)
+                .where(LLMUsageEvent.task_id == task_id)
+                .order_by(LLMUsageEvent.operation)
+            )
+        ).scalars().all()
+        evaluation = (
+            await db.execute(
+                select(TaskEvaluation).where(TaskEvaluation.task_id == task_id)
+            )
+        ).scalar_one()
+    usage_by_operation = {event.operation: event for event in usage_events}
+    assert set(usage_by_operation) == {
+        "writing_evaluation",
+        "writing_prompt_generation",
+    }
+    assert usage_by_operation["writing_prompt_generation"].total_tokens == 960
+    assert usage_by_operation["writing_evaluation"].total_tokens == 1300
+    assert float(usage_by_operation["writing_evaluation"].cost_usd) == 0.0016
+    assert float(evaluation.cost_usd) == 0.0016
 
 
 @pytest.mark.asyncio

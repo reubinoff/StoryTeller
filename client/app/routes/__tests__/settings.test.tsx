@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsRoute from "../settings";
@@ -81,6 +81,7 @@ const baseUser: User = {
   last_name: "Patel",
   year_of_birth: 2017,
   grade_level: 4,
+  english_level: 24,
   phone_number: null,
   avatar_url: null,
   display_locale: "en",
@@ -153,6 +154,7 @@ describe("SettingsRoute", () => {
       reduce_motion: true,
       notif_email_enabled: false,
       notif_inapp_enabled: false,
+      english_level: 12,
     });
 
     render(<SettingsRoute />);
@@ -160,12 +162,14 @@ describe("SettingsRoute", () => {
     const firstNameInput = screen.getByDisplayValue("Maya");
     const lastNameInput = screen.getByDisplayValue("Patel");
     const phoneInput = screen.getByPlaceholderText("+1 555 0100");
+    const levelInput = screen.getByLabelText("English level value");
 
     await user.clear(firstNameInput);
     await user.type(firstNameInput, "Mira");
     await user.clear(lastNameInput);
     await user.type(lastNameInput, "Stone");
     await user.type(phoneInput, "+1 555 0100");
+    fireEvent.change(levelInput, { target: { value: "12" } });
     await user.click(screen.getByRole("button", { name: "Large" }));
     await user.click(rowActionButton("Reduce motion"));
     await user.click(rowActionButton("Email reminders"));
@@ -195,6 +199,7 @@ describe("SettingsRoute", () => {
         reduce_motion: true,
         notif_email_enabled: false,
         notif_inapp_enabled: false,
+        english_level: 12,
       }),
     );
     expect(mockSetInterests).toHaveBeenCalledWith(["space"]);
@@ -203,6 +208,7 @@ describe("SettingsRoute", () => {
         first_name: "Mira",
         last_name: "Stone",
         phone_number: "+1 555 0100",
+        english_level: 12,
         interests: ["space"],
       }),
     );

@@ -50,8 +50,6 @@ export interface AdminSetStatusRequest {
 }
 
 export interface CompleteOnboardingRequest {
-  year_of_birth: number;
-  grade_level: number;
   interest_ids: InterestId[];
 }
 
@@ -70,6 +68,7 @@ export interface User {
   last_name: string;
   year_of_birth: number;
   grade_level: number; // 1..12
+  english_level: number; // 0..100
   phone_number: string | null;
   avatar_url: string | null;
   display_locale: string;
@@ -94,6 +93,7 @@ export interface UpdateUserRequest {
   reduce_motion?: boolean;
   notif_email_enabled?: boolean;
   notif_inapp_enabled?: boolean;
+  english_level?: number;
 }
 
 // ----- Catalog -----
@@ -201,6 +201,7 @@ export interface Task {
   course_type: CourseType;
   interest_id: InterestId;
   grade_level_at_roll: number;
+  english_level_at_roll: number;
   status: TaskStatus;
   title: string;
   topic_label: string;
@@ -436,6 +437,7 @@ export interface AdminUserSummary {
 export interface AdminUserDetail extends AdminUserSummary {
   email_verified: boolean;
   grade_level: number;
+  english_level: number;
   year_of_birth: number;
   onboarding_completed: boolean;
   interests: InterestId[];

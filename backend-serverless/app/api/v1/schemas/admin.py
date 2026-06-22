@@ -49,6 +49,77 @@ class AdminOverviewOut(ApiModel):
     course_metrics: list[AdminCourseMetric]
 
 
+class AdminTokenUsageTotals(ApiModel):
+    input_tokens: int
+    output_tokens: int
+    cache_write_tokens: int
+    cache_read_tokens: int
+    total_tokens: int
+    requests: int
+    cost_usd: float
+    unknown_cost_events: int
+
+
+class AdminTokenUsageDailyBucket(ApiModel):
+    date: date
+    input_tokens: int
+    output_tokens: int
+    cache_write_tokens: int
+    cache_read_tokens: int
+    total_tokens: int
+    requests: int
+    cost_usd: float
+
+
+class AdminTokenUsageUserBreakdown(ApiModel):
+    user_id: UUID
+    email: EmailStr
+    first_name: str
+    last_name: str
+    total_tokens: int
+    requests: int
+    cost_usd: float
+
+
+class AdminTokenUsageTaskBreakdown(ApiModel):
+    task_id: UUID
+    title: str
+    course_type: str
+    user_id: UUID | None = None
+    user_email: EmailStr | None = None
+    total_tokens: int
+    requests: int
+    cost_usd: float
+
+
+class AdminTokenUsageBreakdown(ApiModel):
+    key: str
+    label: str
+    total_tokens: int
+    requests: int
+    cost_usd: float
+
+
+class AdminTokenUsageForecast(ApiModel):
+    days: int
+    total_tokens: int
+    cost_usd: float
+    avg_daily_tokens: float
+    avg_daily_cost_usd: float
+
+
+class AdminTokenUsageOut(ApiModel):
+    range_days: AdminRangeDays
+    generated_at: datetime
+    totals: AdminTokenUsageTotals
+    daily: list[AdminTokenUsageDailyBucket]
+    top_users: list[AdminTokenUsageUserBreakdown]
+    top_tasks: list[AdminTokenUsageTaskBreakdown]
+    by_operation: list[AdminTokenUsageBreakdown]
+    by_model: list[AdminTokenUsageBreakdown]
+    forecast_30d: AdminTokenUsageForecast
+
+
 class AdminUserSummary(ApiModel):
     id: UUID
     email: EmailStr
@@ -78,6 +149,7 @@ class AdminTaskStatusCount(ApiModel):
 class AdminUserDetail(AdminUserSummary):
     email_verified: bool
     grade_level: int
+    english_level: int
     year_of_birth: int
     onboarding_completed: bool
     interests: list[str]

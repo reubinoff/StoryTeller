@@ -24,6 +24,7 @@ import {
 } from "~/lib/api/queries";
 import type { DashboardMetrics, Notification } from "~/lib/api/types";
 import { avatarImageUrl } from "~/lib/avatar";
+import { englishLevelShortLabel } from "~/lib/english-level";
 
 interface NavItem {
   id: string;
@@ -195,7 +196,7 @@ export const Shell = ({ children }: ShellProps) => {
                   {user.first_name} {user.last_name}
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
-                  Grade {user.grade_level} · {user.year_of_birth}
+                  Level {user.english_level} · {englishLevelShortLabel(user.english_level)}
                 </div>
               </div>
             </div>

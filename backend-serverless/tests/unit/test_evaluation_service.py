@@ -17,6 +17,7 @@ from app.db.models.task_evaluation import TaskEvaluation
 from app.db.models.user import User
 from app.services.content_service import content_grade_for_school_grade
 from app.services.evaluation_service import run_writing_evaluation
+from app.services.level_service import english_level_for_grade
 
 BOTH_SIDES_NOW_ANSWER = (
     '"Both Sides Now" by Joni Mitchell is the song I keep coming back to. '
@@ -45,6 +46,7 @@ async def _create_writing_task(
     max_words: int = 100,
 ) -> uuid.UUID:
     content_grade = content_grade_for_school_grade(school_grade)
+    english_level = english_level_for_grade(content_grade)
     async with sm() as db:
         user = User(
             email=f"{uuid.uuid4()}@example.com",
@@ -52,6 +54,7 @@ async def _create_writing_task(
             last_name="Patel",
             year_of_birth=2017,
             grade_level=school_grade,
+            english_level=english_level,
         )
         db.add(user)
         await db.flush()
@@ -89,6 +92,7 @@ async def _create_writing_task(
             course_type="short_writing",
             interest_slug="travel",
             grade_level_at_roll=school_grade,
+            english_level_at_roll=english_level,
             status=status,
             title="A Place You Would Love to Visit",
             topic_label="Travel",
@@ -233,7 +237,7 @@ async def test_worker_uses_persisted_answer_when_draft_is_empty(
     prompt = claude_stub.calls[0]["prompt"]
     assert "Israeli school English learner" in prompt
     assert "School grade: **3**" in prompt
-    assert "English difficulty grade: **2**" in prompt
+    assert "English difficulty: **Grade 2**" in prompt
 
 
 @pytest.mark.asyncio
@@ -252,8 +256,8 @@ async def test_worker_requests_beginner_level_feedback_for_grade_one(
 
     assert len(claude_stub.calls) == 1
     prompt = claude_stub.calls[0]["prompt"]
-    assert "English difficulty grade: **1**" in prompt
-    assert "Write every feedback field in English at difficulty grade 1" in prompt
+    assert "English difficulty: **Grade 1**" in prompt
+    assert "Write every feedback field in English at Grade 1 or easier" in prompt
     assert "Use very short sentences with common words" in prompt
 
 
@@ -300,7 +304,7 @@ async def test_worker_supplies_authoritative_word_count_without_maturity_penalty
     assert len(claude_stub.calls) == 1
     prompt = claude_stub.calls[0]["prompt"]
     assert "School grade: **7**" in prompt
-    assert "English difficulty grade: **6**" in prompt
+    assert "English difficulty: **Grade 6**" in prompt
     assert "Submitted word count: **152**" in prompt
     assert "Required range: **80-180 words**" in prompt
     assert "Word-count status: **within range**" in prompt

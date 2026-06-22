@@ -43,6 +43,7 @@ const mockUser: User = {
   last_name: "User",
   year_of_birth: 2010,
   grade_level: 6,
+  english_level: 30,
   phone_number: null,
   avatar_url: null,
   display_locale: "en",
@@ -331,8 +332,6 @@ describe("completeOnboarding", () => {
 
     await result.current.signin("test@test.com", "pass");
     const user = await result.current.completeOnboarding({
-      year_of_birth: 2010,
-      grade_level: 6,
       interest_ids: ["animals"],
     });
 

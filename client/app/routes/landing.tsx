@@ -147,7 +147,7 @@ export default function Landing() {
               <IconCheck size={14} /> No ads
             </div>
             <div className="row gap-6">
-              <IconCheck size={14} /> Grade-tuned tasks
+              <IconCheck size={14} /> Level-tuned tasks
             </div>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function Landing() {
             }}
           >
             <div className="row gap-12" style={{ marginBottom: 14 }}>
-              <span className="chip chip-teal">Reading · Grade 4</span>
+              <span className="chip chip-teal">Reading · Level 24</span>
               <span
                 style={{
                   marginLeft: "auto",
@@ -318,7 +318,7 @@ export default function Landing() {
             {[
               ["No ads", "The learner experience is focused on the task, not attention traps."],
               ["Privacy-first", "Only practical account and learning information is used to tune practice."],
-              ["Age-aware", "Year of birth, grade, and interests guide the tone and difficulty."],
+              ["Age-aware", "Age, English level, and interests guide the tone and difficulty."],
               ["Visible progress", "Parents can see recent work, badges, streaks, and task history."],
             ].map(([title, body]) => (
               <div key={title} className="landing-trust-item">

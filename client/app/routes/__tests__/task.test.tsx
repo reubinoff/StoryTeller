@@ -59,6 +59,7 @@ const baseTask = (overrides: Partial<Task> = {}): Task => ({
   course_type: "unseen_text",
   interest_id: "space",
   grade_level_at_roll: 4,
+  english_level_at_roll: 24,
   status: "in_progress",
   title: "Moon Signals",
   topic_label: "Space",

@@ -75,6 +75,7 @@ def build_smoke_prompt() -> str:
         "writing_prompt",
         school_grade_level=5,
         content_grade_level=4,
+        content_level_label="Grade 4",
         interest_label="travel",
         min_words=30,
         max_words=80,

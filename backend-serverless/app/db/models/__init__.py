@@ -1,10 +1,11 @@
 """ORM models — re-exports every model so Alembic can autogenerate against them."""
 
-from app.db.models.admin import AdminAuditEvent
 from app.db.models.achievement import Achievement, UserAchievement
+from app.db.models.admin import AdminAuditEvent
 from app.db.models.content import ContentPassage, WritingPrompt
 from app.db.models.course import Course
 from app.db.models.interest import Interest, UserInterest
+from app.db.models.llm_usage import LLMUsageEvent
 from app.db.models.notification import Notification
 from app.db.models.streak import Streak
 from app.db.models.task import Task
@@ -21,6 +22,7 @@ __all__ = [
     "ContentPassage",
     "Course",
     "Interest",
+    "LLMUsageEvent",
     "Notification",
     "Streak",
     "Task",

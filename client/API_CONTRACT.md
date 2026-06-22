@@ -57,6 +57,8 @@ Validation:
 - `email`: RFC 5322, unique.
 - `password`: ≥ 8 chars, must contain at least one letter and one digit.
 - `year_of_birth`: integer, between `current_year - 100` and `current_year - 5`.
+- `english_level` is derived by the server from `year_of_birth` and defaults to
+  the conservative grade band below the learner's school grade.
 
 **201 Created**
 
@@ -143,10 +145,13 @@ Returns the authenticated `User`.
   reduce_motion?: boolean;
   notif_email_enabled?: boolean;
   notif_inapp_enabled?: boolean;
+  english_level?: number; // 0..100
 }
 ```
 
-Returns the updated `User`.
+Returns the updated `User`. If `english_level` changes, the server deletes that
+user's `not_started` tasks and queues fresh ready-task refills. In-progress,
+submitted, completed, failed, and retryable tasks are left unchanged.
 
 New users default to `"light"` for the child experience. Existing users keep
 their saved preference, and Settings can still switch to `"auto"` or `"dark"`.
@@ -173,13 +178,13 @@ Completes first-run learner setup and returns the updated `User`.
 
 ```json
 {
-  "year_of_birth": 2012,
-  "grade_level": 4,
   "interest_ids": ["animals", "space"]
 }
 ```
 
-Server validates the year range, `1 ≤ grade_level ≤ 12`, and `1 ≤ interests ≤ 6`.
+Server validates `1 ≤ interests ≤ 6`. `year_of_birth` remains immutable after
+signup; onboarding recalculates the starting `english_level` from that stored
+birth year and ignores legacy `year_of_birth` / `grade_level` fields if sent.
 
 ### `POST /me/avatar`
 
@@ -234,6 +239,7 @@ random interest from the user's selection when omitted.
   "course_type": "unseen_text",
   "interest_id": "space",
   "grade_level_at_roll": 4,
+  "english_level_at_roll": 24,
   "status": "not_started",
   "title": "The Curious Case of Saturn's Rings",
   "topic_label": "Space & Astronomy",
@@ -477,6 +483,14 @@ interface AdminSession {
 Query: `range_days=7|30|90` (default `30`). Returns aggregate user/task KPIs,
 daily activity buckets, and course completion metrics.
 
+### `GET /admin/token-usage`
+
+Query: `range_days=7|30|90` (default `30`). Returns LLM token usage analytics
+for recorded usage events in the selected range: totals, daily buckets, top
+users, top tasks, operation/model breakdowns, and a next-30-days forecast.
+`cost_usd` values are estimates from configured per-model token pricing; events
+without configured pricing are counted in `unknown_cost_events`.
+
 ### `GET /admin/users`
 
 Query: `query`, `role`, `status`, `limit`, `cursor`. Returns
@@ -598,6 +612,7 @@ interface User {
   last_name: string;
   year_of_birth: number;
   grade_level: number;             // 1..12
+  english_level: number;           // 0..100
   phone_number: string | null;
   avatar_url: string | null;
   display_locale: string;          // "en" in v1
@@ -685,7 +700,8 @@ interface Task {
   course_id: CourseId;
   course_type: CourseType;
   interest_id: InterestId;
-  grade_level_at_roll: number;
+  grade_level_at_roll: number;     // school/age context at roll time
+  english_level_at_roll: number;   // difficulty level at roll time
   status: TaskStatus;
   title: string;
   topic_label: string;
@@ -858,6 +874,71 @@ interface AdminOverview {
   }>;
 }
 
+interface AdminTokenUsage {
+  range_days: 7 | 30 | 90;
+  generated_at: ISO8601;
+  totals: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_write_tokens: number;
+    cache_read_tokens: number;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+    unknown_cost_events: number;
+  };
+  daily: Array<{
+    date: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_write_tokens: number;
+    cache_read_tokens: number;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  top_users: Array<{
+    user_id: UUID;
+    email: string;
+    first_name: string;
+    last_name: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  top_tasks: Array<{
+    task_id: UUID;
+    title: string;
+    course_type: string;
+    user_id: UUID | null;
+    user_email: string | null;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  by_operation: Array<{
+    key: string;
+    label: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  by_model: Array<{
+    key: string;
+    label: string;
+    total_tokens: number;
+    requests: number;
+    cost_usd: number;
+  }>;
+  forecast_30d: {
+    days: number;
+    total_tokens: number;
+    cost_usd: number;
+    avg_daily_tokens: number;
+    avg_daily_cost_usd: number;
+  };
+}
+
 interface AdminUserSummary {
   id: UUID;
   email: string;
@@ -877,6 +958,7 @@ interface AdminUserSummary {
 interface AdminUserDetail extends AdminUserSummary {
   email_verified: boolean;
   grade_level: number;
+  english_level: number;
   year_of_birth: number;
   onboarding_completed: boolean;
   interests: InterestId[];

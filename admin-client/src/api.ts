@@ -2,6 +2,7 @@ import type {
   AdminAuditEvent,
   AdminOverview,
   AdminSession,
+  AdminTokenUsage,
   AdminUserDetail,
   AdminUserSummary,
   AuthResponse,
@@ -178,6 +179,10 @@ export const api = {
     session: () => request<AdminSession>("/admin/session"),
     overview: (rangeDays: 7 | 30 | 90) =>
       request<AdminOverview>("/admin/overview", {
+        query: { range_days: rangeDays },
+      }),
+    tokenUsage: (rangeDays: 7 | 30 | 90) =>
+      request<AdminTokenUsage>("/admin/token-usage", {
         query: { range_days: rangeDays },
       }),
     users: (params: {

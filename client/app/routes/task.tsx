@@ -180,7 +180,7 @@ const ReadingTask = ({ task, onCompleted }: ReadingTaskProps) => {
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <div className="row gap-12" style={{ marginBottom: 18, flexWrap: "wrap" }}>
             <span className="chip chip-teal">
-              Reading · Grade {task.grade_level_at_roll}
+              Reading · Level {task.english_level_at_roll}
             </span>
             <span className="chip">Topic: {task.topic_label}</span>
             <span className="chip">

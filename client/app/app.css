@@ -1732,6 +1732,71 @@ select:focus-visible {
 .settings-form-row > div {
   min-width: 0;
 }
+.settings-level-control {
+  border-top: 1px solid var(--line);
+  padding: 18px 0 14px;
+}
+.settings-level-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.settings-level-number {
+  width: 96px;
+  text-align: center;
+}
+.settings-level-slider {
+  width: 100%;
+  accent-color: var(--teal);
+}
+.settings-level-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.onboarding-level-meter {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  margin-top: 12px;
+}
+.onboarding-level-number {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--teal);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+}
+.onboarding-level-label {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+.onboarding-level-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  margin: 20px 0 10px;
+}
+.onboarding-level-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rust);
+}
 .settings-row,
 .settings-profile-row {
   overflow-wrap: anywhere;
@@ -2130,8 +2195,7 @@ select:focus-visible {
   .result-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-  .settings-interests-grid,
-  .onboarding-grade-grid {
+  .settings-interests-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .tasks-stats {
@@ -2304,12 +2368,20 @@ select:focus-visible {
     flex: 1;
     min-height: 38px;
   }
+  .settings-level-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .onboarding-level-meter {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .settings-level-number {
+    width: 100%;
+  }
   .settings-interests-grid,
   .onboarding-topics {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-  .onboarding-grade-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .achievements-grid,
   .result-stats-grid,

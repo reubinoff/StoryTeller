@@ -34,6 +34,7 @@ from app.db.models.interest import Interest, UserInterest
 from app.db.models.task import Task
 from app.deps import CurrentUser, DbSession
 from app.services import auth_service, avatar_service, dashboard_service, task_service
+from app.services.level_service import default_english_level_for_year_of_birth
 from app.services.user_service import to_user_out
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -94,10 +95,22 @@ async def get_me(current_user: CurrentUser, db: DbSession) -> UserOut:
 @router.patch("", response_model=UserOut)
 async def patch_me(body: UpdateUserRequest, current_user: CurrentUser, db: DbSession) -> UserOut:
     payload = body.model_dump(exclude_unset=True)
+    english_level_changed = (
+        "english_level" in payload and payload["english_level"] != current_user.english_level
+    )
     for field, value in payload.items():
         setattr(current_user, field, value)
+    if english_level_changed:
+        await db.execute(
+            delete(Task).where(
+                Task.user_id == current_user.id,
+                Task.status == "not_started",
+            )
+        )
     await db.commit()
     await db.refresh(current_user)
+    if english_level_changed and current_user.onboarding_completed:
+        await task_service.enqueue_all_ready_task_refills(current_user.id)
     return await to_user_out(db, current_user)
 
 
@@ -117,8 +130,9 @@ async def complete_onboarding(
     body: CompleteOnboardingRequest, current_user: CurrentUser, db: DbSession
 ) -> UserOut:
     await _replace_interests(db, current_user, body.interest_ids)
-    current_user.year_of_birth = body.year_of_birth
-    current_user.grade_level = body.grade_level
+    current_user.english_level = default_english_level_for_year_of_birth(
+        current_user.year_of_birth
+    )
     current_user.onboarding_completed_at = utcnow()
     await db.commit()
     await db.refresh(current_user)

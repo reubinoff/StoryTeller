@@ -99,13 +99,14 @@ async def test_generate_structured_uses_pydantic_ai_test_model_without_network()
         model_label="test:structured",
     )
 
-    output, latency_ms = await client.generate_structured(
+    output, metadata = await client.generate_structured(
         prompt="Generate a writing prompt.",
         output_type=GeneratedWritingPrompt,
     )
 
     assert output.title == WRITING_PROMPT_RESPONSE["title"]
-    assert latency_ms >= 0
+    assert metadata.latency_ms >= 0
+    assert metadata.usage.requests >= 0
     assert client.model == "test:structured"
     assert test_model.last_model_request_parameters is not None
     assert test_model.last_model_request_parameters.output_tools

@@ -70,6 +70,7 @@ class TaskOut(ApiModel):
     course_type: CourseType
     interest_id: str
     grade_level_at_roll: int
+    english_level_at_roll: int
     status: TaskStatus
     title: str
     topic_label: str

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -13,6 +14,7 @@ from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.azure import AzureProvider
+from pydantic_ai.usage import RunUsage
 
 from app.config import Settings, get_settings
 
@@ -32,6 +34,40 @@ _DEFAULT_INSTRUCTIONS = "Return only the structured output requested by the appl
 
 class LLMConfigError(RuntimeError):
     """Raised when the selected LLM provider is missing required configuration."""
+
+
+@dataclass(frozen=True)
+class LLMUsage:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    requests: int = 0
+
+    @classmethod
+    def from_run_usage(cls, usage: RunUsage) -> LLMUsage:
+        return cls(
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cache_write_tokens=usage.cache_write_tokens,
+            cache_read_tokens=usage.cache_read_tokens,
+            requests=usage.requests,
+        )
+
+    @property
+    def total_tokens(self) -> int:
+        return (
+            self.input_tokens
+            + self.output_tokens
+            + self.cache_write_tokens
+            + self.cache_read_tokens
+        )
+
+
+@dataclass(frozen=True)
+class LLMRunMetadata:
+    latency_ms: int
+    usage: LLMUsage
 
 
 def render_prompt(name: str, **context: Any) -> str:
@@ -66,7 +102,7 @@ class LLMClient:
         output_type: type[OutputT],
         system: str | None = None,
         max_retries: int = 1,
-    ) -> tuple[OutputT, int]:
+    ) -> tuple[OutputT, LLMRunMetadata]:
         """Send `prompt` and return validated structured output plus latency."""
         agent = Agent(
             self._build_model(),
@@ -79,7 +115,10 @@ class LLMClient:
         async with agent:
             result = await agent.run(prompt)
         latency_ms = int((time.perf_counter() - started) * 1000)
-        return result.output, latency_ms
+        return result.output, LLMRunMetadata(
+            latency_ms=latency_ms,
+            usage=LLMUsage.from_run_usage(result.usage),
+        )
 
     def _build_model(self) -> Any:
         if self._model_override is not None:

@@ -14,7 +14,10 @@ from app.core.security import hash_password, verify_password
 from app.db.models._helpers import utcnow
 from app.db.models.user import AuthCredential, AuthIdentity, User
 from app.services import admin_service
-from app.services.user_service import derive_grade_level
+from app.services.level_service import (
+    default_english_level_for_year_of_birth,
+    derive_grade_level,
+)
 
 GOOGLE_PROVIDER = "google"
 
@@ -29,12 +32,14 @@ async def signup(db: AsyncSession, body: SignupRequest) -> User:
             title="Email already in use",
             detail="An account with this email already exists.",
         )
+    grade_level = derive_grade_level(body.year_of_birth)
     user = User(
         email=email,
         first_name=body.first_name.strip(),
         last_name=body.last_name.strip(),
         year_of_birth=body.year_of_birth,
-        grade_level=derive_grade_level(body.year_of_birth),
+        grade_level=grade_level,
+        english_level=default_english_level_for_year_of_birth(body.year_of_birth),
         theme_preference="light",
     )
     db.add(user)
@@ -160,13 +165,15 @@ async def login_or_signup_google(db: AsyncSession, profile: Mapping[str, Any]) -
     if user is None:
         first_name, last_name = _google_names(profile, email)
         year_of_birth = utcnow().year - 12
+        grade_level = derive_grade_level(year_of_birth)
         user = User(
             email=email,
             email_verified_at=utcnow(),
             first_name=first_name,
             last_name=last_name,
             year_of_birth=year_of_birth,
-            grade_level=derive_grade_level(year_of_birth),
+            grade_level=grade_level,
+            english_level=default_english_level_for_year_of_birth(year_of_birth),
             avatar_url=avatar_url,
             theme_preference="light",
         )

@@ -30,6 +30,12 @@ import {
   displayPreferencesFromUser,
   watchAutoThemePreference,
 } from "~/lib/display-preferences";
+import {
+  ENGLISH_LEVEL_MAX,
+  ENGLISH_LEVEL_MIN,
+  clampEnglishLevel,
+  englishLevelLabel,
+} from "~/lib/english-level";
 import { TOPICS } from "~/lib/topics";
 
 export function meta() {
@@ -72,6 +78,9 @@ export default function SettingsRoute() {
   const [notifApp, setNotifApp] = useState<boolean>(
     user?.notif_inapp_enabled ?? true
   );
+  const [englishLevel, setEnglishLevel] = useState<number>(
+    user?.english_level ?? 0
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -113,6 +122,7 @@ export default function SettingsRoute() {
         reduce_motion: reduceMotion,
         notif_email_enabled: notifEmail,
         notif_inapp_enabled: notifApp,
+        english_level: englishLevel,
       });
       await setInterests(interests);
       setUser({ ...updated, interests });
@@ -265,6 +275,42 @@ export default function SettingsRoute() {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+1 555 0100"
             />
+          </div>
+        </div>
+        <div className="settings-level-control">
+          <div className="settings-level-heading">
+            <div>
+              <label className="field-label" htmlFor="settings-english-level">
+                English level
+              </label>
+              <div className="field-help">
+                {englishLevelLabel(englishLevel)} · 0-100
+              </div>
+            </div>
+            <input
+              id="settings-english-level-number"
+              className="field-input settings-level-number"
+              type="number"
+              min={ENGLISH_LEVEL_MIN}
+              max={ENGLISH_LEVEL_MAX}
+              value={englishLevel}
+              onChange={(e) => setEnglishLevel(clampEnglishLevel(e.target.valueAsNumber))}
+              aria-label="English level value"
+            />
+          </div>
+          <input
+            id="settings-english-level"
+            className="settings-level-slider"
+            type="range"
+            min={ENGLISH_LEVEL_MIN}
+            max={ENGLISH_LEVEL_MAX}
+            value={englishLevel}
+            onChange={(e) => setEnglishLevel(clampEnglishLevel(e.target.valueAsNumber))}
+          />
+          <div className="settings-level-scale" aria-hidden="true">
+            <span>0</span>
+            <span>Grade bands</span>
+            <span>Professional 100</span>
           </div>
         </div>
       </SettingsSection>

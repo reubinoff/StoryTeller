@@ -12,6 +12,7 @@ const user = (onboarding_completed: boolean): User =>
     last_name: "Patel",
     year_of_birth: 2017,
     grade_level: 4,
+    english_level: 24,
     phone_number: null,
     avatar_url: null,
     display_locale: "en",

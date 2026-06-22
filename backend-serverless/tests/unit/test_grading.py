@@ -6,9 +6,15 @@ import pytest
 
 from app.core.grading import is_correct_answer, normalize_answer, reading_xp
 from app.services.content_service import (
+    content_grade_for_english_level,
     content_grade_for_school_grade,
+    content_label_for_english_level_value,
     writing_submission_word_count,
     writing_word_bounds,
+)
+from app.services.level_service import (
+    default_english_level_for_school_grade,
+    english_level_for_grade,
 )
 from app.services.user_service import derive_grade_level
 
@@ -111,6 +117,28 @@ def test_content_grade_for_school_grade_steps_back_for_israeli_english(
     school_grade: int, content_grade: int
 ) -> None:
     assert content_grade_for_school_grade(school_grade) == content_grade
+
+
+@pytest.mark.parametrize(
+    ("english_level", "content_grade", "label"),
+    [
+        (0, 1, "Grade 1"),
+        (24, 4, "Grade 4"),
+        (80, 12, "Grade 12"),
+        (81, 13, "Professional English"),
+        (100, 13, "Professional English"),
+    ],
+)
+def test_content_grade_for_english_level_bands(
+    english_level: int, content_grade: int, label: str
+) -> None:
+    assert content_grade_for_english_level(english_level) == content_grade
+    assert content_label_for_english_level_value(english_level) == label
+
+
+def test_default_english_level_preserves_previous_conservative_grade() -> None:
+    assert default_english_level_for_school_grade(5) == english_level_for_grade(4)
+    assert default_english_level_for_school_grade(1) == english_level_for_grade(1)
 
 
 def test_writing_word_bounds_scale_with_grade() -> None:
