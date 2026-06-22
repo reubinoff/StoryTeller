@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, TypeVar
@@ -101,6 +102,50 @@ def extract_latency_ms(run_info: object) -> int:
     return int(latency)
 
 
+def smoke_description(settings: Settings) -> str:
+    model = settings.resolved_llm_model or "<unset>"
+    return (
+        f"provider={settings.llm_provider} "
+        f"model={settings.llm_provider}:{model} "
+        f"max_tokens={settings.resolved_llm_max_tokens}"
+    )
+
+
+def redact_secrets(message: str, settings: Settings | None) -> str:
+    if settings is None:
+        return message
+
+    redacted = message
+    for secret in (settings.anthropic_api_key, settings.azure_openai_api_key):
+        if len(secret) >= 4:
+            redacted = redacted.replace(secret, "***")
+    return redacted
+
+
+def exception_chain(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        chain.append(current)
+        seen.add(id(current))
+        current = current.__cause__
+        if current is None and not chain[-1].__suppress_context__:
+            current = chain[-1].__context__
+    return chain
+
+
+def format_exception_chain(exc: BaseException, settings: Settings | None) -> str:
+    parts: list[str] = []
+    for item in exception_chain(exc):
+        message = redact_secrets(str(item), settings)
+        if message:
+            parts.append(f"{type(item).__name__}: {message}")
+        else:
+            parts.append(type(item).__name__)
+    return " <- ".join(parts)
+
+
 async def run_smoke(
     *,
     settings: Settings | None = None,
@@ -126,12 +171,22 @@ async def run_smoke(
 
 
 def main() -> None:
+    started = time.perf_counter()
+    settings: Settings | None = None
     try:
-        result = asyncio.run(run_smoke())
+        settings = Settings()
+        print(f"LLM smoke starting {smoke_description(settings)}")
+        result = asyncio.run(run_smoke(settings=settings))
     except (LLMConfigError, ValidationError, ValueError) as exc:
-        raise SystemExit(f"LLM smoke failed: {exc}") from exc
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        details = format_exception_chain(exc, settings)
+        raise SystemExit(f"LLM smoke failed elapsed_ms={elapsed_ms}: {details}") from exc
     except Exception as exc:
-        raise SystemExit(f"LLM smoke request failed: {type(exc).__name__}: {exc}") from exc
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        details = format_exception_chain(exc, settings)
+        raise SystemExit(
+            f"LLM smoke request failed elapsed_ms={elapsed_ms}: {details}"
+        ) from exc
 
     print(
         "LLM smoke succeeded "

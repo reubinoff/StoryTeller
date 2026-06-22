@@ -11,8 +11,11 @@ from app.config import Settings
 from scripts.smoke_llm_provider import (
     build_smoke_prompt,
     extract_latency_ms,
+    format_exception_chain,
     missing_required_env,
+    redact_secrets,
     run_smoke,
+    smoke_description,
 )
 from tests.__conftest_helpers__ import WRITING_PROMPT_RESPONSE
 
@@ -101,6 +104,52 @@ def test_extract_latency_supports_metadata_object() -> None:
         latency_ms = 42
 
     assert extract_latency_ms(Metadata()) == 42
+
+
+def test_smoke_description_uses_resolved_provider_model_and_token_limit() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="test-key",
+        llm_model="",
+        claude_model="claude-legacy",
+        llm_max_tokens=1024,
+    )
+
+    assert smoke_description(settings) == (
+        "provider=anthropic model=anthropic:claude-legacy max_tokens=1024"
+    )
+
+
+def test_redact_secrets_masks_configured_api_keys() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="anthropic-secret",
+        azure_openai_api_key="azure-secret",
+    )
+
+    message = "bad keys anthropic-secret and azure-secret"
+
+    assert redact_secrets(message, settings) == "bad keys *** and ***"
+
+
+def test_format_exception_chain_includes_causes_without_secrets() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="anthropic-secret",
+    )
+
+    try:
+        try:
+            raise RuntimeError("inner anthropic-secret connection reset")
+        except RuntimeError as cause:
+            raise ValueError("outer failure") from cause
+    except ValueError as exc:
+        formatted = format_exception_chain(exc, settings)
+
+    assert formatted == (
+        "ValueError: outer failure <- RuntimeError: inner *** connection reset"
+    )
+    assert "anthropic-secret" not in formatted
 
 
 @pytest.mark.asyncio
