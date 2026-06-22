@@ -12,9 +12,9 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.1
+anthropic==0.111.0
     # via storyteller-backend-serverless
-anyio==4.13.0
+anyio==4.14.0
     # via
     #   anthropic
     #   httpx
@@ -38,7 +38,7 @@ azure-storage-blob==12.30.0
     # via storyteller-backend-serverless
 azure-storage-queue==12.17.0
     # via storyteller-backend-serverless
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -68,13 +68,13 @@ docstring-parser==0.18.0
     # via anthropic
 email-validator==2.3.0
     # via storyteller-backend-serverless
-fastapi==0.137.1
+fastapi==0.138.0
     # via storyteller-backend-serverless
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-greenlet==3.5.1
+greenlet==3.5.2
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -128,7 +128,7 @@ pydantic==2.13.4
     #   storyteller-backend-serverless
 pydantic-core==2.46.4
     # via pydantic
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via storyteller-backend-serverless
 pyjwt==2.13.0
     # via storyteller-backend-serverless
