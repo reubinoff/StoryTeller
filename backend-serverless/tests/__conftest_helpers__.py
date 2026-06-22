@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 
-# Canned Claude responses used to stub out network calls during tests.
+# Canned LLM responses used to stub out network calls during tests.
 READING_RESPONSE: dict[str, Any] = {
     "title": "A Tiny Trip Around the Sun",
     "paragraphs": [

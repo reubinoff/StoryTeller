@@ -69,8 +69,17 @@ Edit `local.settings.json`:
 - `AzureWebJobsStorage`: use `UseDevelopmentStorage=true` when running Azurite.
 - `DATABASE_URL`: local PostgreSQL URL.
 - `JWT_SECRET`: any long local-only secret.
-- `ANTHROPIC_API_KEY`: required for real Claude calls. Tests stub Claude and do
-  not need a real key.
+- `LLM_PROVIDER`: defaults to `anthropic`; set `azure_openai` for Azure AI
+  Foundry / Azure OpenAI-compatible deployments.
+- `LLM_MODEL`: optional for Anthropic because `CLAUDE_MODEL` is the fallback;
+  required for `azure_openai`.
+- `LLM_MAX_TOKENS`: response token budget. Legacy `CLAUDE_MAX_TOKENS` is still
+  accepted when `LLM_MAX_TOKENS` is unset.
+- `ANTHROPIC_API_KEY`: required for real Anthropic calls. Tests stub the LLM and
+  do not need a real key.
+- `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_VERSION`:
+  required for Azure only, except `AZURE_OPENAI_API_VERSION` which is optional
+  for the newer `/openai/v1/` endpoints.
 - `CORS_ORIGINS`: include your frontend dev origin.
 - `FRONTEND_BASE_URL`, `GOOGLE_OAUTH_CLIENT_ID`,
   `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`: required for
@@ -171,8 +180,8 @@ Azurite or an Azure Storage account and open the `writing-evaluations` queue.
   malformed JSON, unsupported `schema_version`, and unsupported `kind`.
 - API works but worker cannot read DB: confirm `DATABASE_URL` in
   `local.settings.json` and run `uv run --no-sync alembic upgrade head`.
-- Claude calls fail: set `ANTHROPIC_API_KEY`, or run tests where Claude is
-  stubbed.
+- LLM calls fail: confirm `LLM_PROVIDER` and the matching provider credentials,
+  or run tests where the LLM is stubbed.
 - CORS errors: add the frontend origin to `CORS_ORIGINS`.
 - Google redirects to the wrong host: set `FRONTEND_BASE_URL` to
   `https://storyteller.reubinoff.com` and register the deployed

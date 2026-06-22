@@ -15,7 +15,7 @@ from app.db.models._helpers import utcnow, uuid7
 
 
 class ContentPassage(Base):
-    """A reading passage produced by Claude (or seeded). Reusable across users."""
+    """A reading passage produced by an LLM (or seeded). Reusable across users."""
 
     __tablename__ = "content_passages"
     __table_args__ = (
@@ -38,7 +38,7 @@ class ContentPassage(Base):
 
 
 class WritingPrompt(Base):
-    """A writing prompt produced by Claude (or seeded). Reusable across users."""
+    """A writing prompt produced by an LLM (or seeded). Reusable across users."""
 
     __tablename__ = "writing_prompts"
     __table_args__ = (

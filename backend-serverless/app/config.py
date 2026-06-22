@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+LLMProvider = Literal["anthropic", "azure_openai"]
 
 
 class Settings(BaseSettings):
@@ -40,7 +43,13 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = Field(default="")
     claude_model: str = Field(default="claude-haiku-4-5-20251001")
+    llm_provider: LLMProvider = "anthropic"
+    llm_model: str = ""
+    llm_max_tokens: int | None = None
     claude_max_tokens: int = 4096
+    azure_openai_endpoint: str = ""
+    azure_openai_api_key: str = ""
+    azure_openai_api_version: str = ""
 
     azure_web_jobs_storage: str = Field(
         default="",
@@ -75,6 +84,16 @@ class Settings(BaseSettings):
         if admin_origin and admin_origin not in origins:
             origins.append(admin_origin)
         return origins
+
+    @property
+    def resolved_llm_model(self) -> str:
+        if self.llm_provider == "anthropic":
+            return self.llm_model or self.claude_model
+        return self.llm_model
+
+    @property
+    def resolved_llm_max_tokens(self) -> int:
+        return self.llm_max_tokens if self.llm_max_tokens is not None else self.claude_max_tokens
 
 
 @lru_cache(maxsize=1)

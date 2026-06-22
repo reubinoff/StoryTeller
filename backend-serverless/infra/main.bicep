@@ -26,6 +26,29 @@ param jwtSecret string
 @description('Anthropic API key for Claude content generation and evaluation.')
 param anthropicApiKey string = ''
 
+@description('LLM provider used for content generation and evaluation.')
+@allowed([
+  'anthropic'
+  'azure_openai'
+])
+param llmProvider string = 'anthropic'
+
+@description('LLM model name. Optional for Anthropic, required when llmProvider is azure_openai.')
+param llmModel string = ''
+
+@description('Maximum tokens for LLM responses.')
+param llmMaxTokens string = '4096'
+
+@description('Azure AI Foundry or Azure OpenAI endpoint. For v1 endpoints, include the /openai/v1/ path.')
+param azureOpenAiEndpoint string = ''
+
+@secure()
+@description('Azure AI Foundry or Azure OpenAI API key.')
+param azureOpenAiApiKey string = ''
+
+@description('Optional Azure OpenAI api-version for legacy api-version based deployments.')
+param azureOpenAiApiVersion string = ''
+
 @description('Allowed frontend origins as a JSON array string.')
 param corsOrigins string = '["https://storyteller.reubinoff.com"]'
 
@@ -189,6 +212,14 @@ resource anthropicSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+resource azureOpenAiApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'azure-openai-api-key'
+  properties: {
+    value: azureOpenAiApiKey
+  }
+}
+
 resource googleOauthClientSecretResource 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'google-oauth-client-secret'
@@ -301,6 +332,18 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: googleOauthRedirectUri
         }
         {
+          name: 'LLM_PROVIDER'
+          value: llmProvider
+        }
+        {
+          name: 'LLM_MODEL'
+          value: llmModel
+        }
+        {
+          name: 'LLM_MAX_TOKENS'
+          value: llmMaxTokens
+        }
+        {
           name: 'ANTHROPIC_API_KEY'
           value: '@Microsoft.KeyVault(SecretUri=${anthropicSecret.properties.secretUri})'
         }
@@ -311,6 +354,18 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'CLAUDE_MAX_TOKENS'
           value: '4096'
+        }
+        {
+          name: 'AZURE_OPENAI_ENDPOINT'
+          value: azureOpenAiEndpoint
+        }
+        {
+          name: 'AZURE_OPENAI_API_KEY'
+          value: '@Microsoft.KeyVault(SecretUri=${azureOpenAiApiKeySecret.properties.secretUri})'
+        }
+        {
+          name: 'AZURE_OPENAI_API_VERSION'
+          value: azureOpenAiApiVersion
         }
         {
           name: 'CORS_ORIGINS'

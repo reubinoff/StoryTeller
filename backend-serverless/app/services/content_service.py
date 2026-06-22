@@ -1,4 +1,4 @@
-"""Generate + cache reading passages and writing prompts via Claude."""
+"""Generate + cache reading passages and writing prompts via LLM."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.api.v1.schemas.content import (
     GeneratedWritingPrompt,
 )
 from app.db.models.content import ContentPassage, WritingPrompt
-from app.llm.claude_client import ClaudeClient, get_claude_client, render_prompt
+from app.llm.client import LLMClient, get_llm_client, render_prompt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,10 +68,10 @@ async def generate_reading_passage(
     interest_label: str,
     school_grade_level: int,
     content_grade_level: int,
-    client: ClaudeClient | None = None,
+    client: LLMClient | None = None,
 ) -> ContentPassage:
-    """Call Claude, validate, persist a new ContentPassage row. Returns it."""
-    cli = client or get_claude_client()
+    """Call the LLM, validate, persist a new ContentPassage row. Returns it."""
+    cli = client or get_llm_client()
     prompt = render_prompt(
         "reading_passage",
         school_grade_level=school_grade_level,
@@ -81,8 +81,10 @@ async def generate_reading_passage(
         target_paragraphs=_reading_paragraphs_target(content_grade_level),
         num_questions=_reading_num_questions(content_grade_level),
     )
-    raw, _latency = await cli.generate_json(prompt=prompt)
-    parsed = GeneratedReadingPassage.model_validate(raw)
+    parsed, _latency = await cli.generate_structured(
+        prompt=prompt,
+        output_type=GeneratedReadingPassage,
+    )
     passage = ContentPassage(
         interest_slug=interest_slug,
         grade_level=content_grade_level,
@@ -104,9 +106,9 @@ async def generate_writing_prompt(
     interest_label: str,
     school_grade_level: int,
     content_grade_level: int,
-    client: ClaudeClient | None = None,
+    client: LLMClient | None = None,
 ) -> WritingPrompt:
-    cli = client or get_claude_client()
+    cli = client or get_llm_client()
     min_w, max_w = writing_word_bounds(content_grade_level)
     prompt = render_prompt(
         "writing_prompt",
@@ -116,8 +118,10 @@ async def generate_writing_prompt(
         min_words=min_w,
         max_words=max_w,
     )
-    raw, _latency = await cli.generate_json(prompt=prompt)
-    parsed = GeneratedWritingPrompt.model_validate(raw)
+    parsed, _latency = await cli.generate_structured(
+        prompt=prompt,
+        output_type=GeneratedWritingPrompt,
+    )
     if parsed.min_words >= parsed.max_words:
         parsed = parsed.model_copy(update={"min_words": min_w, "max_words": max_w})
     record = WritingPrompt(
@@ -145,10 +149,10 @@ async def evaluate_writing(
     max_words: int,
     submitted_word_count: int,
     student_answer: str,
-    client: ClaudeClient | None = None,
+    client: LLMClient | None = None,
 ) -> tuple[GeneratedWritingEvaluation, int, str]:
-    """Call Claude to score a student writing answer. Returns (evaluation, latency_ms, model)."""
-    cli = client or get_claude_client()
+    """Call the LLM to score a student writing answer."""
+    cli = client or get_llm_client()
     prompt = render_prompt(
         "writing_evaluation",
         school_grade_level=school_grade_level,
@@ -160,5 +164,8 @@ async def evaluate_writing(
         submitted_word_count=submitted_word_count,
         student_answer=student_answer,
     )
-    raw, latency = await cli.generate_json(prompt=prompt)
-    return GeneratedWritingEvaluation.model_validate(raw), latency, cli.model
+    evaluation, latency = await cli.generate_structured(
+        prompt=prompt,
+        output_type=GeneratedWritingEvaluation,
+    )
+    return evaluation, latency, cli.model

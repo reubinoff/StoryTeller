@@ -19,23 +19,4 @@ Hard requirements:
 - For fill_blank, `options` is `null`; `correct_answer` is the lowercase, trimmed missing word/phrase.
 - Every question MUST have a brief, friendly `explanation` for the result page.
 
-You MUST reply with a single JSON object — no prose, no markdown fences, no code blocks. The JSON object must match this schema EXACTLY:
-
-```
-{
-  "title": string,
-  "paragraphs": string[],
-  "questions": [
-    {
-      "question_type": "multiple_choice" | "true_false" | "fill_blank",
-      "prompt": string,
-      "options": string[] | null,
-      "correct_answer": string,
-      "explanation": string,
-      "max_points": 1
-    }
-  ]
-}
-```
-
-Begin now and reply with ONLY that JSON object.
+Return only the structured output requested by the app.

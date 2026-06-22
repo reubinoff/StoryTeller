@@ -13,8 +13,21 @@ async def test_interests_returns_all_15_in_display_order(client: AsyncClient) ->
     items = resp.json()
     assert len(items) == 15
     expected = [
-        "animals", "sports", "music", "movies", "science", "space", "tech",
-        "food", "travel", "art", "books", "games", "history", "cars", "health",
+        "animals",
+        "sports",
+        "music",
+        "movies",
+        "science",
+        "space",
+        "tech",
+        "food",
+        "travel",
+        "art",
+        "books",
+        "games",
+        "history",
+        "cars",
+        "health",
     ]
     assert [i["id"] for i in items] == expected
     for i in items:
@@ -29,8 +42,16 @@ async def test_courses_returns_two_courses(client: AsyncClient) -> None:
     assert {c["id"] for c in items} == {"reading", "writing"}
     for c in items:
         assert {
-            "id", "slug", "type", "title", "subtitle", "description",
-            "min_grade", "max_grade", "estimated_minutes", "illustration",
+            "id",
+            "slug",
+            "type",
+            "title",
+            "subtitle",
+            "description",
+            "min_grade",
+            "max_grade",
+            "estimated_minutes",
+            "illustration",
         } <= c.keys()
 
 

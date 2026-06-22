@@ -65,7 +65,7 @@ uv export --frozen --no-dev --format requirements-txt --no-hashes --output-file 
 
 ## Tests
 
-- Claude is stubbed in tests; `ANTHROPIC_API_KEY` is not required for pytest.
+- LLM calls are stubbed in tests; provider API keys are not required for pytest.
 - Single-test runs may fail coverage; run `uv run --no-sync pytest -v tests/` before calling backend work done.
 
 ## Azure

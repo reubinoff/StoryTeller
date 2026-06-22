@@ -13,16 +13,4 @@ Hard requirements:
 - Hints: 2–4 short, actionable bullet points (e.g. "Mention a place by name", "Use at least two adjectives", "End with a personal reason").
 - Stay age-appropriate, no PII, no controversial topics.
 
-You MUST reply with a single JSON object — no prose, no markdown fences. The JSON object must match this schema EXACTLY:
-
-```
-{
-  "title": string,
-  "prompt": string,
-  "hints": string[],
-  "min_words": {{ min_words }},
-  "max_words": {{ max_words }}
-}
-```
-
-Begin now and reply with ONLY that JSON object.
+Return only the structured output requested by the app.

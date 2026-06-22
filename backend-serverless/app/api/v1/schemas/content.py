@@ -1,10 +1,10 @@
-"""Internal schemas for validating Claude's generated content."""
+"""Internal schemas for validating LLM-generated content."""
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.api.v1.schemas.common import ApiModel
 
@@ -18,7 +18,7 @@ class GeneratedQuestion(ApiModel):
     options: list[str] | None = None
     correct_answer: str = Field(min_length=1)
     explanation: str | None = None
-    max_points: int = 1
+    max_points: Literal[1] = 1
 
     @field_validator("options")
     @classmethod
@@ -29,6 +29,31 @@ class GeneratedQuestion(ApiModel):
             msg = "All options must be non-empty strings"
             raise ValueError(msg)
         return v
+
+    @model_validator(mode="after")
+    def _validate_question_shape(self) -> Self:
+        if self.question_type == "multiple_choice":
+            if self.options is None or len(self.options) != 4:
+                msg = "multiple_choice questions must have exactly 4 options"
+                raise ValueError(msg)
+            if self.correct_answer not in self.options:
+                msg = "multiple_choice correct_answer must match an option"
+                raise ValueError(msg)
+        elif self.question_type == "true_false":
+            if self.options != ["True", "False"]:
+                msg = 'true_false options must be exactly ["True", "False"]'
+                raise ValueError(msg)
+            if self.correct_answer not in {"True", "False"}:
+                msg = 'true_false correct_answer must be "True" or "False"'
+                raise ValueError(msg)
+        elif self.question_type == "fill_blank":
+            if self.options is not None:
+                msg = "fill_blank options must be null"
+                raise ValueError(msg)
+            if self.correct_answer != self.correct_answer.strip().lower():
+                msg = "fill_blank correct_answer must be lowercase and trimmed"
+                raise ValueError(msg)
+        return self
 
 
 class GeneratedReadingPassage(ApiModel):

@@ -30,7 +30,7 @@ _EVALUATION_LOCKS: dict[uuid.UUID, asyncio.Lock] = {}
 
 
 async def run_writing_evaluation(task_id: uuid.UUID) -> None:
-    """BackgroundTask entrypoint: scores a submitted writing task with Claude."""
+    """BackgroundTask entrypoint: scores a submitted writing task with an LLM."""
     lock = _EVALUATION_LOCKS.setdefault(task_id, asyncio.Lock())
     async with lock:
         sm = get_sessionmaker()

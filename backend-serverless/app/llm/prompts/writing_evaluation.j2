@@ -45,22 +45,4 @@ Provide:
 - 2–4 short `focus_next` chips at the learner's English difficulty grade.
 - 0–6 `highlights` anchored to character offsets in the student's answer text. Each highlight: `start` (inclusive), `end` (exclusive), `kind` (`grammar` | `word_choice` | `suggestion`), `message` (short, friendly).
 
-You MUST reply with a single JSON object — no prose, no markdown fences. Schema:
-
-```
-{
-  "score_overall": number,
-  "score_grammar": number,
-  "score_vocabulary": number,
-  "score_structure": number,
-  "score_relevance": number,
-  "feedback_summary": string,
-  "feedback_detail": string[],
-  "focus_next": string[],
-  "highlights": [
-    {"start": int, "end": int, "kind": "grammar" | "word_choice" | "suggestion", "message": string}
-  ]
-}
-```
-
-Reply with ONLY that JSON object.
+Return only the structured output requested by the app.

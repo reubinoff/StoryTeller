@@ -1,15 +1,16 @@
-"""Test fixtures: in-memory aiosqlite DB, Claude stub, AsyncClient."""
+"""Test fixtures: in-memory aiosqlite DB, LLM stub, AsyncClient."""
 
 from __future__ import annotations
 
 import asyncio
 import os
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, TypeVar
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -24,7 +25,7 @@ os.environ.setdefault("ENVIRONMENT", "test")
 from app.db.base import Base  # noqa: E402
 from app.db import models  # noqa: F401, E402  (registers tables)
 from app.db.session import get_session  # noqa: E402
-from app.llm.claude_client import ClaudeClient, set_claude_client  # noqa: E402
+from app.llm.client import LLMClient, set_llm_client  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.seed import seed_static_catalog  # noqa: E402
 from app.db import session as db_session_module  # noqa: E402
@@ -53,51 +54,55 @@ def event_loop():
     loop.close()
 
 
-# ----- Claude stub -----
+OutputT = TypeVar("OutputT", bound=BaseModel)
 
 
-class StubClaudeClient(ClaudeClient):
-    """Deterministic stand-in for Anthropic's client during tests."""
+# ----- LLM stub -----
+
+
+class StubClaudeClient(LLMClient):
+    """Deterministic stand-in for the configured LLM during tests."""
 
     def __init__(self) -> None:  # noqa: D401  (override base init)
-        self._model = "claude-stub"
+        self._model = "llm-stub"
+        self._model_label = "test:llm-stub"
         self._max_tokens = 4096
-        self._client = None  # type: ignore[assignment]
         self.calls: list[dict[str, Any]] = []
         self.next_response: dict[str, Any] | None = None
 
     @property
-    def model(self) -> str:  # type: ignore[override]
-        return self._model
+    def model(self) -> str:
+        return self._model_label
 
-    async def generate_json(  # type: ignore[override]
+    async def generate_structured(
         self,
         *,
         prompt: str,
+        output_type: type[OutputT],
         system: str | None = None,
         max_retries: int = 1,
-    ) -> tuple[dict[str, Any], int]:
+    ) -> tuple[OutputT, int]:
         self.calls.append({"prompt": prompt, "system": system})
         if self.next_response is not None:
             payload, self.next_response = self.next_response, None
-            return payload, 12
+            return output_type.model_validate(payload), 12
         if "comprehension questions" in prompt or "reading passage" in prompt:
-            return READING_RESPONSE, 12
+            return output_type.model_validate(READING_RESPONSE), 12
         if "writing prompt" in prompt or "short-answer writing prompt" in prompt:
-            return WRITING_PROMPT_RESPONSE, 8
+            return output_type.model_validate(WRITING_PROMPT_RESPONSE), 8
         if "evaluating a short writing answer" in prompt or "score the answer" in prompt.lower():
-            return WRITING_EVAL_RESPONSE, 17
-        return READING_RESPONSE, 12
+            return output_type.model_validate(WRITING_EVAL_RESPONSE), 17
+        return output_type.model_validate(READING_RESPONSE), 12
 
 
 @pytest_asyncio.fixture
 async def claude_stub() -> AsyncIterator[StubClaudeClient]:
     stub = StubClaudeClient()
-    set_claude_client(stub)
+    set_llm_client(stub)
     try:
         yield stub
     finally:
-        set_claude_client(None)
+        set_llm_client(None)
 
 
 @pytest_asyncio.fixture

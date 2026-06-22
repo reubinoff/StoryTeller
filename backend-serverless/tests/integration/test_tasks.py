@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import UTC, datetime
+from typing import Any, NoReturn
 
 import pytest
 from httpx import AsyncClient
@@ -1107,10 +1108,16 @@ async def test_writing_eval_marks_failed_when_llm_raises(
     task_id = rolled.json()["id"]
 
     # Now break the stub so the evaluation call raises.
-    async def _boom(*, prompt: str, system: str | None = None, max_retries: int = 1):
-        raise RuntimeError("Claude is grumpy")
+    async def _boom(
+        *,
+        prompt: str,
+        output_type: type[Any],
+        system: str | None = None,
+        max_retries: int = 1,
+    ) -> NoReturn:
+        raise RuntimeError("LLM is grumpy")
 
-    claude_stub.generate_json = _boom  # type: ignore[method-assign]
+    claude_stub.generate_structured = _boom
 
     submit = await client.post(
         f"/tasks/{task_id}/submit",
@@ -1231,12 +1238,18 @@ async def test_retry_after_failure_triggers_re_evaluation(
     rolled = await client.post("/courses/writing/tasks", headers=headers, json={})
     task_id = rolled.json()["id"]
 
-    original_generate_json = claude_stub.generate_json
+    original_generate_structured = claude_stub.generate_structured
 
-    async def _boom(*, prompt: str, system: str | None = None, max_retries: int = 1):
-        raise RuntimeError("Claude is still grumpy")
+    async def _boom(
+        *,
+        prompt: str,
+        output_type: type[Any],
+        system: str | None = None,
+        max_retries: int = 1,
+    ) -> NoReturn:
+        raise RuntimeError("LLM is still grumpy")
 
-    claude_stub.generate_json = _boom  # type: ignore[method-assign]
+    claude_stub.generate_structured = _boom
     try:
         await client.post(
             f"/tasks/{task_id}/submit",
@@ -1247,7 +1260,7 @@ async def test_retry_after_failure_triggers_re_evaluation(
         first = await client.get(f"/tasks/{task_id}", headers=headers)
         assert first.json()["status"] == "failed"
 
-        claude_stub.generate_json = original_generate_json  # type: ignore[method-assign]
+        claude_stub.generate_structured = original_generate_structured
         retried = await client.post(f"/tasks/{task_id}/retry", headers=headers)
         assert retried.status_code == 202
         assert evaluation_queue.task_ids == [uuid.UUID(task_id), uuid.UUID(task_id)]
@@ -1256,7 +1269,7 @@ async def test_retry_after_failure_triggers_re_evaluation(
         final = await client.get(f"/tasks/{task_id}", headers=headers)
         assert final.json()["status"] == "completed"
     finally:
-        claude_stub.generate_json = original_generate_json  # type: ignore[method-assign]
+        claude_stub.generate_structured = original_generate_structured
 
 
 @pytest.mark.asyncio
