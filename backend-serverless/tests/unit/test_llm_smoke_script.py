@@ -8,8 +8,10 @@ import pytest
 from pydantic import BaseModel
 
 from app.config import Settings
+from app.llm.client import LLMConfigError
 from scripts.smoke_llm_provider import (
     build_smoke_prompt,
+    ensure_required_env,
     extract_latency_ms,
     format_exception_chain,
     missing_required_env,
@@ -74,6 +76,22 @@ def test_anthropic_smoke_accepts_legacy_model_with_api_key() -> None:
 
     assert missing_required_env(settings) == []
     assert settings.resolved_llm_model == "claude-legacy"
+
+
+def test_anthropic_smoke_rejects_embedded_control_characters_without_leaking_key() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="test\nanthropic-key",
+        llm_model="",
+        claude_model="claude-legacy",
+    )
+
+    with pytest.raises(LLMConfigError, match="ANTHROPIC_API_KEY") as exc_info:
+        ensure_required_env(settings)
+
+    message = str(exc_info.value)
+    assert "single-line" in message
+    assert "test\nanthropic-key" not in message
 
 
 def test_azure_smoke_requires_model_endpoint_and_api_key() -> None:

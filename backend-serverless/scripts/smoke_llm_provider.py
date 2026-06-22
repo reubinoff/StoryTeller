@@ -16,7 +16,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.api.v1.schemas.content import GeneratedWritingPrompt  # noqa: E402
-from app.config import Settings  # noqa: E402
+from app.config import Settings, contains_control_characters  # noqa: E402
 from app.llm.client import LLMClient, LLMConfigError, render_prompt  # noqa: E402
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -68,6 +68,22 @@ def ensure_required_env(settings: Settings) -> None:
     if missing:
         joined = ", ".join(missing)
         msg = f"LLM smoke test missing required configuration: {joined}"
+        raise LLMConfigError(msg)
+
+    invalid = [
+        name
+        for name, value in (
+            ("ANTHROPIC_API_KEY", settings.anthropic_api_key),
+            ("AZURE_OPENAI_API_KEY", settings.azure_openai_api_key),
+        )
+        if value and contains_control_characters(value)
+    ]
+    if invalid:
+        joined = ", ".join(invalid)
+        msg = (
+            f"LLM smoke test invalid secret formatting: {joined} must be single-line "
+            "values without embedded control characters"
+        )
         raise LLMConfigError(msg)
 
 

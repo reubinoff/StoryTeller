@@ -47,9 +47,18 @@ def test_llm_api_keys_are_stripped_for_header_safety() -> None:
     assert settings.azure_openai_api_key == "test-azure-key"
 
 
-def test_llm_api_keys_reject_embedded_control_characters() -> None:
-    with pytest.raises(ValueError, match="single-line"):
-        Settings(anthropic_api_key="test\nanthropic-key")
+@pytest.mark.asyncio
+async def test_llm_api_keys_reject_embedded_control_characters_without_leaking_key() -> None:
+    settings = Settings(anthropic_api_key="test\nanthropic-key")
+    client = LLMClient(settings=settings)
+
+    with pytest.raises(LLMConfigError, match="ANTHROPIC_API_KEY") as exc_info:
+        await client.generate_structured(
+            prompt="Generate a writing prompt.",
+            output_type=GeneratedWritingPrompt,
+        )
+
+    assert "test\nanthropic-key" not in str(exc_info.value)
 
 
 def test_legacy_claude_max_tokens_used_when_llm_max_tokens_missing(

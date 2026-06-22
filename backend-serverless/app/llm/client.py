@@ -16,7 +16,7 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.azure import AzureProvider
 from pydantic_ai.usage import RunUsage
 
-from app.config import Settings, get_settings
+from app.config import Settings, contains_control_characters, get_settings
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
@@ -131,6 +131,10 @@ class LLMClient:
         raise LLMConfigError(msg)
 
     def _build_anthropic_model(self) -> AnthropicModel:
+        self._ensure_header_safe_secret(
+            "ANTHROPIC_API_KEY",
+            self._settings.anthropic_api_key,
+        )
         return AnthropicModel(
             self._model,
             provider=AnthropicProvider(api_key=self._settings.anthropic_api_key or None),
@@ -151,6 +155,10 @@ class LLMClient:
             msg = f"LLM_PROVIDER=azure_openai requires {joined}"
             raise LLMConfigError(msg)
 
+        self._ensure_header_safe_secret(
+            "AZURE_OPENAI_API_KEY",
+            self._settings.azure_openai_api_key,
+        )
         if self._settings.azure_openai_api_version:
             provider = AzureProvider(
                 azure_endpoint=self._settings.azure_openai_endpoint,
@@ -163,6 +171,12 @@ class LLMClient:
                 api_key=self._settings.azure_openai_api_key,
             )
         return OpenAIChatModel(self._model, provider=provider)
+
+    @staticmethod
+    def _ensure_header_safe_secret(name: str, value: str) -> None:
+        if contains_control_characters(value):
+            msg = f"{name} must be a single-line value without embedded control characters"
+            raise LLMConfigError(msg)
 
 
 _singleton: LLMClient | None = None

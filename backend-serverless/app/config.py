@@ -11,6 +11,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 LLMProvider = Literal["anthropic", "azure_openai"]
 
 
+def contains_control_characters(value: str) -> bool:
+    return any(ord(char) < 32 or ord(char) == 127 for char in value)
+
+
 class LLMTokenPrice(BaseModel):
     input_per_million: float = Field(ge=0)
     output_per_million: float = Field(ge=0)
@@ -64,12 +68,7 @@ class Settings(BaseSettings):
     def _normalize_llm_api_key(cls, value: object) -> object:
         if not isinstance(value, str):
             return value
-
-        stripped = value.strip()
-        if any(ord(char) < 32 or ord(char) == 127 for char in stripped):
-            msg = "API keys must be single-line values without control characters"
-            raise ValueError(msg)
-        return stripped
+        return value.strip()
 
     azure_web_jobs_storage: str = Field(
         default="",
