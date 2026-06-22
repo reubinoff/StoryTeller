@@ -1,0 +1,136 @@
+"""Tests for the real-provider LLM smoke script without network calls."""
+
+from __future__ import annotations
+
+from typing import TypeVar
+
+import pytest
+from pydantic import BaseModel
+
+from app.config import Settings
+from scripts.smoke_llm_provider import (
+    build_smoke_prompt,
+    extract_latency_ms,
+    missing_required_env,
+    run_smoke,
+)
+from tests.__conftest_helpers__ import WRITING_PROMPT_RESPONSE
+
+OutputT = TypeVar("OutputT", bound=BaseModel)
+
+
+class FakeSmokeClient:
+    def __init__(self, payload: dict[str, object] | None = None) -> None:
+        self._payload = payload or WRITING_PROMPT_RESPONSE
+        self.calls: list[dict[str, object]] = []
+
+    @property
+    def model(self) -> str:
+        return "test:llm-smoke"
+
+    async def generate_structured(
+        self,
+        *,
+        prompt: str,
+        output_type: type[OutputT],
+        system: str | None = None,
+        max_retries: int = 1,
+    ) -> tuple[OutputT, int]:
+        self.calls.append(
+            {
+                "prompt": prompt,
+                "output_type": output_type,
+                "system": system,
+                "max_retries": max_retries,
+            }
+        )
+        return (
+            output_type.model_validate(self._payload),
+            9,
+        )
+
+
+def test_anthropic_smoke_requires_api_key() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="",
+        llm_model="",
+        claude_model="claude-legacy",
+    )
+
+    assert missing_required_env(settings) == ["ANTHROPIC_API_KEY"]
+
+
+def test_anthropic_smoke_accepts_legacy_model_with_api_key() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="test-key",
+        llm_model="",
+        claude_model="claude-legacy",
+    )
+
+    assert missing_required_env(settings) == []
+    assert settings.resolved_llm_model == "claude-legacy"
+
+
+def test_azure_smoke_requires_model_endpoint_and_api_key() -> None:
+    settings = Settings(
+        llm_provider="azure_openai",
+        llm_model="",
+        azure_openai_endpoint="",
+        azure_openai_api_key="",
+    )
+
+    assert missing_required_env(settings) == [
+        "LLM_MODEL",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_API_KEY",
+    ]
+
+
+def test_smoke_prompt_uses_existing_writing_prompt_template() -> None:
+    prompt = build_smoke_prompt()
+
+    assert "short-answer writing prompt" in prompt
+    assert "travel" in prompt
+    assert "30–80" in prompt
+
+
+def test_extract_latency_supports_metadata_object() -> None:
+    class Metadata:
+        latency_ms = 42
+
+    assert extract_latency_ms(Metadata()) == 42
+
+
+@pytest.mark.asyncio
+async def test_run_smoke_uses_fake_client_without_network() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="test-key",
+        claude_model="claude-legacy",
+    )
+    fake_client = FakeSmokeClient()
+
+    result = await run_smoke(settings=settings, client=fake_client)
+
+    assert result.provider == "anthropic"
+    assert result.model == "test:llm-smoke"
+    assert result.latency_ms == 9
+    assert result.output.title == WRITING_PROMPT_RESPONSE["title"]
+    assert len(fake_client.calls) == 1
+    assert fake_client.calls[0]["max_retries"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_smoke_rejects_invalid_word_bounds() -> None:
+    settings = Settings(
+        llm_provider="anthropic",
+        anthropic_api_key="test-key",
+        claude_model="claude-legacy",
+    )
+    payload = {**WRITING_PROMPT_RESPONSE, "min_words": 80, "max_words": 80}
+    fake_client = FakeSmokeClient(payload)
+
+    with pytest.raises(ValueError, match="word bounds"):
+        await run_smoke(settings=settings, client=fake_client)

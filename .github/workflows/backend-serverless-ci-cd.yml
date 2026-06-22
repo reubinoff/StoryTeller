@@ -120,6 +120,22 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v5
+      - name: Smoke test configured LLM provider
+        working-directory: backend-serverless
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/backend-llm-smoke-venv
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_MAX_TOKENS: ${{ vars.LLM_SMOKE_MAX_TOKENS || '1024' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION }}
+        run: uv run --frozen python scripts/smoke_llm_provider.py
       - name: Log in to Azure with OIDC
         uses: azure/login@v2
         with:
