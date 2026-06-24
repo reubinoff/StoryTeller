@@ -156,11 +156,11 @@ pydantic==2.13.4
     #   pydantic-graph
     #   pydantic-settings
     #   storyteller-backend-serverless
-pydantic-ai-slim==1.107.0
+pydantic-ai-slim==2.0.0
     # via storyteller-backend-serverless
-pydantic-core==2.47.0
+pydantic-core==2.46.4
     # via pydantic
-pydantic-graph==1.107.0
+pydantic-graph==2.0.0
     # via pydantic-ai-slim
 pydantic-settings==2.14.2
     # via storyteller-backend-serverless
