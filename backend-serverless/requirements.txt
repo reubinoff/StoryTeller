@@ -158,7 +158,7 @@ pydantic==2.13.4
     #   storyteller-backend-serverless
 pydantic-ai-slim==1.107.0
     # via storyteller-backend-serverless
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-graph==1.107.0
     # via pydantic-ai-slim
