@@ -9,6 +9,7 @@ import type {
 } from "../types";
 
 const endpointMocks = vi.hoisted(() => ({
+  patch: vi.fn(),
   result: vi.fn(),
   retry: vi.fn(),
   submit: vi.fn(),
@@ -16,6 +17,9 @@ const endpointMocks = vi.hoisted(() => ({
 
 vi.mock("../endpoints", () => ({
   api: {
+    me: {
+      patch: endpointMocks.patch,
+    },
     tasks: {
       result: endpointMocks.result,
       retry: endpointMocks.retry,
@@ -29,6 +33,7 @@ import {
   taskResultRefetchInterval,
   useRetryTask,
   useSubmitTask,
+  useUpdateProfile,
 } from "../queries";
 
 afterEach(() => {
@@ -77,6 +82,30 @@ const readingSubmitResponse: ReadingSubmitResponse = {
   correct_count: 3,
   total: 3,
 };
+
+const userResponse = {
+  id: "user-1",
+  email: "maya@example.com",
+  email_verified: true,
+  first_name: "Maya",
+  last_name: "Patel",
+  year_of_birth: 2017,
+  grade_level: 4,
+  english_level: 24,
+  phone_number: null,
+  avatar_url: null,
+  display_locale: "en",
+  theme_preference: "auto",
+  text_size_preference: "md",
+  reduce_motion: false,
+  notif_email_enabled: true,
+  notif_inapp_enabled: true,
+  interests: ["animals"],
+  role: "user",
+  status: "active",
+  created_at: "2026-06-01T10:00:00Z",
+  onboarding_completed: true,
+} as const;
 
 describe("useSubmitTask", () => {
   beforeEach(() => {
@@ -187,6 +216,33 @@ describe("useTaskResult", () => {
       taskResultRefetchInterval({ ...processing, status: "completed" })
     ).toBe(false);
     expect(taskResultRefetchInterval(undefined)).toBe(false);
+  });
+});
+
+describe("useUpdateProfile", () => {
+  beforeEach(() => {
+    endpointMocks.patch.mockReset();
+  });
+
+  it("invalidates task queries when the english level changes", async () => {
+    const queryClient = makeClient();
+    queryClient.setQueryData(queryKeys.me, userResponse);
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    endpointMocks.patch.mockResolvedValue({
+      ...userResponse,
+      english_level: 36,
+    });
+    const { result } = renderHook(() => useUpdateProfile(), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ english_level: 36 });
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["tasks"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.metrics });
   });
 });
 

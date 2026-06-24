@@ -16,6 +16,7 @@ import type {
   TaskResult,
   TaskStatus,
   UpdateUserRequest,
+  User,
 } from "./types";
 
 export const queryKeys = {
@@ -232,8 +233,15 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateUserRequest) => api.me.patch(body),
-    onSuccess: (data) => {
+    onSuccess: (data, body) => {
+      const cachedUser = qc.getQueryData<User>(queryKeys.me);
       qc.setQueryData(queryKeys.me, data);
+      if (
+        body.english_level !== undefined &&
+        body.english_level !== cachedUser?.english_level
+      ) {
+        void qc.invalidateQueries({ queryKey: ["tasks"] });
+      }
       void qc.invalidateQueries({ queryKey: queryKeys.dashboard });
       void qc.invalidateQueries({ queryKey: queryKeys.metrics });
     },
