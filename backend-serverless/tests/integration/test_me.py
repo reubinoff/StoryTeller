@@ -7,7 +7,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE
+from app.core.session_cookies import ACCESS_COOKIE
 from app.db.models.task import Task
 from app.db.models.user import User
 from tests.integration._helpers import set_interests, signup_and_login
@@ -154,15 +154,17 @@ async def test_patch_me_updates_english_level_and_refreshes_ready_tasks(
 
     old_failed = await client.get(f"/tasks/{writing_id}", headers=headers)
     assert old_failed.status_code == 404
+    assert task_prewarm_queue.jobs == [
+        (uuid.UUID(onboarded.json()["id"]), "reading"),
+        (uuid.UUID(onboarded.json()["id"]), "writing"),
+    ]
+    task_prewarm_queue.jobs.clear()
+
     dashboard = await client.get("/me/dashboard", headers=headers)
     assert dashboard.status_code == 200
     dashboard_task_ids = {task["id"] for task in dashboard.json()["in_progress"]}
     assert reading_id not in dashboard_task_ids
     assert writing_id not in dashboard_task_ids
-    assert task_prewarm_queue.jobs == [
-        (uuid.UUID(onboarded.json()["id"]), "reading"),
-        (uuid.UUID(onboarded.json()["id"]), "writing"),
-    ]
 
 
 @pytest.mark.asyncio

@@ -56,7 +56,9 @@ async def _read_avatar_upload(file: UploadFile) -> bytes:
     return content
 
 
-async def _replace_interests(db: DbSession, current_user: CurrentUser, interest_ids: list[str]) -> list[str]:
+async def _replace_interests(
+    db: DbSession, current_user: CurrentUser, interest_ids: list[str]
+) -> list[str]:
     valid = await db.execute(select(Interest.slug).where(Interest.slug.in_(interest_ids)))
     valid_set = {r[0] for r in valid.all()}
     missing = [slug for slug in interest_ids if slug not in valid_set]
@@ -69,7 +71,9 @@ async def _replace_interests(db: DbSession, current_user: CurrentUser, interest_
             errors=[{"field": "interest_ids", "message": f"Unknown: {', '.join(missing)}"}],
         )
 
-    previous = await db.execute(select(UserInterest.interest_slug).where(UserInterest.user_id == current_user.id))
+    previous = await db.execute(
+        select(UserInterest.interest_slug).where(UserInterest.user_id == current_user.id)
+    )
     removed_interest_ids = {r[0] for r in previous.all()}.difference(interest_ids)
 
     await db.execute(delete(UserInterest).where(UserInterest.user_id == current_user.id))
@@ -133,9 +137,13 @@ async def put_interests(
 
 
 @router.put("/onboarding", response_model=UserOut)
-async def complete_onboarding(body: CompleteOnboardingRequest, current_user: CurrentUser, db: DbSession) -> UserOut:
+async def complete_onboarding(
+    body: CompleteOnboardingRequest, current_user: CurrentUser, db: DbSession
+) -> UserOut:
     await _replace_interests(db, current_user, body.interest_ids)
-    current_user.english_level = default_english_level_for_year_of_birth(current_user.year_of_birth)
+    current_user.english_level = default_english_level_for_year_of_birth(
+        current_user.year_of_birth
+    )
     current_user.onboarding_completed_at = utcnow()
     await db.commit()
     await db.refresh(current_user)
@@ -144,7 +152,9 @@ async def complete_onboarding(body: CompleteOnboardingRequest, current_user: Cur
 
 
 @router.post("/password/change", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(body: PasswordChangeRequest, current_user: CurrentUser, db: DbSession) -> Response:
+async def change_password(
+    body: PasswordChangeRequest, current_user: CurrentUser, db: DbSession
+) -> Response:
     await auth_service.change_password(db, current_user, body.current_password, body.new_password)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -158,7 +168,9 @@ async def upload_avatar(
     try:
         content_type = avatar_service.normalize_avatar_content_type(file.content_type)
         content = await _read_avatar_upload(file)
-        current_user.avatar_url = await avatar_service.upload_user_avatar(current_user.id, content, content_type)
+        current_user.avatar_url = await avatar_service.upload_user_avatar(
+            current_user.id, content, content_type
+        )
     except avatar_service.AvatarValidationError as exc:
         status_code = 413 if "2 MiB" in str(exc) else 422
         raise AppError(
@@ -203,7 +215,9 @@ async def get_avatar(current_user: CurrentUser) -> Response:
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_me(body: DeleteAccountRequest, current_user: CurrentUser, db: DbSession) -> Response:
+async def delete_me(
+    body: DeleteAccountRequest, current_user: CurrentUser, db: DbSession
+) -> Response:
     if not body.confirm:
         raise AppError(
             status_code=422,
@@ -246,7 +260,9 @@ async def notifications(current_user: CurrentUser, db: DbSession) -> Page[Notifi
 
 
 @router.post("/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT)
-async def mark_notification_read(notification_id: str, current_user: CurrentUser, db: DbSession) -> Response:
+async def mark_notification_read(
+    notification_id: str, current_user: CurrentUser, db: DbSession
+) -> Response:
     try:
         nid = uuid.UUID(notification_id)
     except ValueError as exc:
