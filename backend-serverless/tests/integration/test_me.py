@@ -8,6 +8,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE
+from app.db.models.task import Task
 from app.db.models.user import User
 from tests.integration._helpers import set_interests, signup_and_login
 
@@ -107,7 +108,7 @@ async def test_patch_me_updates_preferences(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_patch_me_updates_english_level_and_refreshes_ready_tasks(
-    client: AsyncClient, task_prewarm_queue
+    client: AsyncClient, db_engine, task_prewarm_queue
 ) -> None:
     _user, headers = await signup_and_login(client)
     onboarded = await client.put(
@@ -136,18 +137,28 @@ async def test_patch_me_updates_english_level_and_refreshes_ready_tasks(
     )
     assert writing.status_code == 201, writing.text
     writing_id = writing.json()["id"]
+    _engine, sessionmaker = db_engine
+    async with sessionmaker() as session:
+        old_failed_task = await session.get(Task, uuid.UUID(writing_id))
+        assert old_failed_task is not None
+        old_failed_task.status = "failed"
+        await session.commit()
     task_prewarm_queue.jobs.clear()
 
     resp = await client.patch("/me", headers=headers, json={"english_level": 12})
     assert resp.status_code == 200, resp.text
     assert resp.json()["english_level"] == 12
 
-    kept = await client.get(f"/tasks/{reading_id}", headers=headers)
-    assert kept.status_code == 200
-    assert kept.json()["status"] == "in_progress"
+    old_started = await client.get(f"/tasks/{reading_id}", headers=headers)
+    assert old_started.status_code == 404
 
-    deleted = await client.get(f"/tasks/{writing_id}", headers=headers)
-    assert deleted.status_code == 404
+    old_failed = await client.get(f"/tasks/{writing_id}", headers=headers)
+    assert old_failed.status_code == 404
+    dashboard = await client.get("/me/dashboard", headers=headers)
+    assert dashboard.status_code == 200
+    dashboard_task_ids = {task["id"] for task in dashboard.json()["in_progress"]}
+    assert reading_id not in dashboard_task_ids
+    assert writing_id not in dashboard_task_ids
     assert task_prewarm_queue.jobs == [
         (uuid.UUID(onboarded.json()["id"]), "reading"),
         (uuid.UUID(onboarded.json()["id"]), "writing"),

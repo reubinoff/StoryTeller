@@ -39,6 +39,15 @@ from app.services.user_service import to_user_out
 
 router = APIRouter(prefix="/me", tags=["me"])
 
+OLD_LEVEL_TASK_STATUSES = (
+    "not_started",
+    "in_progress",
+    "submitted",
+    "processing",
+    "needs_retry",
+    "failed",
+)
+
 
 async def _read_avatar_upload(file: UploadFile) -> bytes:
     content = await file.read(avatar_service.MAX_AVATAR_BYTES + 1)
@@ -91,14 +100,18 @@ async def get_me(current_user: CurrentUser, db: DbSession) -> UserOut:
 @router.patch("", response_model=UserOut)
 async def patch_me(body: UpdateUserRequest, current_user: CurrentUser, db: DbSession) -> UserOut:
     payload = body.model_dump(exclude_unset=True)
-    english_level_changed = "english_level" in payload and payload["english_level"] != current_user.english_level
+    english_level_changed = (
+        "english_level" in payload
+        and payload["english_level"] != current_user.english_level
+    )
     for field, value in payload.items():
         setattr(current_user, field, value)
     if english_level_changed:
         await db.execute(
             delete(Task).where(
                 Task.user_id == current_user.id,
-                Task.status == "not_started",
+                Task.status.in_(OLD_LEVEL_TASK_STATUSES),
+                Task.english_level_at_roll != payload["english_level"],
             )
         )
     await db.commit()
