@@ -3,33 +3,32 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas.catalog import CourseOut
 from app.api.v1.schemas.dashboard import (
     AchievementOut,
     DashboardMetrics,
     DashboardResponse,
     NotificationOut,
-    RecentTask,
     ReadyTasks,
+    RecentTask,
     TaskProgress,
 )
-from app.api.v1.schemas.catalog import CourseOut
 from app.api.v1.schemas.task import PASSING_SCORE
 from app.db.models.achievement import Achievement, UserAchievement
+from app.db.models.content import WritingPrompt
 from app.db.models.course import Course
 from app.db.models.notification import Notification
-from app.db.models.content import WritingPrompt
 from app.db.models.streak import Streak
 from app.db.models.task import Task
 from app.db.models.task_answer import TaskAnswer
 from app.db.models.task_question import TaskQuestion
 from app.db.models.user import User
 from app.services import task_service
-
 
 _LEVEL_THRESHOLDS = [
     (0, "Apprentice"),
@@ -64,9 +63,9 @@ def _passed(score: float | None) -> bool | None:
 
 
 def _relative_when(when: datetime) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     diff = now - when
     minutes = int(diff.total_seconds() / 60)
     if minutes < 1:
@@ -82,17 +81,13 @@ def _relative_when(when: datetime) -> str:
     return f"{days} days ago"
 
 
-async def _compute_progress(
-    db: AsyncSession, task: Task
-) -> TaskProgress | None:
+async def _compute_progress(db: AsyncSession, task: Task) -> TaskProgress | None:
     if task.status not in ("not_started", "in_progress"):
         return None
 
     if task.course_type == "unseen_text":
         total_q = await db.execute(
-            select(func.count())
-            .select_from(TaskQuestion)
-            .where(TaskQuestion.task_id == task.id)
+            select(func.count()).select_from(TaskQuestion).where(TaskQuestion.task_id == task.id)
         )
         total = int(total_q.scalar_one() or 0)
         answered_q = await db.execute(
@@ -106,9 +101,7 @@ async def _compute_progress(
         )
         current = int(answered_q.scalar_one() or 0)
         pct = round((current / total) * 100) if total else 0
-        return TaskProgress(
-            current=current, total=total, percentage=pct, label=f"{current} of {total} answered"
-        )
+        return TaskProgress(current=current, total=total, percentage=pct, label=f"{current} of {total} answered")
 
     if task.course_type == "short_writing":
         text = task.writing_draft or ""
@@ -127,15 +120,8 @@ async def _compute_progress(
     return None
 
 
-async def _build_recent(
-    db: AsyncSession, user_id: uuid.UUID, limit: int = 20
-) -> list[RecentTask]:
-    rows = await db.execute(
-        select(Task)
-        .where(Task.user_id == user_id)
-        .order_by(Task.updated_at.desc())
-        .limit(limit)
-    )
+async def _build_recent(db: AsyncSession, user_id: uuid.UUID, limit: int = 20) -> list[RecentTask]:
+    rows = await db.execute(select(Task).where(Task.user_id == user_id).order_by(Task.updated_at.desc()).limit(limit))
     out: list[RecentTask] = []
     for t in rows.scalars().all():
         progress = await _compute_progress(db, t)
@@ -157,13 +143,12 @@ async def _build_recent(
 
 async def get_metrics(db: AsyncSession, user: User) -> DashboardMetrics:
     completed_q = await db.execute(
-        select(func.count(), func.coalesce(func.avg(Task.score), 0))
-        .where(Task.user_id == user.id, Task.status == "completed")
+        select(func.count(), func.coalesce(func.avg(Task.score), 0)).where(
+            Task.user_id == user.id, Task.status == "completed"
+        )
     )
     completed_count, avg_score = completed_q.one()
-    xp_q = await db.execute(
-        select(func.coalesce(func.sum(Task.xp_awarded), 0)).where(Task.user_id == user.id)
-    )
+    xp_q = await db.execute(select(func.coalesce(func.sum(Task.xp_awarded), 0)).where(Task.user_id == user.id))
     xp_total = int(xp_q.scalar_one() or 0)
     streak = await db.get(Streak, user.id)
     current_streak = streak.current_streak if streak else 0
@@ -189,12 +174,9 @@ async def get_dashboard(db: AsyncSession, user: User) -> DashboardResponse:
     in_progress = [
         rt
         for rt in recent
-        if rt.status
-        in ("not_started", "in_progress", "submitted", "processing", "needs_retry", "failed")
+        if rt.status in ("not_started", "in_progress", "submitted", "processing", "needs_retry", "failed")
     ]
-    courses = await db.execute(
-        select(Course).where(Course.is_active.is_(True)).order_by(Course.display_order)
-    )
+    courses = await db.execute(select(Course).where(Course.is_active.is_(True)).order_by(Course.display_order))
     recommended = [
         CourseOut(
             id=c.slug,
@@ -227,12 +209,8 @@ async def get_dashboard(db: AsyncSession, user: User) -> DashboardResponse:
 
 async def get_achievements(db: AsyncSession, user: User) -> list[AchievementOut]:
     catalog = await db.execute(select(Achievement).order_by(Achievement.display_order))
-    earned_q = await db.execute(
-        select(UserAchievement).where(UserAchievement.user_id == user.id)
-    )
-    earned_by_slug: dict[str, UserAchievement] = {
-        ua.achievement_slug: ua for ua in earned_q.scalars().all()
-    }
+    earned_q = await db.execute(select(UserAchievement).where(UserAchievement.user_id == user.id))
+    earned_by_slug: dict[str, UserAchievement] = {ua.achievement_slug: ua for ua in earned_q.scalars().all()}
     out: list[AchievementOut] = []
     for a in catalog.scalars().all():
         ua = earned_by_slug.get(a.slug)
@@ -250,9 +228,7 @@ async def get_achievements(db: AsyncSession, user: User) -> list[AchievementOut]
     return out
 
 
-async def list_notifications(
-    db: AsyncSession, user: User, limit: int = 50
-) -> list[NotificationOut]:
+async def list_notifications(db: AsyncSession, user: User, limit: int = 50) -> list[NotificationOut]:
     rows = await db.execute(
         select(Notification)
         .where(Notification.user_id == user.id)
@@ -271,24 +247,18 @@ async def list_notifications(
     ]
 
 
-async def mark_notification_read(
-    db: AsyncSession, user: User, notification_id: uuid.UUID
-) -> None:
+async def mark_notification_read(db: AsyncSession, user: User, notification_id: uuid.UUID) -> None:
     notif = await db.get(Notification, notification_id)
     if notif is None or notif.user_id != user.id:
         return
     if notif.read_at is None:
-        notif.read_at = datetime.now(timezone.utc)
+        notif.read_at = datetime.now(UTC)
         await db.commit()
 
 
 async def mark_all_notifications_read(db: AsyncSession, user: User) -> None:
-    rows = await db.execute(
-        select(Notification).where(
-            Notification.user_id == user.id, Notification.read_at.is_(None)
-        )
-    )
-    now = datetime.now(timezone.utc)
+    rows = await db.execute(select(Notification).where(Notification.user_id == user.id, Notification.read_at.is_(None)))
+    now = datetime.now(UTC)
     for n in rows.scalars().all():
         n.read_at = now
     await db.commit()

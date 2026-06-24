@@ -15,9 +15,7 @@ from app.config import get_settings
 
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 AvatarContentType = Literal["image/png", "image/jpeg", "image/webp"]
-AVATAR_CONTENT_TYPES: frozenset[AvatarContentType] = frozenset(
-    ("image/png", "image/jpeg", "image/webp")
-)
+AVATAR_CONTENT_TYPES: frozenset[AvatarContentType] = frozenset(("image/png", "image/jpeg", "image/webp"))
 
 
 class AvatarValidationError(ValueError):
@@ -35,9 +33,7 @@ class AvatarBlob:
 
 
 class AvatarStore(Protocol):
-    async def upload_user_avatar(
-        self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType
-    ) -> None:
+    async def upload_user_avatar(self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType) -> None:
         """Persist avatar bytes for a user."""
 
     async def get_user_avatar(self, user_id: uuid.UUID) -> AvatarBlob | None:
@@ -55,9 +51,7 @@ class AzureBlobAvatarStore:
             conn_str=settings.azure_web_jobs_storage,
         ).get_container_client(settings.avatar_container_name)
 
-    async def upload_user_avatar(
-        self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType
-    ) -> None:
+    async def upload_user_avatar(self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType) -> None:
         try:
             await self._container_client.create_container()
         except ResourceExistsError:
@@ -77,9 +71,7 @@ class AzureBlobAvatarStore:
             content = await downloader.readall()
         except ResourceNotFoundError:
             return None
-        content_type = normalize_avatar_content_type(
-            properties.content_settings.content_type
-        )
+        content_type = normalize_avatar_content_type(properties.content_settings.content_type)
         return AvatarBlob(content=content, content_type=content_type)
 
 
@@ -89,9 +81,7 @@ class InMemoryAvatarStore:
     def __init__(self) -> None:
         self.avatars: dict[uuid.UUID, AvatarBlob] = {}
 
-    async def upload_user_avatar(
-        self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType
-    ) -> None:
+    async def upload_user_avatar(self, user_id: uuid.UUID, content: bytes, content_type: AvatarContentType) -> None:
         self.avatars[user_id] = AvatarBlob(content=content, content_type=content_type)
 
     async def get_user_avatar(self, user_id: uuid.UUID) -> AvatarBlob | None:
@@ -138,9 +128,7 @@ def get_avatar_store() -> AvatarStore:
     return _default_avatar_store()
 
 
-async def upload_user_avatar(
-    user_id: uuid.UUID, content: bytes, content_type: AvatarContentType
-) -> str:
+async def upload_user_avatar(user_id: uuid.UUID, content: bytes, content_type: AvatarContentType) -> str:
     validate_avatar_size(content)
     try:
         await get_avatar_store().upload_user_avatar(user_id, content, content_type)

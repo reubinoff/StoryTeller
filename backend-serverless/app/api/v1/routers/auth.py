@@ -52,18 +52,12 @@ def _safe_return_to(value: str | None, fallback: str = "/dashboard") -> str:
     return value
 
 
-def _frontend_callback_url(
-    return_to: str, error: str | None = None, surface: str = "app"
-) -> str:
+def _frontend_callback_url(return_to: str, error: str | None = None, surface: str = "app") -> str:
     settings = get_settings()
     query: dict[str, str] = {"returnTo": _safe_return_to(return_to)}
     if error:
         query["error"] = error
-    frontend_base_url = (
-        settings.admin_frontend_base_url
-        if surface == "admin"
-        else settings.frontend_base_url
-    )
+    frontend_base_url = settings.admin_frontend_base_url if surface == "admin" else settings.frontend_base_url
     return f"{frontend_base_url.rstrip('/')}/auth/callback?{urlencode(query)}"
 
 
@@ -99,9 +93,7 @@ async def _user_from_refresh_cookie(db: DbSession, refresh_token: str | None) ->
 async def _exchange_google_code(code: str) -> dict[str, Any]:
     settings = get_settings()
     if not (
-        settings.google_oauth_client_id
-        and settings.google_oauth_client_secret
-        and settings.google_oauth_redirect_uri
+        settings.google_oauth_client_id and settings.google_oauth_client_secret and settings.google_oauth_redirect_uri
     ):
         raise AppError(
             status_code=503,
@@ -132,9 +124,7 @@ async def _exchange_google_code(code: str) -> dict[str, Any]:
 async def _verify_google_id_token(id_token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
-        signing_key = await asyncio.to_thread(
-            _google_jwks_client.get_signing_key_from_jwt, id_token
-        )
+        signing_key = await asyncio.to_thread(_google_jwks_client.get_signing_key_from_jwt, id_token)
         payload = jwt.decode(
             id_token,
             signing_key.key,
@@ -199,9 +189,7 @@ async def google_start(
 ) -> RedirectResponse:
     settings = get_settings()
     if not (
-        settings.google_oauth_client_id
-        and settings.google_oauth_client_secret
-        and settings.google_oauth_redirect_uri
+        settings.google_oauth_client_id and settings.google_oauth_client_secret and settings.google_oauth_redirect_uri
     ):
         raise AppError(
             status_code=503,
@@ -211,9 +199,7 @@ async def google_start(
     safe_return_to = _safe_return_to(return_to)
     safe_intent = intent if intent in {"login", "signup"} else "login"
     safe_surface = surface if surface in {"app", "admin"} else "app"
-    state = create_oauth_state(
-        return_to=safe_return_to, intent=safe_intent, surface=safe_surface
-    )
+    state = create_oauth_state(return_to=safe_return_to, intent=safe_intent, surface=safe_surface)
     params = {
         "client_id": settings.google_oauth_client_id,
         "redirect_uri": settings.google_oauth_redirect_uri,
@@ -242,18 +228,12 @@ async def google_callback(
             decoded_surface = str(state_payload.get("surface") or "app")
             surface = decoded_surface if decoded_surface in {"app", "admin"} else "app"
     except Exception:
-        return RedirectResponse(
-            _frontend_callback_url(return_to, "invalid_oauth_state", surface)
-        )
+        return RedirectResponse(_frontend_callback_url(return_to, "invalid_oauth_state", surface))
 
     if error:
-        return RedirectResponse(
-            _frontend_callback_url(return_to, "google_oauth_denied", surface)
-        )
+        return RedirectResponse(_frontend_callback_url(return_to, "google_oauth_denied", surface))
     if not code:
-        return RedirectResponse(
-            _frontend_callback_url(return_to, "missing_google_code", surface)
-        )
+        return RedirectResponse(_frontend_callback_url(return_to, "missing_google_code", surface))
 
     try:
         token_payload = await _exchange_google_code(code)
@@ -263,9 +243,7 @@ async def google_callback(
     except AppError as exc:
         return RedirectResponse(_frontend_callback_url(return_to, exc.code, surface))
     except Exception:
-        return RedirectResponse(
-            _frontend_callback_url(return_to, "google_oauth_failed", surface)
-        )
+        return RedirectResponse(_frontend_callback_url(return_to, "google_oauth_failed", surface))
 
     redirect = RedirectResponse(_frontend_callback_url(return_to, surface=surface))
     set_session_cookies(redirect, str(user.id))
@@ -298,6 +276,4 @@ async def password_forgot() -> Response:
 
 @router.post("/password/reset", status_code=status.HTTP_501_NOT_IMPLEMENTED)
 async def password_reset() -> None:
-    raise AppError(
-        status_code=501, code="not_implemented", title="Password reset not implemented in v1"
-    )
+    raise AppError(status_code=501, code="not_implemented", title="Password reset not implemented in v1")

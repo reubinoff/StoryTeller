@@ -27,12 +27,8 @@ class LLMUsageEvent(Base):
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     model: Mapped[str] = mapped_column(String(120), nullable=False)
 
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="SET NULL")
-    )
-    task_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("tasks.id", ondelete="SET NULL")
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    task_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("tasks.id", ondelete="SET NULL"))
     resource_type: Mapped[str | None] = mapped_column(String(40))
     resource_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
 
@@ -45,15 +41,8 @@ class LLMUsageEvent(Base):
 
     cost_usd: Mapped[float | None] = mapped_column(Numeric(12, 6))
     pricing_status: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     @property
     def total_tokens(self) -> int:
-        return (
-            self.input_tokens
-            + self.output_tokens
-            + self.cache_write_tokens
-            + self.cache_read_tokens
-        )
+        return self.input_tokens + self.output_tokens + self.cache_write_tokens + self.cache_read_tokens

@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import uuid
 import secrets
+import uuid
 from typing import Annotated
 
 from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
-from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, SAFE_METHODS
 from app.core.security import decode_access_token
+from app.core.session_cookies import ACCESS_COOKIE, CSRF_COOKIE, SAFE_METHODS
 from app.db.models.user import User
 from app.db.session import get_session
 from app.services import admin_service
@@ -72,9 +72,7 @@ async def get_current_user(
             detail="Account is not active.",
         )
     if request.method.upper() not in SAFE_METHODS:
-        if not csrf_cookie or not csrf_header or not secrets.compare_digest(
-            csrf_cookie, csrf_header
-        ):
+        if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
             raise AppError(
                 status_code=403,
                 code="csrf_mismatch",

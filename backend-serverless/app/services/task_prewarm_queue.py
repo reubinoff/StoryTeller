@@ -33,9 +33,7 @@ class TaskPrewarmMessage(BaseModel):
 
 
 class TaskPrewarmQueueClient(Protocol):
-    async def enqueue_task_prewarm(
-        self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId
-    ) -> None:
+    async def enqueue_task_prewarm(self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId) -> None:
         """Persist a ready-task prewarm work item."""
 
 
@@ -53,9 +51,7 @@ class AzureStorageTaskPrewarmQueueClient:
             queue_name=self._queue_name,
         )
 
-    async def enqueue_task_prewarm(
-        self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId
-    ) -> None:
+    async def enqueue_task_prewarm(self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId) -> None:
         payload = task_prewarm_message(user_id, course_id)
         if self._create_on_enqueue:
             try:
@@ -72,9 +68,7 @@ class InMemoryTaskPrewarmQueueClient:
         self.messages: list[str] = []
         self.jobs: list[tuple[uuid.UUID, TaskPrewarmCourseId]] = []
 
-    async def enqueue_task_prewarm(
-        self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId
-    ) -> None:
+    async def enqueue_task_prewarm(self, user_id: uuid.UUID, course_id: TaskPrewarmCourseId) -> None:
         payload = task_prewarm_message(user_id, course_id)
         self.messages.append(payload)
         self.jobs.append((user_id, course_id))
@@ -103,9 +97,7 @@ def parse_task_prewarm_message(raw: str | bytes) -> tuple[uuid.UUID, TaskPrewarm
     except ValidationError as exc:
         raise ValueError("Invalid task prewarm queue message.") from exc
     if message.schema_version != TASK_PREWARM_MESSAGE_SCHEMA_VERSION:
-        raise ValueError(
-            f"Unsupported task prewarm schema version: {message.schema_version}"
-        )
+        raise ValueError(f"Unsupported task prewarm schema version: {message.schema_version}")
     if message.kind != TASK_PREWARM_KIND:
         raise ValueError(f"Unsupported queue message kind: {message.kind}")
     return message.user_id, message.course_id
@@ -128,9 +120,7 @@ def get_task_prewarm_queue_client() -> TaskPrewarmQueueClient:
     return _default_queue_client()
 
 
-async def enqueue_task_prewarm(
-    user_id: uuid.UUID, course_id: TaskPrewarmCourseId
-) -> None:
+async def enqueue_task_prewarm(user_id: uuid.UUID, course_id: TaskPrewarmCourseId) -> None:
     try:
         await get_task_prewarm_queue_client().enqueue_task_prewarm(user_id, course_id)
     except TaskPrewarmQueueError:

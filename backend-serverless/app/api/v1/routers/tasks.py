@@ -112,22 +112,14 @@ async def _enqueue_evaluation_or_fail(db: AsyncSession, task: Task) -> None:
 
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
-async def get_task(
-    task_id: str, current_user: CurrentUser, db: DbSession
-) -> TaskOut:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+async def get_task(task_id: str, current_user: CurrentUser, db: DbSession) -> TaskOut:
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     return await task_service.task_to_out(db, task)
 
 
 @router.patch("/tasks/{task_id}/start", response_model=TaskOut)
-async def start_task(
-    task_id: str, current_user: CurrentUser, db: DbSession
-) -> TaskOut:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+async def start_task(task_id: str, current_user: CurrentUser, db: DbSession) -> TaskOut:
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     task = await task_service.start_task(db, task)
     return await task_service.task_to_out(db, task)
 
@@ -139,12 +131,8 @@ async def answer_question(
     current_user: CurrentUser,
     db: DbSession,
 ) -> AnswerAccepted:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
-    await task_service.record_answer(
-        db, task=task, question_id=body.question_id, answer=body.answer
-    )
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
+    await task_service.record_answer(db, task=task, question_id=body.question_id, answer=body.answer)
     return AnswerAccepted(accepted=True)
 
 
@@ -155,9 +143,7 @@ async def submit_task(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     if task.course_type == "unseen_text":
         parsed = _model_validate_submit_body(ReadingSubmitRequest, body)
         answers_map: dict[uuid.UUID, str | int] = {a.question_id: a.answer for a in parsed.answers}
@@ -172,7 +158,9 @@ async def submit_task(
         from fastapi.responses import JSONResponse
 
         payload = WritingSubmitAccepted(
-            id=task.id, status=task.status, submitted_at=task.submitted_at  # type: ignore[arg-type]
+            id=task.id,
+            status=task.status,
+            submitted_at=task.submitted_at,  # type: ignore[arg-type]
         )
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
@@ -189,9 +177,7 @@ async def save_draft(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WritingDraftResponse:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     saved_at = await task_service.save_writing_draft(db, task=task, text=body.text)
     return WritingDraftResponse(saved_at=saved_at)
 
@@ -206,9 +192,7 @@ async def retry_task(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WritingSubmitAccepted:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     task = await task_service.retry_writing(db, task=task)
     await _enqueue_evaluation_or_fail(db, task)
     return WritingSubmitAccepted(
@@ -224,20 +208,14 @@ async def redo_task(
     current_user: CurrentUser,
     db: DbSession,
 ) -> TaskOut:
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     task = await task_service.redo_task(db, task=task)
     return await task_service.task_to_out(db, task)
 
 
 @router.get("/tasks/{task_id}/result")
-async def get_result(
-    task_id: str, current_user: CurrentUser, db: DbSession
-):
-    task = await task_service.get_owned_task(
-        db, user_id=current_user.id, task_id=_parse_task_id(task_id)
-    )
+async def get_result(task_id: str, current_user: CurrentUser, db: DbSession):
+    task = await task_service.get_owned_task(db, user_id=current_user.id, task_id=_parse_task_id(task_id))
     if task.course_type == "unseen_text":
         if task.status not in ("completed", "needs_retry"):
             raise AppError(

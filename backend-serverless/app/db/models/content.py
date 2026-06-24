@@ -18,9 +18,7 @@ class ContentPassage(Base):
     """A reading passage produced by an LLM (or seeded). Reusable across users."""
 
     __tablename__ = "content_passages"
-    __table_args__ = (
-        Index("ix_content_passages_lookup", "interest_slug", "grade_level"),
-    )
+    __table_args__ = (Index("ix_content_passages_lookup", "interest_slug", "grade_level"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
     interest_slug: Mapped[str] = mapped_column(
@@ -32,18 +30,14 @@ class ContentPassage(Base):
     questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     model: Mapped[str] = mapped_column(String(80), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class WritingPrompt(Base):
     """A writing prompt produced by an LLM (or seeded). Reusable across users."""
 
     __tablename__ = "writing_prompts"
-    __table_args__ = (
-        Index("ix_writing_prompts_lookup", "interest_slug", "grade_level"),
-    )
+    __table_args__ = (Index("ix_writing_prompts_lookup", "interest_slug", "grade_level"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
     interest_slug: Mapped[str] = mapped_column(
@@ -56,6 +50,4 @@ class WritingPrompt(Base):
     min_words: Mapped[int] = mapped_column(Integer, nullable=False)
     max_words: Mapped[int] = mapped_column(Integer, nullable=False)
     model: Mapped[str] = mapped_column(String(80), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)

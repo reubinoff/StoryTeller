@@ -48,9 +48,7 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         LOGGER.info("evaluate_writing_task: skipping task in status=%s", task.status)
         return
 
-    prompt = (
-        await db.get(WritingPrompt, task.writing_prompt_id) if task.writing_prompt_id else None
-    )
+    prompt = await db.get(WritingPrompt, task.writing_prompt_id) if task.writing_prompt_id else None
     if prompt is None:
         await _mark_failed(db, task, "Missing writing prompt")
         return
@@ -63,12 +61,8 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         return
 
     try:
-        content_grade_level = content_service.content_grade_for_english_level(
-            task.english_level_at_roll
-        )
-        content_level_label = content_service.content_label_for_english_level_value(
-            task.english_level_at_roll
-        )
+        content_grade_level = content_service.content_grade_for_english_level(task.english_level_at_roll)
+        content_level_label = content_service.content_label_for_english_level_value(task.english_level_at_roll)
         evaluation, metadata, model_name = await content_service.evaluate_writing(
             school_grade_level=task.grade_level_at_roll,
             content_grade_level=content_grade_level,
@@ -85,9 +79,7 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
         await _mark_failed(db, task, "Evaluation failed")
         return
 
-    existing_eval = await db.scalar(
-        select(TaskEvaluation.id).where(TaskEvaluation.task_id == task.id)
-    )
+    existing_eval = await db.scalar(select(TaskEvaluation.id).where(TaskEvaluation.task_id == task.id))
     if existing_eval is not None:
         LOGGER.info("evaluate_writing_task: evaluation already exists id=%s", task_id)
         return
@@ -157,11 +149,7 @@ async def _run(db: AsyncSession, task_id: uuid.UUID) -> None:
 
 
 async def _load_full_text_answer(db: AsyncSession, task_id: uuid.UUID) -> str | None:
-    rows = await db.execute(
-        select(TaskAnswer).where(
-            TaskAnswer.task_id == task_id, TaskAnswer.question_id.is_(None)
-        )
-    )
+    rows = await db.execute(select(TaskAnswer).where(TaskAnswer.task_id == task_id, TaskAnswer.question_id.is_(None)))
     record = rows.scalar_one_or_none()
     return record.answer_text if record is not None else None
 

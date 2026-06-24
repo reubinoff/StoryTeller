@@ -93,9 +93,7 @@ def parse_writing_evaluation_message(raw: str | bytes) -> uuid.UUID:
     except ValidationError as exc:
         raise ValueError("Invalid writing evaluation queue message.") from exc
     if message.schema_version != EVALUATION_MESSAGE_SCHEMA_VERSION:
-        raise ValueError(
-            f"Unsupported writing evaluation schema version: {message.schema_version}"
-        )
+        raise ValueError(f"Unsupported writing evaluation schema version: {message.schema_version}")
     if message.kind != WRITING_EVALUATION_KIND:
         raise ValueError(f"Unsupported queue message kind: {message.kind}")
     return message.task_id

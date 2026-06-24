@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter
 
 from app.api.v1.schemas.catalog import CourseOut, InterestOut
 from app.core.errors import AppError
@@ -17,9 +17,7 @@ router = APIRouter(tags=["catalog"])
 
 @router.get("/interests", response_model=list[InterestOut])
 async def list_interests(db: DbSession) -> list[InterestOut]:
-    rows = await db.execute(
-        select(Interest).where(Interest.is_active.is_(True)).order_by(Interest.display_order)
-    )
+    rows = await db.execute(select(Interest).where(Interest.is_active.is_(True)).order_by(Interest.display_order))
     return [
         InterestOut(
             id=i.slug,
@@ -47,9 +45,7 @@ def _course_to_out(c: Course) -> CourseOut:
 
 
 async def _load_courses(db: AsyncSession) -> list[Course]:
-    rows = await db.execute(
-        select(Course).where(Course.is_active.is_(True)).order_by(Course.display_order)
-    )
+    rows = await db.execute(select(Course).where(Course.is_active.is_(True)).order_by(Course.display_order))
     return list(rows.scalars().all())
 
 

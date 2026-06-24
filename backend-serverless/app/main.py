@@ -8,11 +8,11 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from alembic import command
-from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from alembic import command
+from alembic.config import Config
 from app.api.v1 import build_v1_router
 from app.config import get_settings
 from app.core.errors import register_exception_handlers

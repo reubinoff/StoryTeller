@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Achievement, Course, Interest
 from app.db.session import get_sessionmaker
 
-
 INTERESTS: list[dict[str, object]] = [
     {"slug": "animals", "display_name": "Animals & Pets", "emoji": "🐾", "display_order": 1},
     {"slug": "sports", "display_name": "Sports", "emoji": "⚽", "display_order": 2},

@@ -55,9 +55,7 @@ async def signup(db: AsyncSession, body: SignupRequest) -> User:
 async def login(db: AsyncSession, body: LoginRequest) -> User:
     email = body.email.lower()
     stmt = (
-        select(User, AuthCredential)
-        .join(AuthCredential, AuthCredential.user_id == User.id)
-        .where(User.email == email)
+        select(User, AuthCredential).join(AuthCredential, AuthCredential.user_id == User.id).where(User.email == email)
     )
     row = (await db.execute(stmt)).first()
     if row is None:
@@ -201,9 +199,7 @@ async def login_or_signup_google(db: AsyncSession, profile: Mapping[str, Any]) -
     return user
 
 
-async def change_password(
-    db: AsyncSession, user: User, current_password: str, new_password: str
-) -> None:
+async def change_password(db: AsyncSession, user: User, current_password: str, new_password: str) -> None:
     cred = await db.get(AuthCredential, user.id)
     if cred is None or not verify_password(current_password, cred.password_hash):
         raise AppError(

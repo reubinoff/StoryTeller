@@ -33,9 +33,7 @@ class Settings(BaseSettings):
     app_name: str = "StoryTeller"
     environment: str = "dev"
 
-    database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/storyteller"
-    )
+    database_url: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/storyteller")
 
     jwt_secret: str = Field(default="change-me-in-prod-please-use-a-long-random-string")
     jwt_algorithm: str = "HS256"
@@ -45,9 +43,7 @@ class Settings(BaseSettings):
 
     frontend_base_url: str = "http://localhost:5174"
     admin_frontend_base_url: str = "http://localhost:5175"
-    admin_bootstrap_emails: list[str] = Field(
-        default_factory=lambda: ["reubinoff@gmail.com"]
-    )
+    admin_bootstrap_emails: list[str] = Field(default_factory=lambda: ["reubinoff@gmail.com"])
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     google_oauth_redirect_uri: str = "http://localhost:7071/api/v1/auth/google/callback"

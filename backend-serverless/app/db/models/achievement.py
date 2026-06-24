@@ -25,12 +25,8 @@ class Achievement(Base):
 class UserAchievement(Base):
     __tablename__ = "user_achievements"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     achievement_slug: Mapped[str] = mapped_column(
         String(40), ForeignKey("achievements.slug", ondelete="RESTRICT"), primary_key=True
     )
-    earned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)

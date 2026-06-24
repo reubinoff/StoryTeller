@@ -61,9 +61,7 @@ COURSE_SLUGS: tuple[TaskPrewarmCourseId, TaskPrewarmCourseId] = ("reading", "wri
 
 
 async def _user_interest_slugs(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
-    rows = await db.execute(
-        select(UserInterest.interest_slug).where(UserInterest.user_id == user_id)
-    )
+    rows = await db.execute(select(UserInterest.interest_slug).where(UserInterest.user_id == user_id))
     return [r[0] for r in rows.all()]
 
 
@@ -87,9 +85,7 @@ async def _course(db: AsyncSession, course_slug: str) -> Course:
     return course
 
 
-async def _resolve_interest(
-    db: AsyncSession, user: User, override: str | None
-) -> tuple[str, str]:
+async def _resolve_interest(db: AsyncSession, user: User, override: str | None) -> tuple[str, str]:
     """Returns (slug, display_name)."""
     if override is not None:
         label = await _interest_label(db, override)
@@ -111,12 +107,9 @@ async def _resolve_interest(
 async def _find_unused_passage(
     db: AsyncSession, *, user_id: uuid.UUID, interest_slug: str, grade_level: int
 ) -> ContentPassage | None:
-    used_subq = (
-        select(Task.content_passage_id)
-        .where(
-            Task.user_id == user_id,
-            Task.content_passage_id.is_not(None),
-        )
+    used_subq = select(Task.content_passage_id).where(
+        Task.user_id == user_id,
+        Task.content_passage_id.is_not(None),
     )
     stmt = (
         select(ContentPassage)
@@ -137,12 +130,9 @@ async def _find_unused_passage(
 async def _find_unused_writing_prompt(
     db: AsyncSession, *, user_id: uuid.UUID, interest_slug: str, grade_level: int
 ) -> WritingPrompt | None:
-    used_subq = (
-        select(Task.writing_prompt_id)
-        .where(
-            Task.user_id == user_id,
-            Task.writing_prompt_id.is_not(None),
-        )
+    used_subq = select(Task.writing_prompt_id).where(
+        Task.user_id == user_id,
+        Task.writing_prompt_id.is_not(None),
     )
     stmt = (
         select(WritingPrompt)
@@ -181,9 +171,7 @@ async def _materialise_reading_questions(
 # ---------- roll ----------
 
 
-async def _find_same_course_blocker(
-    db: AsyncSession, *, user_id: uuid.UUID, course_type: str
-) -> Task | None:
+async def _find_same_course_blocker(db: AsyncSession, *, user_id: uuid.UUID, course_type: str) -> Task | None:
     for task_status in ROLL_BLOCKER_PRIORITY:
         stmt = (
             select(Task)
@@ -227,12 +215,8 @@ async def _create_new_task(
     override_interest: str | None = None,
 ) -> Task:
     interest_slug, interest_label = await _resolve_interest(db, user, override_interest)
-    content_grade_level = content_service.content_grade_for_english_level(
-        user.english_level
-    )
-    content_level_label = content_service.content_label_for_english_level_value(
-        user.english_level
-    )
+    content_grade_level = content_service.content_grade_for_english_level(user.english_level)
+    content_level_label = content_service.content_label_for_english_level_value(user.english_level)
 
     if course.type == "unseen_text":
         passage = await _find_unused_passage(
@@ -437,9 +421,7 @@ async def roll_task(
 ) -> Task:
     """Resume same-course work first, otherwise create a ready task."""
     course = await _course(db, course_slug)
-    blocker = await _find_same_course_blocker(
-        db, user_id=user.id, course_type=course.type
-    )
+    blocker = await _find_same_course_blocker(db, user_id=user.id, course_type=course.type)
     if blocker is not None:
         return blocker
     return await _create_new_task(
@@ -454,17 +436,11 @@ async def roll_task(
 
 
 async def _load_questions(db: AsyncSession, task_id: uuid.UUID) -> list[TaskQuestion]:
-    rows = await db.execute(
-        select(TaskQuestion)
-        .where(TaskQuestion.task_id == task_id)
-        .order_by(TaskQuestion.position)
-    )
+    rows = await db.execute(select(TaskQuestion).where(TaskQuestion.task_id == task_id).order_by(TaskQuestion.position))
     return list(rows.scalars().all())
 
 
-async def _load_writing_prompt(
-    db: AsyncSession, task: Task
-) -> WritingPrompt | None:
+async def _load_writing_prompt(db: AsyncSession, task: Task) -> WritingPrompt | None:
     if task.writing_prompt_id is None:
         return None
     return await db.get(WritingPrompt, task.writing_prompt_id)
@@ -498,11 +474,7 @@ async def task_to_out(db: AsyncSession, task: Task) -> TaskOut:
 
     if task.course_type == "unseen_text":
         questions = await _load_questions(db, task.id)
-        passage = (
-            await db.get(ContentPassage, task.content_passage_id)
-            if task.content_passage_id
-            else None
-        )
+        passage = await db.get(ContentPassage, task.content_passage_id) if task.content_passage_id else None
         if passage is not None:
             paragraphs = passage.paragraphs
             word_count = passage.word_count
@@ -554,9 +526,7 @@ async def task_to_out(db: AsyncSession, task: Task) -> TaskOut:
     )
 
 
-async def get_owned_task(
-    db: AsyncSession, *, user_id: uuid.UUID, task_id: uuid.UUID
-) -> Task:
+async def get_owned_task(db: AsyncSession, *, user_id: uuid.UUID, task_id: uuid.UUID) -> Task:
     task = await db.get(Task, task_id)
     if task is None or task.user_id != user_id:
         raise AppError(status_code=404, code="not_found", title="Task not found")
@@ -598,9 +568,7 @@ async def start_task(db: AsyncSession, task: Task) -> Task:
     return task
 
 
-async def record_answer(
-    db: AsyncSession, *, task: Task, question_id: uuid.UUID, answer: str | int
-) -> None:
+async def record_answer(db: AsyncSession, *, task: Task, question_id: uuid.UUID, answer: str | int) -> None:
     if task.course_type != "unseen_text":
         raise AppError(
             status_code=400,
@@ -617,17 +585,15 @@ async def record_answer(
         task.started_at = utcnow()
 
     existing_q = await db.execute(
-        select(TaskAnswer).where(
-            TaskAnswer.task_id == task.id, TaskAnswer.question_id == question_id
-        )
+        select(TaskAnswer).where(TaskAnswer.task_id == task.id, TaskAnswer.question_id == question_id)
     )
     record = existing_q.scalar_one_or_none()
     answer_text = str(answer)
     if record is None:
         db.add(TaskAnswer(task_id=task.id, question_id=question_id, answer_text=answer_text))
     else:
-            record.answer_text = answer_text
-            record.submitted_at = utcnow()
+        record.answer_text = answer_text
+        record.submitted_at = utcnow()
     await db.commit()
     if was_ready:
         await enqueue_ready_task_refill(task.user_id, task.course_slug)
@@ -640,9 +606,7 @@ async def submit_reading(
     answers: dict[uuid.UUID, str | int],
 ) -> tuple[int, int]:
     if task.course_type != "unseen_text":
-        raise AppError(
-            status_code=400, code="invalid_state", title="Not a reading task"
-        )
+        raise AppError(status_code=400, code="invalid_state", title="Not a reading task")
     if task.status not in ("not_started", "in_progress"):
         raise AppError(
             status_code=400,
@@ -659,9 +623,7 @@ async def submit_reading(
         merged_answer = answers.get(q.id)
         if merged_answer is None:
             stored = await db.execute(
-                select(TaskAnswer).where(
-                    TaskAnswer.task_id == task.id, TaskAnswer.question_id == q.id
-                )
+                select(TaskAnswer).where(TaskAnswer.task_id == task.id, TaskAnswer.question_id == q.id)
             )
             ta = stored.scalar_one_or_none()
             if ta is not None and ta.answer_text is not None:
@@ -676,9 +638,7 @@ async def submit_reading(
             correct_count += 1
 
         existing_row = await db.execute(
-            select(TaskAnswer).where(
-                TaskAnswer.task_id == task.id, TaskAnswer.question_id == q.id
-            )
+            select(TaskAnswer).where(TaskAnswer.task_id == task.id, TaskAnswer.question_id == q.id)
         )
         record = existing_row.scalar_one_or_none()
         answer_text = str(merged_answer) if merged_answer is not None else None
@@ -721,13 +681,9 @@ async def submit_reading(
     return correct_count, total
 
 
-async def save_writing_draft(
-    db: AsyncSession, *, task: Task, text: str
-) -> datetime:
+async def save_writing_draft(db: AsyncSession, *, task: Task, text: str) -> datetime:
     if task.course_type != "short_writing":
-        raise AppError(
-            status_code=400, code="invalid_state", title="Drafts only apply to writing tasks"
-        )
+        raise AppError(status_code=400, code="invalid_state", title="Drafts only apply to writing tasks")
     if task.status not in ("not_started", "in_progress"):
         raise AppError(
             status_code=400,
@@ -746,25 +702,17 @@ async def save_writing_draft(
     return task.updated_at
 
 
-async def submit_writing(
-    db: AsyncSession, *, task: Task, full_text: str
-) -> Task:
+async def submit_writing(db: AsyncSession, *, task: Task, full_text: str) -> Task:
     if task.course_type != "short_writing":
-        raise AppError(
-            status_code=400, code="invalid_state", title="Submit-text only applies to writing tasks"
-        )
+        raise AppError(status_code=400, code="invalid_state", title="Submit-text only applies to writing tasks")
     if task.status not in ("not_started", "in_progress"):
-        raise AppError(
-            status_code=400, code="invalid_state", title=f"Task is already {task.status}"
-        )
+        raise AppError(status_code=400, code="invalid_state", title=f"Task is already {task.status}")
 
     was_ready = task.status == "not_started"
 
     # Persist single full-text answer row (question_id NULL).
     existing_full = await db.execute(
-        select(TaskAnswer).where(
-            TaskAnswer.task_id == task.id, TaskAnswer.question_id.is_(None)
-        )
+        select(TaskAnswer).where(TaskAnswer.task_id == task.id, TaskAnswer.question_id.is_(None))
     )
     record = existing_full.scalar_one_or_none()
     if record is None:
@@ -785,13 +733,9 @@ async def submit_writing(
 
 async def retry_writing(db: AsyncSession, *, task: Task) -> Task:
     if task.course_type != "short_writing":
-        raise AppError(
-            status_code=400, code="invalid_state", title="Retry only applies to writing tasks"
-        )
+        raise AppError(status_code=400, code="invalid_state", title="Retry only applies to writing tasks")
     if task.status != "failed":
-        raise AppError(
-            status_code=400, code="invalid_state", title="Only failed tasks can be retried"
-        )
+        raise AppError(status_code=400, code="invalid_state", title="Only failed tasks can be retried")
     task.status = "processing"
     task.failed_at = None
     task.fail_reason = None
@@ -830,11 +774,7 @@ async def redo_task(db: AsyncSession, *, task: Task) -> Task:
             )
         )
         answer_row = answer_row_q.scalar_one_or_none()
-        task.writing_draft = (
-            (answer_row.answer_text if answer_row is not None else None)
-            or task.writing_draft
-            or ""
-        )
+        task.writing_draft = (answer_row.answer_text if answer_row is not None else None) or task.writing_draft or ""
         await db.execute(delete(TaskEvaluation).where(TaskEvaluation.task_id == task.id))
         task.status = "in_progress"
         task.score = None
@@ -851,9 +791,7 @@ async def redo_task(db: AsyncSession, *, task: Task) -> Task:
     raise AppError(status_code=400, code="invalid_state", title="Unknown task type")
 
 
-async def mark_writing_evaluation_failed(
-    db: AsyncSession, *, task: Task, reason: str
-) -> Task:
+async def mark_writing_evaluation_failed(db: AsyncSession, *, task: Task, reason: str) -> Task:
     if task.course_type != "short_writing":
         raise AppError(
             status_code=400,
@@ -885,13 +823,9 @@ async def mark_writing_evaluation_failed(
 
 async def reading_result(db: AsyncSession, task: Task) -> ReadingResultOut:
     questions = await _load_questions(db, task.id)
-    answers_rows = await db.execute(
-        select(TaskAnswer).where(TaskAnswer.task_id == task.id)
-    )
+    answers_rows = await db.execute(select(TaskAnswer).where(TaskAnswer.task_id == task.id))
     answers_by_qid: dict[uuid.UUID, TaskAnswer] = {
-        row.question_id: row
-        for row in answers_rows.scalars().all()
-        if row.question_id is not None
+        row.question_id: row for row in answers_rows.scalars().all() if row.question_id is not None
     }
     out_questions: list[ReadingResultQuestion] = []
     correct_count = 0
@@ -941,19 +875,13 @@ async def reading_result(db: AsyncSession, task: Task) -> ReadingResultOut:
 
 
 async def writing_result(db: AsyncSession, task: Task) -> WritingResultOut:
-    eval_row_q = await db.execute(
-        select(TaskEvaluation).where(TaskEvaluation.task_id == task.id)
-    )
+    eval_row_q = await db.execute(select(TaskEvaluation).where(TaskEvaluation.task_id == task.id))
     eval_row = eval_row_q.scalar_one_or_none()
     answer_row_q = await db.execute(
-        select(TaskAnswer).where(
-            TaskAnswer.task_id == task.id, TaskAnswer.question_id.is_(None)
-        )
+        select(TaskAnswer).where(TaskAnswer.task_id == task.id, TaskAnswer.question_id.is_(None))
     )
     answer_row = answer_row_q.scalar_one_or_none()
-    answer_text = (
-        (answer_row.answer_text if answer_row is not None else None) or task.writing_draft or ""
-    )
+    answer_text = (answer_row.answer_text if answer_row is not None else None) or task.writing_draft or ""
     evaluation: WritingEvaluationOut | None = None
     if eval_row is not None:
         evaluation = WritingEvaluationOut.model_validate(

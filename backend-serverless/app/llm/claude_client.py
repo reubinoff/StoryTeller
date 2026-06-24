@@ -23,13 +23,9 @@ class ClaudeClient(LLMClient):
             settings = settings.model_copy(
                 update={
                     "llm_provider": "anthropic",
-                    "anthropic_api_key": (
-                        api_key if api_key is not None else settings.anthropic_api_key
-                    ),
+                    "anthropic_api_key": (api_key if api_key is not None else settings.anthropic_api_key),
                     "llm_model": model if model is not None else settings.llm_model,
-                    "llm_max_tokens": (
-                        max_tokens if max_tokens is not None else settings.llm_max_tokens
-                    ),
+                    "llm_max_tokens": (max_tokens if max_tokens is not None else settings.llm_max_tokens),
                 }
             )
         super().__init__(settings=settings)

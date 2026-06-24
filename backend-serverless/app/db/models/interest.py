@@ -25,12 +25,8 @@ class Interest(Base):
 class UserInterest(Base):
     __tablename__ = "user_interests"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     interest_slug: Mapped[str] = mapped_column(
         String(40), ForeignKey("interests.slug", ondelete="RESTRICT"), primary_key=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)

@@ -43,11 +43,7 @@ ADMIN_ASSIGNABLE_STATUSES = {"active", "suspended"}
 
 
 def bootstrap_admin_emails() -> set[str]:
-    return {
-        email.strip().lower()
-        for email in get_settings().admin_bootstrap_emails
-        if email.strip()
-    }
+    return {email.strip().lower() for email in get_settings().admin_bootstrap_emails if email.strip()}
 
 
 def is_protected_admin(user: User) -> bool:
@@ -78,9 +74,7 @@ async def record_audit_event(
     )
 
 
-async def ensure_bootstrap_admin(
-    db: AsyncSession, user: User, *, commit: bool = False
-) -> bool:
+async def ensure_bootstrap_admin(db: AsyncSession, user: User, *, commit: bool = False) -> bool:
     if not is_protected_admin(user) or user.role == ADMIN_ROLE:
         return False
     before_role = user.role
@@ -102,9 +96,7 @@ async def ensure_bootstrap_admin(
 
 async def active_admin_count(db: AsyncSession) -> int:
     count_q = await db.execute(
-        select(func.count())
-        .select_from(User)
-        .where(User.role == ADMIN_ROLE, User.status == "active")
+        select(func.count()).select_from(User).where(User.role == ADMIN_ROLE, User.status == "active")
     )
     return int(count_q.scalar_one() or 0)
 
@@ -149,15 +141,11 @@ def _admin_user_summary(
     )
 
 
-async def _task_metrics_by_user(
-    db: AsyncSession, user_ids: list[uuid.UUID]
-) -> dict[uuid.UUID, dict[str, Any]]:
+async def _task_metrics_by_user(db: AsyncSession, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, dict[str, Any]]:
     if not user_ids:
         return {}
     rows = await db.execute(
-        select(Task.user_id, Task.status, Task.score, Task.updated_at).where(
-            Task.user_id.in_(user_ids)
-        )
+        select(Task.user_id, Task.status, Task.score, Task.updated_at).where(Task.user_id.in_(user_ids))
     )
     metrics: dict[uuid.UUID, dict[str, Any]] = {
         user_id: {
@@ -178,10 +166,7 @@ async def _task_metrics_by_user(
                 row_metrics["score_total"] += float(score)
                 row_metrics["score_count"] += 1
         updated_at = _as_utc(updated_at)
-        if (
-            row_metrics["last_activity_at"] is None
-            or updated_at > row_metrics["last_activity_at"]
-        ):
+        if row_metrics["last_activity_at"] is None or updated_at > row_metrics["last_activity_at"]:
             row_metrics["last_activity_at"] = updated_at
     return metrics
 
@@ -218,19 +203,11 @@ async def get_overview(db: AsyncSession, *, range_days: int) -> AdminOverviewOut
     }
 
     users_total_q = await db.execute(select(func.count()).select_from(User))
-    users_active_q = await db.execute(
-        select(func.count()).select_from(User).where(User.status == "active")
-    )
-    users_suspended_q = await db.execute(
-        select(func.count()).select_from(User).where(User.status == "suspended")
-    )
-    admins_total_q = await db.execute(
-        select(func.count()).select_from(User).where(User.role == ADMIN_ROLE)
-    )
+    users_active_q = await db.execute(select(func.count()).select_from(User).where(User.status == "active"))
+    users_suspended_q = await db.execute(select(func.count()).select_from(User).where(User.status == "suspended"))
+    admins_total_q = await db.execute(select(func.count()).select_from(User).where(User.role == ADMIN_ROLE))
 
-    users_in_window = await db.execute(
-        select(User.created_at).where(User.created_at >= window_start)
-    )
+    users_in_window = await db.execute(select(User.created_at).where(User.created_at >= window_start))
     signups_in_range = 0
     for (created_at,) in users_in_window.all():
         created_at = _as_utc(created_at)
@@ -308,9 +285,7 @@ async def get_overview(db: AsyncSession, *, range_days: int) -> AdminOverviewOut
             writing_processing=writing_processing,
             avg_completed_score=round(score_total / score_count, 1) if score_count else 0.0,
         ),
-        daily_activity=[
-            AdminDailyActivity(date=day, **values) for day, values in day_buckets.items()
-        ],
+        daily_activity=[AdminDailyActivity(date=day, **values) for day, values in day_buckets.items()],
         course_metrics=[
             AdminCourseMetric(
                 course_type=course_type,
@@ -359,9 +334,7 @@ def _operation_label(operation: str) -> str:
     return labels.get(operation, operation.replace("_", " ").title())
 
 
-def _top_usage_rows(
-    rows: dict[Any, dict[str, Any]], limit: int = 8
-) -> list[dict[str, Any]]:
+def _top_usage_rows(rows: dict[Any, dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
     return sorted(
         rows.values(),
         key=lambda row: (float(row["cost_usd"]), int(row["total_tokens"])),
@@ -373,8 +346,7 @@ async def get_token_usage(db: AsyncSession, *, range_days: int) -> AdminTokenUsa
     now = datetime.now(UTC)
     window_start = now - timedelta(days=range_days)
     day_buckets = {
-        (now.date() - timedelta(days=offset)): _new_usage_bucket()
-        for offset in range(range_days - 1, -1, -1)
+        (now.date() - timedelta(days=offset)): _new_usage_bucket() for offset in range(range_days - 1, -1, -1)
     }
 
     task_user = aliased(User)
@@ -463,19 +435,10 @@ async def get_token_usage(db: AsyncSession, *, range_days: int) -> AdminTokenUsa
             **totals,
             unknown_cost_events=unknown_cost_events,
         ),
-        daily=[
-            AdminTokenUsageDailyBucket(date=day, **bucket)
-            for day, bucket in day_buckets.items()
-        ],
-        top_users=[
-            AdminTokenUsageUserBreakdown(**row) for row in _top_usage_rows(user_rows)
-        ],
-        top_tasks=[
-            AdminTokenUsageTaskBreakdown(**row) for row in _top_usage_rows(task_rows)
-        ],
-        by_operation=[
-            AdminTokenUsageBreakdown(**row) for row in _top_usage_rows(operation_rows)
-        ],
+        daily=[AdminTokenUsageDailyBucket(date=day, **bucket) for day, bucket in day_buckets.items()],
+        top_users=[AdminTokenUsageUserBreakdown(**row) for row in _top_usage_rows(user_rows)],
+        top_tasks=[AdminTokenUsageTaskBreakdown(**row) for row in _top_usage_rows(task_rows)],
+        by_operation=[AdminTokenUsageBreakdown(**row) for row in _top_usage_rows(operation_rows)],
         by_model=[AdminTokenUsageBreakdown(**row) for row in _top_usage_rows(model_rows)],
         forecast_30d=AdminTokenUsageForecast(
             days=30,
@@ -517,9 +480,7 @@ async def list_users(
     visible_users = users[:limit]
     metrics = await _task_metrics_by_user(db, [user.id for user in visible_users])
     return Page(
-        items=[
-            _summary_with_metrics(user, metrics.get(user.id, {})) for user in visible_users
-        ],
+        items=[_summary_with_metrics(user, metrics.get(user.id, {})) for user in visible_users],
         next_cursor=next_cursor,
     )
 
@@ -531,15 +492,10 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> AdminUserDeta
 
     summary = await get_admin_user_summary(db, user)
     interests_q = await db.execute(
-        select(UserInterest.interest_slug)
-        .where(UserInterest.user_id == user.id)
-        .order_by(UserInterest.created_at)
+        select(UserInterest.interest_slug).where(UserInterest.user_id == user.id).order_by(UserInterest.created_at)
     )
     status_counts_q = await db.execute(
-        select(Task.status, func.count())
-        .where(Task.user_id == user.id)
-        .group_by(Task.status)
-        .order_by(Task.status)
+        select(Task.status, func.count()).where(Task.user_id == user.id).group_by(Task.status).order_by(Task.status)
     )
     return AdminUserDetail(
         **summary.model_dump(),
@@ -550,8 +506,7 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> AdminUserDeta
         onboarding_completed=user.onboarding_completed,
         interests=[row[0] for row in interests_q.all()],
         task_status_counts=[
-            AdminTaskStatusCount(status=status, count=int(count or 0))
-            for status, count in status_counts_q.all()
+            AdminTaskStatusCount(status=status, count=int(count or 0)) for status, count in status_counts_q.all()
         ],
     )
 
@@ -610,9 +565,7 @@ async def set_user_admin(
     return await get_user_detail(db, target.id)
 
 
-async def set_user_status(
-    db: AsyncSession, *, actor: User, target_user_id: uuid.UUID, status: str
-) -> AdminUserDetail:
+async def set_user_status(db: AsyncSession, *, actor: User, target_user_id: uuid.UUID, status: str) -> AdminUserDetail:
     if status not in ADMIN_ASSIGNABLE_STATUSES:
         raise AppError(
             status_code=422,
