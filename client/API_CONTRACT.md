@@ -150,8 +150,9 @@ Returns the authenticated `User`.
 ```
 
 Returns the updated `User`. If `english_level` changes, the server deletes that
-user's `not_started` tasks and queues fresh ready-task refills. In-progress,
-submitted, completed, failed, and retryable tasks are left unchanged.
+user's old-level unfinished and retryable tasks (`not_started`, `in_progress`,
+`submitted`, `processing`, `needs_retry`, and `failed`) and queues fresh
+ready-task refills. Completed task history is left unchanged.
 
 New users default to `"light"` for the child experience. Existing users keep
 their saved preference, and Settings can still switch to `"auto"` or `"dark"`.
