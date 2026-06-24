@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.schemas.user import UserOut
 from app.db.models.interest import UserInterest
 from app.db.models.user import User
+from app.services.level_service import derive_grade_level as derive_grade_level
 
 
 async def load_interest_slugs(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
