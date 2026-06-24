@@ -19,7 +19,7 @@ on:
 # in-progress run in the same group to finish before it starts (no cancellation).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build_and_deploy_job:
