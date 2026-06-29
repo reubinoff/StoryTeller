@@ -9,11 +9,11 @@ dependencies = [
     "azure-storage-blob>=12.24.0",
     "azure-storage-queue>=12.12.0",
     "aiohttp>=3.12.0",
-    "fastapi>=0.137.1",
+    "fastapi>=0.138.2",
     "uvicorn[standard]>=0.49.0",
     "sqlalchemy[asyncio]>=2.0.51",
     "asyncpg>=0.30.0",
-    "alembic>=1.14.0",
+    "alembic>=1.18.5",
     "pydantic>=2.9.2",
     "pydantic-settings>=2.6.0",
     "email-validator>=2.2.0",
@@ -32,7 +32,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "aiosqlite>=0.20.0",
     "mypy>=1.13.0",
-    "ruff>=0.7.4",
+    "ruff>=0.15.20",
 ]
 
 [tool.pytest.ini_options]
