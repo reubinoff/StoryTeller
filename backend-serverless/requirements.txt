@@ -8,11 +8,11 @@ aiosignal==1.4.0
     # via aiohttp
 alembic==1.18.5
     # via storyteller-backend-serverless
-annotated-doc==0.0.4
+annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
     # via pydantic
-anthropic==0.120.0
+anthropic==0.120.2
     # via pydantic-ai-slim
 anyio==4.14.2
     # via
@@ -73,13 +73,13 @@ docstring-parser==0.18.0
     # via anthropic
 email-validator==2.3.0
     # via storyteller-backend-serverless
-fastapi==0.140.3
+fastapi==0.141.1
     # via storyteller-backend-serverless
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-genai-prices==0.0.72
+genai-prices==0.1.0
     # via pydantic-ai-slim
 greenlet==3.5.4
     # via sqlalchemy
@@ -136,7 +136,7 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
-openai==2.48.0
+openai==2.52.0
     # via pydantic-ai-slim
 opentelemetry-api==1.44.0
     # via pydantic-ai-slim
@@ -156,11 +156,11 @@ pydantic==2.13.4
     #   pydantic-graph
     #   pydantic-settings
     #   storyteller-backend-serverless
-pydantic-ai-slim==2.18.0
+pydantic-ai-slim==2.21.0
     # via storyteller-backend-serverless
 pydantic-core==2.47.0
     # via pydantic
-pydantic-graph==2.18.0
+pydantic-graph==2.21.0
     # via pydantic-ai-slim
 pydantic-settings==2.14.2
     # via storyteller-backend-serverless
@@ -221,7 +221,7 @@ typing-inspection==0.4.2
     #   pydantic-settings
 urllib3==2.7.0
     # via requests
-uvicorn==0.51.0
+uvicorn==0.52.0
     # via storyteller-backend-serverless
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
