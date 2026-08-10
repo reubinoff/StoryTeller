@@ -13,9 +13,9 @@ dependencies = [
     "uvicorn[standard]>=0.51.0",
     "sqlalchemy[asyncio]>=2.0.51",
     "asyncpg>=0.30.0",
-    "alembic>=1.18.5",
+    "alembic>=1.19.0",
     "pydantic>=2.9.2",
-    "pydantic-settings>=2.6.0",
+    "pydantic-settings>=2.15.0",
     "email-validator>=2.2.0",
     "pydantic-ai-slim[anthropic,openai]>=2,<3",
     "jinja2>=3.1.4",
@@ -32,7 +32,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "aiosqlite>=0.20.0",
     "mypy>=2.3.0",
-    "ruff>=0.16.1",
+    "ruff>=0.16.2",
 ]
 
 [tool.pytest.ini_options]
