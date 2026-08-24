@@ -49,7 +49,7 @@ cffi==2.1.1
     # via
     #   argon2-cffi-bindings
     #   cryptography
-charset-normalizer==3.5.0
+charset-normalizer==3.5.1
     # via requests
 click==8.4.2
     # via uvicorn
@@ -79,11 +79,11 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-genai-prices==0.1.2
+genai-prices==0.1.4
     # via pydantic-ai-slim
 greenlet==3.5.5
     # via sqlalchemy
-griffelib==2.1.0
+griffelib==2.2.0
     # via pydantic-ai-slim
 h11==0.16.0
     # via
@@ -92,7 +92,7 @@ h11==0.16.0
     #   uvicorn
 httpcore==1.0.9
     # via httpx
-httpcore2==2.10.0
+httpcore2==2.12.0
     # via httpx2
 httptools==0.8.0
     # via uvicorn
@@ -103,9 +103,9 @@ httpx==0.28.1
     #   pydantic-ai-slim
     #   pydantic-graph
     #   storyteller-backend-serverless
-httpx2==2.10.0
+httpx2==2.12.0
     # via genai-prices
-idna==3.18
+idna==3.19
     # via
     #   anyio
     #   email-validator
@@ -123,7 +123,7 @@ jiter==0.16.0
     # via
     #   anthropic
     #   openai
-logfire-api==4.40.0
+logfire-api==4.41.0
     # via pydantic-graph
 mako==1.4.1
     # via alembic
@@ -156,17 +156,17 @@ pydantic==2.13.4
     #   pydantic-graph
     #   pydantic-settings
     #   storyteller-backend-serverless
-pydantic-ai-slim==2.30.0
+pydantic-ai-slim==2.33.0
     # via storyteller-backend-serverless
 pydantic-core==2.48.0
     # via pydantic
-pydantic-graph==2.30.0
+pydantic-graph==2.33.0
     # via pydantic-ai-slim
 pydantic-settings==2.15.0
     # via storyteller-backend-serverless
 pyjwt==2.13.0
     # via storyteller-backend-serverless
-python-dotenv==1.2.2
+python-dotenv==1.2.3
     # via
     #   pydantic-settings
     #   uvicorn
@@ -190,7 +190,7 @@ sqlalchemy==2.0.52
     #   storyteller-backend-serverless
 starlette==1.6.0
     # via fastapi
-tiktoken==0.13.0
+tiktoken==0.14.0
     # via pydantic-ai-slim
 tqdm==4.70.0
     # via openai
@@ -221,7 +221,7 @@ typing-inspection==0.4.4
     #   pydantic-settings
 urllib3==2.7.0
     # via requests
-uvicorn==0.52.3
+uvicorn==0.52.4
     # via storyteller-backend-serverless
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
